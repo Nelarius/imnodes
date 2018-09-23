@@ -37,18 +37,15 @@ workspace "imnodes"
         includedirs { "imgui", "gl3w/include" }
         filter "system:macosx"
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
-        filter "action:vs*"
-            -- includedirs { "extern/SDL/include" }
 
     project "example"
         location(project_location)
         kind "WindowedApp"
         language "C++"
         targetdir "bin/%{cfg.buildcfg}"
-        files {"example/main.cpp" }
-        includedirs { ".", "example" }
+        files {"example/main.cpp"}
+        includedirs { ".", "imgui", "gl3w/include" }
         links { "gl3w", "imgui" }
         filter "system:macosx"
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
-            links { "Cocoa.framework" }
-            linkoptions { "-F/Library/Frameworks -framework SDL2" }
+            linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
