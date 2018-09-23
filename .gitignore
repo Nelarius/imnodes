@@ -1,6 +1,11 @@
 ### ImGui ###
 **.ini
 
+### Local build ###
+bin/
+build/
+lib/
+
 # Created by https://www.gitignore.io/api/c,c++
 
 ### C ###
@@ -90,3 +95,13 @@ dkms.conf
 
 
 # End of https://www.gitignore.io/api/visualstudiocode
+
+# Created by https://www.gitignore.io/api/premake-gmake
+
+### premake-gmake ###
+Makefile
+*.make
+obj/
+
+
+# End of https://www.gitignore.io/api/premake-gmake
