@@ -2,7 +2,7 @@
 
 #include "imgui.h"
 
-namespace narwhal
+namespace imnodes
 {
 enum AttributeType
 {
@@ -33,40 +33,34 @@ enum ColorStyle
 
 struct EditorContext;
 
-EditorContext* editor_context_create();
-void editor_context_free(EditorContext*);
-void editor_context_set(EditorContext*);
+EditorContext* EditorContextCreate();
+void EditorContextFree(EditorContext*);
+void EditorContextSet(EditorContext*);
 
-void initialize();
-void shutdown();
+void Initialize();
+void Shutdown();
 
-void begin_node_editor();
+void BeginNodeEditor();
 
-void begin_node(int id);
-void name(const char* name);
+void BeginNode(int id);
+void Name(const char* name);
 
-int begin_attribute(int id, AttributeType type);
-void end_attribute();
+int BeginAttribute(int id, AttributeType type);
+void EndAttribute();
 
-void end_node();
+void EndNode();
 
-void end_node_editor();
+void EndNodeEditor();
 
-void push_color_style(ColorStyle item, ImU32 color);
-void pop_color_style(ColorStyle item);
+void PushColorStyle(ColorStyle item, ImU32 color);
+void PopColorStyle(ColorStyle item);
 
-// TODO: is there a need for manually controlling which links are shown?
+// TODO: condition is unused
+void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
 
-void set_node_pos(int node_id, const ImVec2& pos, ImGuiCond condition);
+bool IsAttributeActive(int* node, int* attribute);
 
-bool is_attribute_active(int* node, int* attribute);
-
-bool new_link_created(
-    int* output_node,
-    int* output_attribute,
-    int* input_node,
-    int* input_attribute);
-
-bool node_deleted(int* deleted_node);
-bool link_deleted(int* output_node, int* output_attribute, int* input_node, int* input_attribute);
-}
+bool NewLinkCreated(int* output_node, int* output_attribute, int* input_node, int* input_attribute);
+bool NodeDeleted(int* deleted_node);
+bool LinkDeleted(int* output_node, int* output_attribute, int* input_node, int* input_attribute);
+} // namespace imnodes

@@ -1,23 +1,23 @@
 #include "node_editor.h"
-#include "common/log.h"
-#include "common/narwhal_assert.h"
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
 #include "SDL_keycode.h"
 
-#include <algorithm>
+#include <algorithm> // for std::sort
+#include <cassert>
+#include <functional> // for std::greater<>
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 // TODO
-// Don't refer to node indices in links, pins, refer to id, and maintain a map of ids for each
-// frame!
+// Don't refer to node indices in links, pins, refer to id, and maintain a map
+// of ids for each frame!
 //
 // Maybe a separate color for node selection?
 
-namespace narwhal
+namespace imnodes
 {
 namespace
 {
@@ -150,7 +150,7 @@ static struct
 
 EditorContext& editor_context_get()
 {
-    NARWHAL_ASSERT(g.editor_ctx != nullptr);
+    assert(g.editor_ctx != nullptr);
     return *g.editor_ctx;
 }
 
@@ -177,8 +177,8 @@ inline ImRect get_title_bar_rect(const Node& node)
     ImVec2 max = ImVec2(
         node.content_rect.Max.x + NODE_CONTENT_PADDING.x,
         ss_node_origin.y + text_size.y + 2.f * NODE_CONTENT_PADDING.y);
-    // NOTE: the content rect already contains 1 x NODE_CONTENT_PADDING due to setting the
-    // cursor!
+    // NOTE: the content rect already contains 1 x NODE_CONTENT_PADDING due to
+    // setting the cursor!
     return ImRect(min, max);
 }
 
@@ -245,16 +245,16 @@ struct EditorContext
     }
 };
 
-EditorContext* editor_context_create()
+EditorContext* EditorContextCreate()
 {
     auto ctx = ImGui::MemAlloc(sizeof(EditorContext));
     new (ctx) EditorContext();
     return (EditorContext*)ctx;
 }
 
-void editor_context_free(EditorContext* ctx) { ImGui::MemFree(ctx); }
+void EditorContextFree(EditorContext* ctx) { ImGui::MemFree(ctx); }
 
-void editor_context_set(EditorContext* ctx) { g.editor_ctx = ctx; }
+void EditorContextSet(EditorContext* ctx) { g.editor_ctx = ctx; }
 
 namespace
 {
@@ -292,7 +292,7 @@ int find_or_create_new_node(int id)
         idx = editor.nodes.size();
         editor.nodes.push_back(Node());
         editor.keys.push_back(ImGuiID(id));
-        NARWHAL_ASSERT(idx != INVALID_INDEX);
+        assert(idx != INVALID_INDEX);
         // TODO: set more new node id state here?
         editor.nodes[idx].id = ImGuiID(id);
         editor.node_map.SetInt(ImGuiID(id), idx);
@@ -312,13 +312,6 @@ bool link_exists(const Pin& start, const Pin& end)
     return false;
 }
 
-/***
- *                       __        _             ___              __  _
- *      _______ ___  ___/ /__ ____(_)__  ___ _  / _/_ _____  ____/ /_(_)__  ___  ___
- *     / __/ -_) _ \/ _  / -_) __/ / _ \/ _ `/ / _/ // / _ \/ __/ __/ / _ \/ _ \(_-<
- *    /_/  \__/_//_/\_,_/\__/_/ /_/_//_/\_, / /_/ \_,_/_//_/\__/\__/_/\___/_//_/___/
- *                                     /___/
- */
 void draw_grid(const EditorContext& editor)
 {
     ImVec2 offset = g.grid_origin - editor.panning;
@@ -346,7 +339,7 @@ void draw_pins(
     Pin& pin_hovered)
 {
     const Node& node = editor.nodes[node_idx];
-    NARWHAL_ASSERT(attribute_type == AttributeType_Input || attribute_type == AttributeType_Output);
+    assert(attribute_type == AttributeType_Input || attribute_type == AttributeType_Output);
     const ImVector<ImRect>& attributes =
         attribute_type == AttributeType_Input ? node.input_attributes : node.output_attributes;
     const ImRect node_rect = get_node_rect(node);
@@ -361,7 +354,8 @@ void draw_pins(
             bool hovered_pin_is_valid = true;
             if (is_pin_valid(link_start))
             {
-                // Ensure that the pin is not linking to the same node, and that the link is output
+                // Ensure that the pin is not linking to the same node, and that
+                // the link is output
                 // -> input.
                 // Also ensure that the link doesn't already exist
                 hovered_pin_is_valid = link_start.node_idx != node_idx &&
@@ -412,9 +406,9 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
         }
     }
 
-    // Check to see whether the node moved during the frame. The node's position is updated
-    // after the node has been drawn (because the used has already rendered the UI!).
-    // Also check to see that the
+    // Check to see whether the node moved during the frame. The node's position
+    // is updated after the node has been drawn (because the used has already
+    // rendered the UI!). Also check to see that the
     if (ImGui::IsItemActive() && pin_hovered.node_idx != node_idx && ImGui::IsMouseDragging(0))
     {
         g.moved_node.index = node_idx;
@@ -434,10 +428,10 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
         {
             ImRect title_rect = get_title_bar_rect(node);
             // TODO: better consistency here?
-            // why subtract panning from Min, and then subtract it only from the y-component of
-            // Max? it's because Max.x is computed from the node rect, which already has the
-            // panning subtracted from it!
-            // the y-component is just looked up from the text height
+            // why subtract panning from Min, and then subtract it only from the
+            // y-component of Max? it's because Max.x is computed from the node
+            // rect, which already has the panning subtracted from it! the
+            // y-component is just looked up from the text height
             title_rect.Min -= editor.panning;
             title_rect.Max.y -= editor.panning.y;
             ImU32 color = is_active ? node.color_styles[ColorStyle_TitleBarHovered]
@@ -450,7 +444,7 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
                 ImDrawCornerFlags_Top);
             ImGui::SetCursorPos(get_node_title_origin(node) - editor.panning);
             ImGui::PushItemWidth(title_rect.Max.x - title_rect.Min.x);
-            ImGui::Text(node.name);
+            ImGui::TextUnformatted(node.name);
             ImGui::PopItemWidth();
         }
         // outline:
@@ -479,8 +473,8 @@ void draw_link(const EditorContext& editor, int link_idx)
 
     ImVec2 start, end, normal;
     {
-        // TODO: maybe compute the current node_rect and store it instead of recomputing it
-        // all the time
+        // TODO: maybe compute the current node_rect and store it instead of
+        // recomputing it all the time
         ImRect node_rect = get_node_rect(editor.nodes[pin_output.node_idx]);
         start = output_pin_position(
             node_rect,
@@ -503,9 +497,9 @@ void draw_link(const EditorContext& editor, int link_idx)
 }
 } // namespace
 
-void initialize()
+void Initialize()
 {
-    editor_context_set(editor_context_create());
+    EditorContextSet(EditorContextCreate());
 
     g.link_dragged = Link();
 
@@ -530,12 +524,13 @@ void initialize()
 }
 
 // TODO: this won't work with user-generated contexts...
-void shutdown() { editor_context_free(&editor_context_get()); }
+void Shutdown() { EditorContextFree(&editor_context_get()); }
 
-void begin_node_editor()
+void BeginNodeEditor()
 {
-    NARWHAL_ASSERT(g.initialized);
-    NARWHAL_ASSERT(g.current_scope == SCOPE_NONE);
+    assert(g.initialized);
+    // Remember to call Initialize() before calling BeginNodeEditor()
+    assert(g.current_scope == SCOPE_NONE);
     g.current_scope = SCOPE_EDITOR;
 
     // Reset state from previous pass
@@ -556,7 +551,7 @@ void begin_node_editor()
     editor.node_delete_queue.events.clear();
     editor.node_delete_queue.current_index = 0;
 
-    NARWHAL_ASSERT(editor.grid_draw_list == nullptr);
+    assert(editor.grid_draw_list == nullptr);
 
     ImGui::BeginGroup();
     {
@@ -570,8 +565,8 @@ void begin_node_editor()
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
         g.grid_origin = ImGui::GetCursorScreenPos();
         // prepare for layering the node content on top of the nodes
-        // NOTE: the draw list has to be captured here, because we want all the content to clip
-        // the scrolling_region child window.
+        // NOTE: the draw list has to be captured here, because we want all the
+        // content to clip the scrolling_region child window.
         editor.grid_draw_list = ImGui::GetWindowDrawList();
         editor.grid_draw_list->ChannelsSplit(CHANNEL_COUNT);
         editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_BACKGROUND);
@@ -586,9 +581,9 @@ void begin_node_editor()
     editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_UI);
 }
 
-void end_node_editor()
+void EndNodeEditor()
 {
-    NARWHAL_ASSERT(g.current_scope == SCOPE_EDITOR);
+    assert(g.current_scope == SCOPE_EDITOR);
     g.current_scope = SCOPE_NONE;
 
     EditorContext& editor = editor_context_get();
@@ -649,7 +644,7 @@ void end_node_editor()
         const Node& node = editor_context_get().nodes[pin.node_idx];
         ImRect node_rect = get_node_rect(node);
         ImVec2 start, end, normal;
-        NARWHAL_ASSERT(pin.type == AttributeType_Input || pin.type == AttributeType_Output);
+        assert(pin.type == AttributeType_Input || pin.type == AttributeType_Output);
         if (pin.type == AttributeType_Input)
         {
             start = input_pin_position(node_rect, node.input_attributes[pin.attribute_idx]);
@@ -676,11 +671,13 @@ void end_node_editor()
 
     if (ImGui::IsMouseReleased(0))
     {
-        // Ensure that a link was actually started before pushing anything into the vector.
+        // Ensure that a link was actually started before pushing anything into
+        // the vector.
         //
-        // It's possible to hover over a pin without starting a link by clicking & dragging on a
-        // node. The node is moved with a frame delay -- so the mouse might be hovering over a
-        // pin when it's released resulting in pin1 never being assigned to a valid node.
+        // It's possible to hover over a pin without starting a link by clicking
+        // & dragging on a node. The node is moved with a frame delay -- so the
+        // mouse might be hovering over a pin when it's released resulting in
+        // pin1 never being assigned to a valid node.
         if (is_pin_valid(g.link_dragged.pin1))
         {
             if (is_pin_valid(pin_hovered))
@@ -738,7 +735,8 @@ void end_node_editor()
                     editor.link_delete_queue.events.push_back(e);
                     deleted_links.push_back(i);
                 }
-                // Update the node indices of the links, since the node gets swap-removed
+                // Update the node indices of the links, since the node gets
+                // swap-removed
                 if (link.pin1.node_idx == editor.nodes.size() - 1)
                 {
                     link.pin1.node_idx = g.selected_node;
@@ -749,8 +747,9 @@ void end_node_editor()
                 }
             }
             // Clean up the links array.
-            // Sort the indices in descending order so that we start with the largest index first.
-            // That way we can swap-remove each link without invalidating any indices.
+            // Sort the indices in descending order so that we start with the
+            // largest index first. That way we can swap-remove each link
+            // without invalidating any indices.
             std::sort(deleted_links.begin(), deleted_links.end(), std::greater<int>());
             for (int i = 0; i < deleted_links.size(); i++)
             {
@@ -800,11 +799,12 @@ void end_node_editor()
     }
 }
 
-void begin_node(int node_id)
+void BeginNode(int node_id)
 {
-    NARWHAL_ASSERT(g.current_scope == SCOPE_EDITOR);
+    // Remember to call BeginNodeEditor before calling BeginNode
+    assert(g.current_scope == SCOPE_EDITOR);
     g.current_scope = SCOPE_NODE;
-    NARWHAL_ASSERT(g.current_node.index == INVALID_INDEX);
+    assert(g.current_node.index == INVALID_INDEX);
 
     EditorContext& editor = editor_context_get();
 
@@ -821,19 +821,19 @@ void begin_node(int node_id)
     ImGui::BeginGroup();
 }
 
-void name(const char* name)
+void Name(const char* name)
 {
-    NARWHAL_ASSERT(g.current_scope == SCOPE_NODE);
+    assert(g.current_scope == SCOPE_NODE);
 
     Node& node = editor_context_get().nodes[g.current_node.index];
-    NARWHAL_ASSERT(strlen(name) < NODE_NAME_STR_LEN);
+    assert(strlen(name) < NODE_NAME_STR_LEN);
     memset(node.name, 0, NODE_NAME_STR_LEN);
     memcpy(node.name, name, strlen(name));
 }
 
-void end_node()
+void EndNode()
 {
-    NARWHAL_ASSERT(g.current_scope == SCOPE_NODE);
+    assert(g.current_scope == SCOPE_NODE);
     g.current_scope = SCOPE_EDITOR;
 
     EditorContext& editor = editor_context_get();
@@ -844,9 +844,11 @@ void end_node()
     g.current_node.index = INVALID_INDEX;
 }
 
-int begin_attribute(int id, AttributeType type)
+int BeginAttribute(int id, AttributeType type)
 {
-    NARWHAL_ASSERT(g.current_scope == SCOPE_NODE);
+    // Make sure to call BeginNode() before calling
+    // BeginAttribute()
+    assert(g.current_scope == SCOPE_NODE);
     g.current_scope = SCOPE_ATTRIBUTE;
 
     ImGui::BeginGroup();
@@ -869,9 +871,9 @@ int begin_attribute(int id, AttributeType type)
     return g.current_node.attribute.index;
 }
 
-void end_attribute()
+void EndAttribute()
 {
-    NARWHAL_ASSERT(g.current_scope == SCOPE_ATTRIBUTE);
+    assert(g.current_scope == SCOPE_ATTRIBUTE);
     g.current_scope = SCOPE_NODE;
 
     ImGui::PopID();
@@ -895,30 +897,30 @@ void end_attribute()
     }
 }
 
-void push_color_style(ColorStyle item, ImU32 color)
+void PushColorStyle(ColorStyle item, ImU32 color)
 {
-    NARWHAL_ASSERT(g.initialized);
+    assert(g.initialized);
     g.color_style_stack.push_back(g.color_styles[item]);
     g.color_styles[item] = color;
 }
 
-void pop_color_style(ColorStyle item)
+void PopColorStyle(ColorStyle item)
 {
-    NARWHAL_ASSERT(g.color_style_stack.size() > 0);
+    assert(g.color_style_stack.size() > 0);
     g.color_styles[item] = g.color_style_stack.back();
     g.color_style_stack.pop_back();
 }
 
-void set_node_pos(int node_id, const ImVec2& pos, ImGuiCond condition)
+void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition)
 {
-    NARWHAL_ASSERT(g.initialized);
+    assert(g.initialized);
     int index = find_or_create_new_node(node_id);
     editor_context_get().nodes[index].origin = pos + editor_context_get().panning - g.grid_origin;
 }
 
-bool is_attribute_active(int* node, int* attribute)
+bool IsAttributeActive(int* node, int* attribute)
 {
-    NARWHAL_ASSERT(g.initialized);
+    assert(g.initialized);
     if (g.active_node.index != INVALID_INDEX)
     {
         // TODO: what if the pointers are null?
@@ -931,24 +933,19 @@ bool is_attribute_active(int* node, int* attribute)
     return false;
 }
 
-bool new_link_created(
-    int* output_node,
-    int* output_attribute,
-    int* input_node,
-    int* input_attribute)
+bool NewLinkCreated(int* output_node, int* output_attribute, int* input_node, int* input_attribute)
 {
     // TODO: maybe this could use the event queue as well?
-    // assert that this is called after end_node_editor()
-    NARWHAL_ASSERT(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == SCOPE_NONE);
     if (is_pin_valid(g.link_dragged.pin1) && is_pin_valid(g.link_dragged.pin2))
     {
-        NARWHAL_ASSERT(
+        assert(
             g.link_dragged.pin1.type == AttributeType_Input ||
             g.link_dragged.pin1.type == AttributeType_Output);
-        NARWHAL_ASSERT(
+        assert(
             g.link_dragged.pin2.type == AttributeType_Input ||
             g.link_dragged.pin2.type == AttributeType_Output);
-        NARWHAL_ASSERT(g.link_dragged.pin1.type != g.link_dragged.pin2.type);
+        assert(g.link_dragged.pin1.type != g.link_dragged.pin2.type);
         const Pin *output_pin, *input_pin;
         if (g.link_dragged.pin1.type == AttributeType_Input)
         {
@@ -974,7 +971,7 @@ bool new_link_created(
     return false;
 }
 
-bool node_deleted(int* deleted_node)
+bool NodeDeleted(int* deleted_node)
 {
     // TODO: separate event queues for node, link events
     NodeDeletedEvent e;
@@ -986,7 +983,7 @@ bool node_deleted(int* deleted_node)
     return false;
 }
 
-bool link_deleted(int* output_node, int* output_attribute, int* input_node, int* input_attribute)
+bool LinkDeleted(int* output_node, int* output_attribute, int* input_node, int* input_attribute)
 {
     LinkDeletedEvent e;
     if (get_link_delete_event(e))
@@ -999,4 +996,4 @@ bool link_deleted(int* output_node, int* output_attribute, int* input_node, int*
     }
     return false;
 }
-} // namespace narwhal
+} // namespace imnodes
