@@ -67,9 +67,12 @@ struct Node
     ImVector<ImRect> output_attributes;
 
     Node()
-        : id(0u), name("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
-          origin(100.0f, 100.0f), content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)),
-          color_styles(), input_attributes(), output_attributes()
+        : id(0u),
+          name(
+              "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
+          origin(100.0f, 100.0f),
+          content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_styles(),
+          input_attributes(), output_attributes()
     {
     }
 };
@@ -80,14 +83,21 @@ struct Pin
     int attribute_idx;
     AttributeType type;
 
-    Pin() : node_idx(INVALID_INDEX), attribute_idx(INVALID_INDEX), type(AttributeType_None) {}
-    Pin(int nidx, int aindx, AttributeType t) : node_idx(nidx), attribute_idx(aindx), type(t) {}
+    Pin()
+        : node_idx(INVALID_INDEX), attribute_idx(INVALID_INDEX),
+          type(AttributeType_None)
+    {
+    }
+    Pin(int nidx, int aindx, AttributeType t)
+        : node_idx(nidx), attribute_idx(aindx), type(t)
+    {
+    }
 };
 
 bool operator==(const Pin& lhs, const Pin& rhs)
 {
-    return lhs.node_idx == rhs.node_idx && lhs.attribute_idx == rhs.attribute_idx &&
-           lhs.type == rhs.type;
+    return lhs.node_idx == rhs.node_idx &&
+           lhs.attribute_idx == rhs.attribute_idx && lhs.type == rhs.type;
 }
 
 struct Link
@@ -154,16 +164,25 @@ EditorContext& editor_context_get()
     return *g.editor_ctx;
 }
 
-inline ImVec2 editor_space_to_screen_space(const ImVec2& v) { return g.grid_origin + v; }
+inline ImVec2 editor_space_to_screen_space(const ImVec2& v)
+{
+    return g.grid_origin + v;
+}
 
-inline ImRect get_item_rect() { return ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()); }
+inline ImRect get_item_rect()
+{
+    return ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+}
 
-inline ImVec2 get_node_title_origin(const Node& node) { return node.origin + NODE_CONTENT_PADDING; }
+inline ImVec2 get_node_title_origin(const Node& node)
+{
+    return node.origin + NODE_CONTENT_PADDING;
+}
 
 inline ImVec2 get_node_content_origin(const Node& node)
 {
-    ImVec2 title_rect_height =
-        ImVec2(0.f, ImGui::CalcTextSize(node.name).y + 2.f * NODE_CONTENT_PADDING.y);
+    ImVec2 title_rect_height = ImVec2(
+        0.f, ImGui::CalcTextSize(node.name).y + 2.f * NODE_CONTENT_PADDING.y);
     return node.origin + NODE_CONTENT_PADDING + title_rect_height;
 }
 
@@ -184,7 +203,8 @@ inline ImRect get_title_bar_rect(const Node& node)
 
 inline ImRect get_node_rect(const Node& node)
 {
-    float text_height = ImGui::CalcTextSize(node.name).y + 2.f * NODE_CONTENT_PADDING.y;
+    float text_height =
+        ImGui::CalcTextSize(node.name).y + 2.f * NODE_CONTENT_PADDING.y;
 
     ImRect rect = node.content_rect;
     rect.Expand(NODE_CONTENT_PADDING);
@@ -198,20 +218,24 @@ inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
     return (delta.x * delta.x + delta.y * delta.y) < (radius * radius);
 }
 
-inline ImVec2 input_pin_position(const ImRect& node_rect, const ImRect& attr_rect)
+inline ImVec2 input_pin_position(
+    const ImRect& node_rect,
+    const ImRect& attr_rect)
 {
     return ImVec2(node_rect.Min.x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
 }
 
-inline ImVec2 output_pin_position(const ImRect& node_rect, const ImRect& attr_rect)
+inline ImVec2 output_pin_position(
+    const ImRect& node_rect,
+    const ImRect& attr_rect)
 {
     return ImVec2(node_rect.Max.x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
 }
 
 inline bool is_pin_valid(const Pin& pin)
 {
-    return pin.node_idx != INVALID_INDEX && pin.attribute_idx != INVALID_INDEX &&
-           pin.type != AttributeType_None;
+    return pin.node_idx != INVALID_INDEX &&
+           pin.attribute_idx != INVALID_INDEX && pin.type != AttributeType_None;
 }
 } // namespace
 
@@ -239,8 +263,8 @@ struct EditorContext
     ImDrawList* grid_draw_list;
 
     EditorContext()
-        : node_map(), nodes(), links(), link_delete_queue(), node_delete_queue(), panning(0.f, 0.f),
-          grid_draw_list(nullptr)
+        : node_map(), nodes(), links(), link_delete_queue(),
+          node_delete_queue(), panning(0.f, 0.f), grid_draw_list(nullptr)
     {
     }
 };
@@ -258,14 +282,19 @@ void EditorContextSet(EditorContext* ctx) { g.editor_ctx = ctx; }
 
 namespace
 {
-inline int node_index_to_id(int node_idx) { return editor_context_get().nodes[node_idx].id; }
+inline int node_index_to_id(int node_idx)
+{
+    return editor_context_get().nodes[node_idx].id;
+}
 
 inline bool get_link_delete_event(LinkDeletedEvent& event)
 {
     EditorContext& editor = editor_context_get();
-    if (editor.link_delete_queue.current_index < editor.link_delete_queue.events.size())
+    if (editor.link_delete_queue.current_index <
+        editor.link_delete_queue.events.size())
     {
-        event = editor.link_delete_queue.events[editor.link_delete_queue.current_index++];
+        event = editor.link_delete_queue
+                    .events[editor.link_delete_queue.current_index++];
         return true;
     }
     return false;
@@ -274,9 +303,11 @@ inline bool get_link_delete_event(LinkDeletedEvent& event)
 inline bool get_node_delete_event(NodeDeletedEvent& event)
 {
     EditorContext& editor = editor_context_get();
-    if (editor.node_delete_queue.current_index < editor.node_delete_queue.events.size())
+    if (editor.node_delete_queue.current_index <
+        editor.node_delete_queue.events.size())
     {
-        event = editor.node_delete_queue.events[editor.node_delete_queue.current_index++];
+        event = editor.node_delete_queue
+                    .events[editor.node_delete_queue.current_index++];
         return true;
     }
     return false;
@@ -316,14 +347,16 @@ void draw_grid(const EditorContext& editor)
 {
     ImVec2 offset = g.grid_origin - editor.panning;
     ImVec2 canvas_size = ImGui::GetWindowSize();
-    for (float x = fmodf(offset.x, GRID_SIZE); x < canvas_size.x; x += GRID_SIZE)
+    for (float x = fmodf(offset.x, GRID_SIZE); x < canvas_size.x;
+         x += GRID_SIZE)
     {
         editor.grid_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(x, 0.0f)),
             editor_space_to_screen_space(ImVec2(x, canvas_size.y)),
             g.color_styles[ColorStyle_GridLine]);
     }
-    for (float y = fmodf(offset.y, GRID_SIZE); y < canvas_size.y; y += GRID_SIZE)
+    for (float y = fmodf(offset.y, GRID_SIZE); y < canvas_size.y;
+         y += GRID_SIZE)
     {
         editor.grid_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(0.0f, y)),
@@ -339,9 +372,12 @@ void draw_pins(
     Pin& pin_hovered)
 {
     const Node& node = editor.nodes[node_idx];
-    assert(attribute_type == AttributeType_Input || attribute_type == AttributeType_Output);
-    const ImVector<ImRect>& attributes =
-        attribute_type == AttributeType_Input ? node.input_attributes : node.output_attributes;
+    assert(
+        attribute_type == AttributeType_Input ||
+        attribute_type == AttributeType_Output);
+    const ImVector<ImRect>& attributes = attribute_type == AttributeType_Input
+                                             ? node.input_attributes
+                                             : node.output_attributes;
     const ImRect node_rect = get_node_rect(node);
     for (int idx = 0u; idx < attributes.size(); idx++)
     {
@@ -358,21 +394,27 @@ void draw_pins(
                 // the link is output
                 // -> input.
                 // Also ensure that the link doesn't already exist
-                hovered_pin_is_valid = link_start.node_idx != node_idx &&
-                                       link_start.type != attribute_type &&
-                                       !link_exists(link_start, Pin(node_idx, idx, attribute_type));
+                hovered_pin_is_valid =
+                    link_start.node_idx != node_idx &&
+                    link_start.type != attribute_type &&
+                    !link_exists(
+                        link_start, Pin(node_idx, idx, attribute_type));
             }
 
             if (hovered_pin_is_valid)
             {
                 editor.grid_draw_list->AddCircleFilled(
-                    pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinHovered]);
+                    pin_pos,
+                    NODE_PIN_RADIUS,
+                    node.color_styles[ColorStyle_PinHovered]);
                 pin_hovered = Pin(node_idx, idx, attribute_type);
             }
             else
             {
                 editor.grid_draw_list->AddCircleFilled(
-                    pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinInvalid]);
+                    pin_pos,
+                    NODE_PIN_RADIUS,
+                    node.color_styles[ColorStyle_PinInvalid]);
             }
         }
         else
@@ -409,18 +451,21 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
     // Check to see whether the node moved during the frame. The node's position
     // is updated after the node has been drawn (because the used has already
     // rendered the UI!). Also check to see that the
-    if (ImGui::IsItemActive() && pin_hovered.node_idx != node_idx && ImGui::IsMouseDragging(0))
+    if (ImGui::IsItemActive() && pin_hovered.node_idx != node_idx &&
+        ImGui::IsMouseDragging(0))
     {
         g.moved_node.index = node_idx;
         g.moved_node.position = node.origin + ImGui::GetIO().MouseDelta;
     }
 
     {
-        bool is_active = g.hovered_node == node_idx || g.selected_node == node_idx;
+        bool is_active =
+            g.hovered_node == node_idx || g.selected_node == node_idx;
         // node base
         {
-            ImU32 color = is_active ? node.color_styles[ColorStyle_NodeBackgroundHovered]
-                                    : node.color_styles[ColorStyle_NodeBackground];
+            ImU32 color =
+                is_active ? node.color_styles[ColorStyle_NodeBackgroundHovered]
+                          : node.color_styles[ColorStyle_NodeBackground];
             editor.grid_draw_list->AddRectFilled(
                 node_rect.Min, node_rect.Max, color, NODE_CORNER_ROUNDNESS);
         }
@@ -434,8 +479,9 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
             // y-component is just looked up from the text height
             title_rect.Min -= editor.panning;
             title_rect.Max.y -= editor.panning.y;
-            ImU32 color = is_active ? node.color_styles[ColorStyle_TitleBarHovered]
-                                    : node.color_styles[ColorStyle_TitleBar];
+            ImU32 color = is_active
+                              ? node.color_styles[ColorStyle_TitleBarHovered]
+                              : node.color_styles[ColorStyle_TitleBar];
             editor.grid_draw_list->AddRectFilled(
                 title_rect.Min,
                 title_rect.Max,
@@ -464,12 +510,14 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
 
 void draw_link(const EditorContext& editor, int link_idx)
 {
-    const Pin& pin_input = editor.links[link_idx].pin1.type == AttributeType_Input
-                               ? editor.links[link_idx].pin1
-                               : editor.links[link_idx].pin2;
-    const Pin& pin_output = editor.links[link_idx].pin1.type == AttributeType_Output
-                                ? editor.links[link_idx].pin1
-                                : editor.links[link_idx].pin2;
+    const Pin& pin_input =
+        editor.links[link_idx].pin1.type == AttributeType_Input
+            ? editor.links[link_idx].pin1
+            : editor.links[link_idx].pin2;
+    const Pin& pin_output =
+        editor.links[link_idx].pin1.type == AttributeType_Output
+            ? editor.links[link_idx].pin1
+            : editor.links[link_idx].pin2;
 
     ImVec2 start, end, normal;
     {
@@ -478,13 +526,16 @@ void draw_link(const EditorContext& editor, int link_idx)
         ImRect node_rect = get_node_rect(editor.nodes[pin_output.node_idx]);
         start = output_pin_position(
             node_rect,
-            editor.nodes[pin_output.node_idx].output_attributes[pin_output.attribute_idx]);
+            editor.nodes[pin_output.node_idx]
+                .output_attributes[pin_output.attribute_idx]);
     }
     normal = ImVec2(50.f, 0.f);
     {
         ImRect node_rect = get_node_rect(editor.nodes[pin_input.node_idx]);
         end = input_pin_position(
-            node_rect, editor.nodes[pin_input.node_idx].input_attributes[pin_input.attribute_idx]);
+            node_rect,
+            editor.nodes[pin_input.node_idx]
+                .input_attributes[pin_input.attribute_idx]);
     }
     editor.grid_draw_list->AddBezierCurve(
         start,
@@ -506,7 +557,8 @@ void Initialize()
     g.initialized = true;
 
     g.color_styles[ColorStyle_NodeBackground] = IM_COL32(60, 60, 60, 255);
-    g.color_styles[ColorStyle_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
+    g.color_styles[ColorStyle_NodeBackgroundHovered] =
+        IM_COL32(75, 75, 75, 255);
     g.color_styles[ColorStyle_NodeBackgroundSelected] =
         IM_COL32(75, 75, 75, 255); // TODO: different default value for this?
     g.color_styles[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
@@ -557,7 +609,8 @@ void BeginNodeEditor()
     {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
-        ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, g.color_styles[ColorStyle_GridBackground]);
+        ImGui::PushStyleColor(
+            ImGuiCol_ChildWindowBg, g.color_styles[ColorStyle_GridBackground]);
         ImGui::BeginChild(
             "scrolling_region",
             ImVec2(0.f, 0.f),
@@ -644,16 +697,20 @@ void EndNodeEditor()
         const Node& node = editor_context_get().nodes[pin.node_idx];
         ImRect node_rect = get_node_rect(node);
         ImVec2 start, end, normal;
-        assert(pin.type == AttributeType_Input || pin.type == AttributeType_Output);
+        assert(
+            pin.type == AttributeType_Input ||
+            pin.type == AttributeType_Output);
         if (pin.type == AttributeType_Input)
         {
-            start = input_pin_position(node_rect, node.input_attributes[pin.attribute_idx]);
+            start = input_pin_position(
+                node_rect, node.input_attributes[pin.attribute_idx]);
             // TODO: stretch the normal as a function of length?
             normal = ImVec2(-50.f, 0.0f);
         }
         else if (pin.type == AttributeType_Output)
         {
-            start = output_pin_position(node_rect, node.output_attributes[pin.attribute_idx]);
+            start = output_pin_position(
+                node_rect, node.output_attributes[pin.attribute_idx]);
             normal = ImVec2(50.f, 0.f);
         }
         end = ImGui::GetIO().MousePos;
@@ -700,7 +757,8 @@ void EndNodeEditor()
      *
      */
 
-    if (g.moved_node.index != INVALID_INDEX && g.link_dragged.pin1.node_idx == INVALID_INDEX)
+    if (g.moved_node.index != INVALID_INDEX &&
+        g.link_dragged.pin1.node_idx == INVALID_INDEX)
     {
         // Don't move the node if we're dragging a link
         editor.nodes[g.moved_node.index].origin = g.moved_node.position;
@@ -723,7 +781,8 @@ void EndNodeEditor()
             {
                 Link& link = editor.links[i];
                 // Remove the links that are connected to the deleted node
-                if (link.pin1.node_idx == g.selected_node || link.pin2.node_idx == g.selected_node)
+                if (link.pin1.node_idx == g.selected_node ||
+                    link.pin2.node_idx == g.selected_node)
                 {
                     int output_node = node_index_to_id(link.pin1.node_idx);
                     int input_node = node_index_to_id(link.pin2.node_idx);
@@ -750,7 +809,10 @@ void EndNodeEditor()
             // Sort the indices in descending order so that we start with the
             // largest index first. That way we can swap-remove each link
             // without invalidating any indices.
-            std::sort(deleted_links.begin(), deleted_links.end(), std::greater<int>());
+            std::sort(
+                deleted_links.begin(),
+                deleted_links.end(),
+                std::greater<int>());
             for (int i = 0; i < deleted_links.size(); i++)
             {
                 int idx = deleted_links[i];
@@ -776,7 +838,8 @@ void EndNodeEditor()
     }
 
     // apply panning if the mouse was dragged
-    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() && ImGui::IsMouseDragging(2, 0))
+    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() &&
+        ImGui::IsMouseDragging(2, 0))
     {
         editor.panning = editor.panning - ImGui::GetIO().MouseDelta;
     }
@@ -811,11 +874,15 @@ void BeginNode(int node_id)
     {
         int idx = find_or_create_new_node(node_id);
         g.current_node.index = idx;
-        memcpy(editor.nodes[idx].color_styles, g.color_styles, sizeof(g.color_styles));
+        memcpy(
+            editor.nodes[idx].color_styles,
+            g.color_styles,
+            sizeof(g.color_styles));
     }
 
     ImGui::SetCursorPos(
-        get_node_content_origin(editor.nodes[g.current_node.index]) - editor.panning);
+        get_node_content_origin(editor.nodes[g.current_node.index]) -
+        editor.panning);
 
     ImGui::PushID(node_id);
     ImGui::BeginGroup();
@@ -859,11 +926,13 @@ int BeginAttribute(int id, AttributeType type)
     switch (type)
     {
         case AttributeType_Input:
-            g.current_node.attribute.index =
-                editor_context_get().nodes[g.current_node.index].input_attributes.size();
+            g.current_node.attribute.index = editor_context_get()
+                                                 .nodes[g.current_node.index]
+                                                 .input_attributes.size();
         case AttributeType_Output:
-            g.current_node.attribute.index =
-                editor_context_get().nodes[g.current_node.index].output_attributes.size();
+            g.current_node.attribute.index = editor_context_get()
+                                                 .nodes[g.current_node.index]
+                                                 .output_attributes.size();
         default:
             g.current_node.attribute.index = INVALID_INDEX;
     }
@@ -915,7 +984,8 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition)
 {
     assert(g.initialized);
     int index = find_or_create_new_node(node_id);
-    editor_context_get().nodes[index].origin = pos + editor_context_get().panning - g.grid_origin;
+    editor_context_get().nodes[index].origin =
+        pos + editor_context_get().panning - g.grid_origin;
 }
 
 bool IsAttributeActive(int* node, int* attribute)
@@ -933,7 +1003,11 @@ bool IsAttributeActive(int* node, int* attribute)
     return false;
 }
 
-bool NewLinkCreated(int* output_node, int* output_attribute, int* input_node, int* input_attribute)
+bool NewLinkCreated(
+    int* output_node,
+    int* output_attribute,
+    int* input_node,
+    int* input_attribute)
 {
     // TODO: maybe this could use the event queue as well?
     assert(g.current_scope == SCOPE_NONE);
@@ -983,7 +1057,11 @@ bool NodeDeleted(int* deleted_node)
     return false;
 }
 
-bool LinkDeleted(int* output_node, int* output_attribute, int* input_node, int* input_attribute)
+bool LinkDeleted(
+    int* output_node,
+    int* output_attribute,
+    int* input_node,
+    int* input_attribute)
 {
     LinkDeletedEvent e;
     if (get_link_delete_event(e))

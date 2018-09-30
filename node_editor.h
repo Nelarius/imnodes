@@ -60,7 +60,15 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
 
 bool IsAttributeActive(int* node, int* attribute);
 
-bool NewLinkCreated(int* output_node, int* output_attribute, int* input_node, int* input_attribute);
+bool NewLinkCreated(
+    int* output_node,
+    int* output_attribute,
+    int* input_node,
+    int* input_attribute);
 bool NodeDeleted(int* deleted_node);
-bool LinkDeleted(int* output_node, int* output_attribute, int* input_node, int* input_attribute);
+bool LinkDeleted(
+    int* output_node,
+    int* output_attribute,
+    int* input_node,
+    int* input_attribute);
 } // namespace imnodes

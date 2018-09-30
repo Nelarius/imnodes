@@ -20,7 +20,7 @@ BraceWrapping: {
     IndentBraces: 'false'
 }
 BreakBeforeBraces: Custom
-ColumnLimit: 100
+ColumnLimit: 80
 Cpp11BracedListStyle: 'true'
 DerivePointerAlignment: 'false'
 IndentCaseLabels: 'true'
