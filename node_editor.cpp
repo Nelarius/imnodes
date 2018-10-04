@@ -345,7 +345,7 @@ bool link_exists(const Pin& start, const Pin& end)
 
 void draw_grid(const EditorContext& editor)
 {
-    ImVec2 offset = g.grid_origin - editor.panning;
+    ImVec2 offset = editor.panning;
     ImVec2 canvas_size = ImGui::GetWindowSize();
     for (float x = fmodf(offset.x, GRID_SIZE); x < canvas_size.x;
          x += GRID_SIZE)
@@ -436,7 +436,7 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
 
     ImRect node_rect = get_node_rect(node);
 
-    ImGui::SetCursorPos(node.origin - editor.panning);
+    ImGui::SetCursorPos(node.origin + editor.panning);
     ImGui::InvisibleButton("node", node_rect.GetSize());
 
     if (ImGui::IsItemHovered())
@@ -477,8 +477,8 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
             // y-component of Max? it's because Max.x is computed from the node
             // rect, which already has the panning subtracted from it! the
             // y-component is just looked up from the text height
-            title_rect.Min -= editor.panning;
-            title_rect.Max.y -= editor.panning.y;
+            title_rect.Min += editor.panning;
+            title_rect.Max.y += editor.panning.y;
             ImU32 color = is_active
                               ? node.color_styles[ColorStyle_TitleBarHovered]
                               : node.color_styles[ColorStyle_TitleBar];
@@ -488,7 +488,7 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
                 color,
                 NODE_CORNER_ROUNDNESS,
                 ImDrawCornerFlags_Top);
-            ImGui::SetCursorPos(get_node_title_origin(node) - editor.panning);
+            ImGui::SetCursorPos(get_node_title_origin(node) + editor.panning);
             ImGui::PushItemWidth(title_rect.Max.x - title_rect.Min.x);
             ImGui::TextUnformatted(node.name);
             ImGui::PopItemWidth();
@@ -841,7 +841,7 @@ void EndNodeEditor()
     if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() &&
         ImGui::IsMouseDragging(2, 0))
     {
-        editor.panning = editor.panning - ImGui::GetIO().MouseDelta;
+        editor.panning = editor.panning + ImGui::GetIO().MouseDelta;
     }
 
     // pop style
@@ -881,7 +881,7 @@ void BeginNode(int node_id)
     }
 
     ImGui::SetCursorPos(
-        get_node_content_origin(editor.nodes[g.current_node.index]) -
+        get_node_content_origin(editor.nodes[g.current_node.index]) +
         editor.panning);
 
     ImGui::PushID(node_id);
@@ -985,7 +985,7 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition)
     assert(g.initialized);
     int index = find_or_create_new_node(node_id);
     editor_context_get().nodes[index].origin =
-        pos + editor_context_get().panning - g.grid_origin;
+        pos - editor_context_get().panning - g.grid_origin;
 }
 
 bool IsAttributeActive(int* node, int* attribute)
