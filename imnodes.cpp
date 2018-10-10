@@ -1,4 +1,4 @@
-#include "node_editor.h"
+#include "imnodes.h"
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
