@@ -122,7 +122,7 @@ static struct
 {
     // TODO: don't use C++11 initializers here
     bool initialized{false};
-    EditorContext* ui_ctx{nullptr};
+    EditorContext* default_editor_ctx{nullptr};
     EditorContext* editor_ctx{nullptr};
     ImVec2 grid_origin{0.0f, 0.0f};
     ScopeFlags current_scope{SCOPE_NONE};
@@ -550,7 +550,8 @@ void draw_link(const EditorContext& editor, int link_idx)
 
 void Initialize()
 {
-    EditorContextSet(EditorContextCreate());
+    g.default_editor_ctx = EditorContextCreate();
+    EditorContextSet(g.default_editor_ctx);
 
     g.link_dragged = Link();
 
@@ -575,8 +576,7 @@ void Initialize()
     g.color_styles[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
 }
 
-// TODO: this won't work with user-generated contexts...
-void Shutdown() { EditorContextFree(&editor_context_get()); }
+void Shutdown() { EditorContextFree(g.default_editor_ctx); }
 
 void BeginNodeEditor()
 {
