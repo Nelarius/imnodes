@@ -25,19 +25,19 @@ namespace
 static const float GRID_SIZE = 32.f;
 
 // Node appearance
-static const float NODE_CORNER_ROUNDNESS{4.0f};
-static const ImVec2 NODE_CONTENT_PADDING{8.f, 8.f};
-static const ImVec2 NODE_DUMMY_SPACING{80.f, 20.f};
+static const float NODE_CORNER_ROUNDNESS = 4.0f;
+static const ImVec2 NODE_CONTENT_PADDING = ImVec2(8.f, 8.f);
+static const ImVec2 NODE_DUMMY_SPACING = ImVec2(80.f, 20.f);
 
-static const float LINK_THICKNESS{3.f};
-static const int LINK_NUM_SEGMENTS{30};
+static const float LINK_THICKNESS = 3.f;
+static const int LINK_NUM_SEGMENTS = 30;
 
-static const float NODE_PIN_RADIUS{4.f};
-static const float NODE_PIN_HOVER_RADIUS{10.f};
+static const float NODE_PIN_RADIUS = 4.f;
+static const float NODE_PIN_HOVER_RADIUS = 10.f;
 
-static const size_t NODE_NAME_STR_LEN{32u};
+static const size_t NODE_NAME_STR_LEN = 32u;
 
-static const int INVALID_INDEX{-1};
+static const int INVALID_INDEX = -1;
 
 enum ScopeFlags
 {
@@ -118,27 +118,34 @@ struct LinkDeletedEvent
     int output_node, output_attribute, input_node, input_attribute;
 };
 
+// This is used to initialize the boolean flag in the static struct
+struct InitializeGuard
+{
+    bool initialized;
+
+    InitializeGuard() : initialized(false) {}
+};
+
 static struct
 {
-    // TODO: don't use C++11 initializers here
-    bool initialized{false};
-    EditorContext* default_editor_ctx{nullptr};
-    EditorContext* editor_ctx{nullptr};
-    ImVec2 grid_origin{0.0f, 0.0f};
-    ScopeFlags current_scope{SCOPE_NONE};
+    InitializeGuard guard;
+    EditorContext* default_editor_ctx;
+    EditorContext* editor_ctx;
+    ImVec2 grid_origin;
+    ScopeFlags current_scope;
 
     ImU32 color_styles[ColorStyle_Count];
     ImVector<ImU32> color_style_stack;
 
-    Link link_dragged{};
+    Link link_dragged;
 
     struct
     {
-        int index{INVALID_INDEX};
+        int index;
         struct
         {
             AttributeType type;
-            int index{INVALID_INDEX};
+            int index;
         } attribute;
     } current_node;
 
@@ -271,9 +278,9 @@ struct EditorContext
 
 EditorContext* EditorContextCreate()
 {
-    auto ctx = ImGui::MemAlloc(sizeof(EditorContext));
-    new (ctx) EditorContext();
-    return (EditorContext*)ctx;
+    void* mem = ImGui::MemAlloc(sizeof(EditorContext));
+    new (mem) EditorContext();
+    return (EditorContext*)mem;
 }
 
 void EditorContextFree(EditorContext* ctx) { ImGui::MemFree(ctx); }
@@ -334,8 +341,9 @@ int find_or_create_new_node(int id)
 bool link_exists(const Pin& start, const Pin& end)
 {
     const EditorContext& editor = editor_context_get();
-    for (const auto& link : editor.links)
+    for (std::size_t i = 0u; i < editor.links.size(); i++)
     {
+        const Link& link = editor.links[i];
         if (link.pin1 == start && link.pin2 == end)
             return true;
     }
@@ -550,12 +558,22 @@ void draw_link(const EditorContext& editor, int link_idx)
 
 void Initialize()
 {
+    assert(g.guard.initialized == false);
+    g.guard.initialized = true;
+    
+    g.default_editor_ctx = NULL;
+    g.editor_ctx = NULL;
+    g.grid_origin = ImVec2(0.0f, 0.0f);
+    g.current_scope = SCOPE_NONE;
+
     g.default_editor_ctx = EditorContextCreate();
     EditorContextSet(g.default_editor_ctx);
 
-    g.link_dragged = Link();
+    g.current_node.index = INVALID_INDEX;
+    g.current_node.attribute.type = AttributeType_None;
+    g.current_node.attribute.index = INVALID_INDEX;
 
-    g.initialized = true;
+    g.link_dragged = Link();
 
     g.color_styles[ColorStyle_NodeBackground] = IM_COL32(60, 60, 60, 255);
     g.color_styles[ColorStyle_NodeBackgroundHovered] =
@@ -580,8 +598,8 @@ void Shutdown() { EditorContextFree(g.default_editor_ctx); }
 
 void BeginNodeEditor()
 {
-    assert(g.initialized);
     // Remember to call Initialize() before calling BeginNodeEditor()
+    assert(g.guard.initialized);
     assert(g.current_scope == SCOPE_NONE);
     g.current_scope = SCOPE_EDITOR;
 
@@ -968,7 +986,7 @@ void EndAttribute()
 
 void PushColorStyle(ColorStyle item, ImU32 color)
 {
-    assert(g.initialized);
+    assert(g.guard.initialized);
     g.color_style_stack.push_back(g.color_styles[item]);
     g.color_styles[item] = color;
 }
@@ -982,7 +1000,7 @@ void PopColorStyle(ColorStyle item)
 
 void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition)
 {
-    assert(g.initialized);
+    assert(g.guard.initialized);
     int index = find_or_create_new_node(node_id);
     editor_context_get().nodes[index].origin =
         pos - editor_context_get().panning - g.grid_origin;
@@ -990,7 +1008,7 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition)
 
 bool IsAttributeActive(int* node, int* attribute)
 {
-    assert(g.initialized);
+    assert(g.guard.initialized);
     if (g.active_node.index != INVALID_INDEX)
     {
         // TODO: what if the pointers are null?
