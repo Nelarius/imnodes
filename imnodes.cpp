@@ -5,7 +5,7 @@
 #include "SDL_keycode.h"
 
 #include <algorithm> // for std::sort
-#include <cassert>
+#include <assert.h>
 #include <functional> // for std::greater<>
 #include <string.h>
 #include <stdint.h>
@@ -34,6 +34,8 @@ static const int LINK_NUM_SEGMENTS = 30;
 
 static const float NODE_PIN_RADIUS = 4.f;
 static const float NODE_PIN_HOVER_RADIUS = 10.f;
+
+static const float LINK_HOVER_DISTANCE = 7.0f;
 
 static const size_t NODE_NAME_STR_LEN = 32u;
 
@@ -223,6 +225,116 @@ inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
 {
     ImVec2 delta = ImGui::GetIO().MousePos - point;
     return (delta.x * delta.x + delta.y * delta.y) < (radius * radius);
+}
+
+inline ImVec2 eval_bezier(
+    float t,
+    const ImVec2 p0,
+    const ImVec2 p1,
+    const ImVec2 p2,
+    const ImVec2 p3)
+{
+    // B(t) = (1-t)**3 p0 + 3(1 - t)**2 t P1 + 3(1-t)t**2 P2 + t**3 P3
+    return ImVec2(
+        (1 - t) * (1 - t) * (1 - t) * p0.x + 3 * (1 - t) * (1 - t) * t * p1.x +
+            3 * (1 - t) * t * t * p2.x + t * t * t * p3.x,
+        (1 - t) * (1 - t) * (1 - t) * p0.y + 3 * (1 - t) * (1 - t) * t * p1.y +
+            3 * (1 - t) * t * t * p2.y + t * t * t * p3.y);
+}
+
+// Divides the bezier curve into n segments. Evaluates the distance to each
+// segment. Chooses the segment with the smallest distance, and repeats the
+// algorithm on that segment, for the given number of iterations.
+inline float get_closest_point_on_cubic_bezier(
+    const int num_iterations,
+    const int num_segments,
+    const ImVec2 pos,
+    const ImVec2 p0,
+    const ImVec2 p1,
+    const ImVec2 p2,
+    const ImVec2 p3)
+{
+    assert(num_iterations > 0 && num_segments > 0);
+    float tstart = 0.0f;
+    float tend = 1.0f;
+    float tbest = 0.5f;
+    float best_distance = FLT_MAX;
+
+    for (int i = 0; i < num_iterations; i++)
+    {
+        // split the current t-range to segments
+        const float dt = (tend - tstart) / num_segments;
+        for (int s = 0; s < num_segments; s++)
+        {
+            const float tmid = tstart + dt * (float(s) + 0.5f);
+            ImVec2 bt = eval_bezier(tmid, p0, p1, p2, p3);
+            ImVec2 dv = bt - pos;
+            float cur_distance = ImLengthSqr(dv);
+            if (cur_distance < best_distance)
+            {
+                best_distance = cur_distance;
+                tbest = tmid;
+            }
+        }
+        // shrink the current t-range to the best segment
+        tstart = tbest - 0.5f * dt;
+        tend = tbest + 0.5f * dt;
+    }
+
+    return tbest;
+}
+
+inline float get_distance_to_cubic_bezier(
+    const ImVec2& pos,
+    const ImVec2& p0,
+    const ImVec2& p1,
+    const ImVec2& p2,
+    const ImVec2& p3)
+{
+    const int segments = 5;
+    const float length = ImSqrt(ImLengthSqr(p3 - p2)) +
+                         ImSqrt(ImLengthSqr(p2 - p1)) +
+                         ImSqrt(ImLengthSqr(p1 - p0));
+    const float iterations_per_length = 0.01f;
+    const int iterations =
+        int(ImClamp(length * iterations_per_length, 2.0f, 8.f));
+
+    float t = get_closest_point_on_cubic_bezier(
+        iterations, segments, pos, p0, p1, p2, p3);
+    ImVec2 point_on_curve = eval_bezier(t, p0, p1, p2, p3);
+
+    const ImVec2 to_curve = point_on_curve - pos;
+    return ImSqrt(ImLengthSqr(to_curve));
+}
+
+inline bool is_mouse_hovering_near_link(
+    const ImVec2& p0,
+    const ImVec2& p1,
+    const ImVec2& p2,
+    const ImVec2& p3)
+{
+    bool near = false;
+    ImVec2 mouse_pos = ImGui::GetIO().MousePos;
+
+    // First, do an AABB test to see whether it the distance
+    // to the line is worth checking in greater detail
+    float xmin = ImMin(p0.x, p3.x);
+    float xmax = ImMax(p0.x, p3.x);
+    float ymin = ImMin(p0.y, p3.y);
+    float ymax = ImMax(p0.y, p3.y);
+
+    if ((mouse_pos.x > xmin && mouse_pos.x < xmax) &&
+        (mouse_pos.y > ymin && mouse_pos.y < ymax))
+    {
+        float distance =
+            get_distance_to_cubic_bezier(mouse_pos, p0, p1, p2, p3);
+        if (distance < LINK_HOVER_DISTANCE)
+        {
+            near = true;
+        }
+    }
+
+    return near;
 }
 
 inline ImVec2 input_pin_position(
@@ -545,12 +657,17 @@ void draw_link(const EditorContext& editor, int link_idx)
             editor.nodes[pin_input.node_idx]
                 .input_attributes[pin_input.attribute_idx]);
     }
+    bool is_hovered =
+        is_mouse_hovering_near_link(start, start + normal, end - normal, end);
+    ImU32 link_color = is_hovered ? g.color_styles[ColorStyle_LinkHovered]
+                                  : g.color_styles[ColorStyle_Link];
+
     editor.grid_draw_list->AddBezierCurve(
         start,
         start + normal,
         end - normal,
         end,
-        g.color_styles[ColorStyle_Link],
+        link_color,
         LINK_THICKNESS,
         LINK_NUM_SEGMENTS);
 }
@@ -560,7 +677,7 @@ void Initialize()
 {
     assert(g.guard.initialized == false);
     g.guard.initialized = true;
-    
+
     g.default_editor_ctx = NULL;
     g.editor_ctx = NULL;
     g.grid_origin = ImVec2(0.0f, 0.0f);
@@ -586,6 +703,8 @@ void Initialize()
     g.color_styles[ColorStyle_TitleBarSelected] =
         IM_COL32(85, 0, 55, 255); // TODO: different default value for this?
     g.color_styles[ColorStyle_Link] = IM_COL32(200, 200, 100, 255);
+    g.color_styles[ColorStyle_LinkHovered] = IM_COL32(250, 250, 100, 255);
+    g.color_styles[ColorStyle_LinkSelected] = IM_COL32(250, 250, 100, 255);
     g.color_styles[ColorStyle_Pin] = IM_COL32(150, 150, 150, 255);
     g.color_styles[ColorStyle_PinHovered] = IM_COL32(200, 200, 100, 255);
     g.color_styles[ColorStyle_PinInvalid] = IM_COL32(255, 0, 0, 255);

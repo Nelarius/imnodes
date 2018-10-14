@@ -22,6 +22,8 @@ enum ColorStyle
     ColorStyle_TitleBarHovered,
     ColorStyle_TitleBarSelected,
     ColorStyle_Link,
+    ColorStyle_LinkHovered,
+    ColorStyle_LinkSelected,
     ColorStyle_Pin,
     ColorStyle_PinHovered,
     ColorStyle_PinInvalid,
