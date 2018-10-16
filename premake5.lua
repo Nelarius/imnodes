@@ -18,6 +18,8 @@ workspace "imnodes"
     filter "action:vs*"
         defines { "_CRT_SECURE_NO_WARNINGS" }
 
+    warnings "Extra"
+
     startproject "example"
 
     project "gl3w"
