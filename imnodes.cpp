@@ -165,6 +165,8 @@ static struct
 
     int hovered_node;
     int selected_node;
+    int hovered_link;
+    int selected_link;
 } g;
 
 EditorContext& editor_context_get()
@@ -628,7 +630,7 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
     ImGui::PopID();
 }
 
-void draw_link(const EditorContext& editor, int link_idx)
+void draw_link(const EditorContext& editor, const int link_idx)
 {
     const Pin& pin_input =
         editor.links[link_idx].pin1.type == AttributeType_Input
@@ -657,10 +659,29 @@ void draw_link(const EditorContext& editor, int link_idx)
             editor.nodes[pin_input.node_idx]
                 .input_attributes[pin_input.attribute_idx]);
     }
+
     bool is_hovered =
         is_mouse_hovering_near_link(start, start + normal, end - normal, end);
-    ImU32 link_color = is_hovered ? g.color_styles[ColorStyle_LinkHovered]
-                                  : g.color_styles[ColorStyle_Link];
+    if (is_hovered)
+    {
+        g.hovered_link = link_idx;
+        if (ImGui::IsMouseClicked(0))
+        {
+            g.selected_link = link_idx;
+        }
+    }
+
+    ColorStyle style = ColorStyle_Link;
+    if (g.selected_link == link_idx)
+    {
+        style = ColorStyle_LinkSelected;
+    }
+    else if (is_hovered)
+    {
+        style = ColorStyle_LinkHovered;
+    }
+
+    ImU32 link_color = g.color_styles[style];
 
     editor.grid_draw_list->AddBezierCurve(
         start,
@@ -692,6 +713,11 @@ void Initialize()
 
     g.link_dragged = Link();
 
+    g.hovered_node = INVALID_INDEX;
+    g.selected_node = INVALID_INDEX;
+    g.hovered_link = INVALID_INDEX;
+    g.selected_link = INVALID_INDEX;
+
     g.color_styles[ColorStyle_NodeBackground] = IM_COL32(60, 60, 60, 255);
     g.color_styles[ColorStyle_NodeBackgroundHovered] =
         IM_COL32(75, 75, 75, 255);
@@ -704,7 +730,7 @@ void Initialize()
         IM_COL32(85, 0, 55, 255); // TODO: different default value for this?
     g.color_styles[ColorStyle_Link] = IM_COL32(200, 200, 100, 255);
     g.color_styles[ColorStyle_LinkHovered] = IM_COL32(250, 250, 100, 255);
-    g.color_styles[ColorStyle_LinkSelected] = IM_COL32(250, 250, 100, 255);
+    g.color_styles[ColorStyle_LinkSelected] = IM_COL32(255, 255, 255, 255);
     g.color_styles[ColorStyle_Pin] = IM_COL32(150, 150, 150, 255);
     g.color_styles[ColorStyle_PinHovered] = IM_COL32(200, 200, 100, 255);
     g.color_styles[ColorStyle_PinInvalid] = IM_COL32(255, 0, 0, 255);
@@ -733,6 +759,7 @@ void BeginNodeEditor()
     g.moved_node.index = INVALID_INDEX;
     g.moved_node.position = ImVec2(0.0f, 0.0f);
     g.hovered_node = INVALID_INDEX;
+    g.hovered_link = INVALID_INDEX;
     // reset ui events for the current editor context
     EditorContext& editor = editor_context_get();
     editor.link_delete_queue.events.clear();
@@ -778,6 +805,8 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
+    const bool is_mouse_clicked = ImGui::IsMouseClicked(0);
+
     /***
      *         ___          __                         __
      *     ___/ (_)__ ___  / /__ ___ __  ___  ___  ___/ /__ ___
@@ -798,7 +827,7 @@ void EndNodeEditor()
     // check to see if the mouse was near any node
     if (g.hovered_node == INVALID_INDEX)
     {
-        if (ImGui::IsMouseClicked(0))
+        if (is_mouse_clicked)
         {
             g.selected_node = INVALID_INDEX;
         }
@@ -817,6 +846,14 @@ void EndNodeEditor()
     for (int i = 0; i < editor.links.size(); i++)
     {
         draw_link(editor, i);
+    }
+
+    if (g.hovered_link == INVALID_INDEX)
+    {
+        if (is_mouse_clicked)
+        {
+            g.selected_link = INVALID_INDEX;
+        }
     }
 
     // See if a new link is created on a pin
@@ -906,11 +943,13 @@ void EndNodeEditor()
     editor.grid_draw_list->ChannelsMerge();
     editor.grid_draw_list = nullptr;
 
-    // see if the user deleted a node
+    // see if the user deleted a node or link
     if (ImGui::IsKeyReleased(SDL_SCANCODE_DELETE))
     {
         if (g.selected_node != INVALID_INDEX)
         {
+            assert(g.selected_node >= 0);
+            assert(g.selected_node < editor.nodes.size());
             // TODO: maybe this could be a part of the global context
             ImVector<int> deleted_links;
             // Update the link array
@@ -971,6 +1010,24 @@ void EndNodeEditor()
                 editor.nodes.pop_back();
                 g.selected_node = INVALID_INDEX;
             }
+        }
+
+        else if (g.selected_link != INVALID_INDEX)
+        {
+            assert(g.selected_link >= 0);
+            assert(g.selected_link < editor.links.size());
+
+            Link link = editor.links[g.selected_link];
+            LinkDeletedEvent e;
+            e.output_node = node_index_to_id(link.pin1.node_idx);
+            e.output_attribute = link.pin1.attribute_idx;
+            e.input_node = node_index_to_id(link.pin2.node_idx);
+            e.input_attribute = link.pin2.attribute_idx;
+            editor.link_delete_queue.events.push_back(e);
+
+            editor.links.erase_unsorted(editor.links.Data + g.selected_link);
+
+            g.selected_link = INVALID_INDEX;
         }
     }
 
@@ -1117,12 +1174,15 @@ void PopColorStyle(ColorStyle item)
     g.color_style_stack.pop_back();
 }
 
-void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition)
+void SetNodePos(
+    int node_id,
+    const ImVec2& screen_space_pos,
+    ImGuiCond condition)
 {
     assert(g.guard.initialized);
     int index = find_or_create_new_node(node_id);
     editor_context_get().nodes[index].origin =
-        pos - editor_context_get().panning - g.grid_origin;
+        screen_space_pos - editor_context_get().panning - g.grid_origin;
 }
 
 bool IsAttributeActive(int* node, int* attribute)
