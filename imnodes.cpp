@@ -580,17 +580,28 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
         g.moved_node.position = node.origin + ImGui::GetIO().MouseDelta;
     }
 
+    ColorStyle color_style_node = ColorStyle_NodeBackground;
+    ColorStyle color_style_title = ColorStyle_TitleBar;
+
+    if (g.selected_node == node_idx)
     {
-        bool is_active =
-            g.hovered_node == node_idx || g.selected_node == node_idx;
+        color_style_node = ColorStyle_NodeBackgroundSelected;
+        color_style_title = ColorStyle_TitleBarSelected;
+    }
+    else if (g.hovered_node == node_idx)
+    {
+        color_style_node = ColorStyle_NodeBackgroundHovered;
+        color_style_title = ColorStyle_TitleBarHovered;
+    }
+
+    {
         // node base
-        {
-            ImU32 color =
-                is_active ? node.color_styles[ColorStyle_NodeBackgroundHovered]
-                          : node.color_styles[ColorStyle_NodeBackground];
-            editor.grid_draw_list->AddRectFilled(
-                node_rect.Min, node_rect.Max, color, NODE_CORNER_ROUNDNESS);
-        }
+        editor.grid_draw_list->AddRectFilled(
+            node_rect.Min,
+            node_rect.Max,
+            node.color_styles[color_style_node],
+            NODE_CORNER_ROUNDNESS);
+
         // title bar:
         {
             ImRect title_rect = get_title_bar_rect(node);
@@ -601,13 +612,10 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
             // y-component is just looked up from the text height
             title_rect.Min += editor.panning;
             title_rect.Max.y += editor.panning.y;
-            ImU32 color = is_active
-                              ? node.color_styles[ColorStyle_TitleBarHovered]
-                              : node.color_styles[ColorStyle_TitleBar];
             editor.grid_draw_list->AddRectFilled(
                 title_rect.Min,
                 title_rect.Max,
-                color,
+                node.color_styles[color_style_title],
                 NODE_CORNER_ROUNDNESS,
                 ImDrawCornerFlags_Top);
             ImGui::SetCursorPos(get_node_title_origin(node) + editor.panning);
