@@ -455,7 +455,7 @@ int find_or_create_new_node(int id)
 bool link_exists(const Pin& start, const Pin& end)
 {
     const EditorContext& editor = editor_context_get();
-    for (std::size_t i = 0u; i < editor.links.size(); i++)
+    for (int i = 0u; i < editor.links.size(); i++)
     {
         const Link& link = editor.links[i];
         if (link.pin1 == start && link.pin2 == end)
