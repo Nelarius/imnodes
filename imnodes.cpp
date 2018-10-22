@@ -397,7 +397,11 @@ EditorContext* EditorContextCreate()
     return (EditorContext*)mem;
 }
 
-void EditorContextFree(EditorContext* ctx) { ImGui::MemFree(ctx); }
+void EditorContextFree(EditorContext* ctx)
+{
+    ctx->~EditorContext();
+    ImGui::MemFree(ctx);
+}
 
 void EditorContextSet(EditorContext* ctx) { g.editor_ctx = ctx; }
 
