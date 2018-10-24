@@ -11,12 +11,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// TODO
-// Don't refer to node indices in links, pins, refer to id, and maintain a map
-// of ids for each frame!
-//
-// Maybe a separate color for node selection?
-
 namespace imnodes
 {
 namespace
@@ -870,7 +864,7 @@ void EndNodeEditor()
 
     // See if a new link is created on a pin
 
-    if (ImGui::IsMouseClicked(0))
+    if (is_mouse_clicked)
     {
         g.link_dragged.pin1 = pin_hovered;
     }
@@ -1031,10 +1025,14 @@ void EndNodeEditor()
 
             Link link = editor.links[g.selected_link];
             LinkDeletedEvent e;
-            e.output_node = node_index_to_id(link.pin1.node_idx);
-            e.output_attribute = link.pin1.attribute_idx;
-            e.input_node = node_index_to_id(link.pin2.node_idx);
-            e.input_attribute = link.pin2.attribute_idx;
+            const Pin output_pin =
+                link.pin1.type == AttributeType_Output ? link.pin1 : link.pin2;
+            const Pin input_pin =
+                link.pin1.type == AttributeType_Input ? link.pin1 : link.pin2;
+            e.output_node = node_index_to_id(output_pin.node_idx);
+            e.output_attribute = output_pin.attribute_idx;
+            e.input_node = node_index_to_id(input_pin.node_idx);
+            e.input_attribute = input_pin.attribute_idx;
             editor.link_delete_queue.events.push_back(e);
 
             editor.links.erase_unsorted(editor.links.Data + g.selected_link);
