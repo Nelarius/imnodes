@@ -998,11 +998,7 @@ void EndNodeEditor()
             for (int i = 0; i < deleted_links.size(); i++)
             {
                 int idx = deleted_links[i];
-                if (idx < editor.links.size() - 1)
-                {
-                    std::swap(editor.links[idx], editor.links.back());
-                }
-                editor.links.pop_back();
+                editor.links.erase_unsorted(editor.links.Data + idx);
             }
 
             // Finally, emit the node deleted event
@@ -1012,8 +1008,8 @@ void EndNodeEditor()
                 editor.node_delete_queue.events.push_back(e);
                 editor.node_map.SetInt(editor.nodes.back().id, g.selected_node);
                 editor.node_map.SetInt(INVALID_INDEX, g.selected_node);
-                std::swap(editor.nodes[g.selected_node], editor.nodes.back());
-                editor.nodes.pop_back();
+                editor.nodes.erase_unsorted(
+                    editor.nodes.Data + g.selected_node);
                 g.selected_node = INVALID_INDEX;
             }
         }
