@@ -1,6 +1,7 @@
 #include "node_editor.h"
 #include "imnodes.h"
 
+#include <algorithm>
 #include <unordered_map>
 #include <vector>
 
@@ -19,8 +20,8 @@ class SimpleNodeEditor
 {
 public:
     SimpleNodeEditor()
-        : current_id_(0), input_nodes_(), output_nodes_(), dragfloat_nodes_(),
-          big_nodes_(), dragfloat_data_(), color_data_()
+        : current_id_(0), node_array_map_(), input_nodes_(), output_nodes_(),
+          dragfloat_nodes_(), big_nodes_(), dragfloat_data_(), color_data_()
     {
     }
 
@@ -151,9 +152,7 @@ public:
                 ImGui::PopItemWidth();
                 imnodes::EndAttribute();
             }
-
             ImGui::Spacing();
-
             {
                 imnodes::BeginAttribute(
                     make_id(big_node, 3), imnodes::AttributeType_Output);
@@ -163,7 +162,7 @@ public:
                 ImGui::PopItemWidth();
                 imnodes::EndAttribute();
             }
-
+            ImGui::Spacing();
             {
                 imnodes::BeginAttribute(
                     make_id(big_node, 5), imnodes::AttributeType_Output);
@@ -207,12 +206,14 @@ public:
             {
                 new_node = current_id_++;
                 input_nodes_.push_back(new_node);
+                node_array_map_[new_node] = &input_nodes_;
             }
 
             if (ImGui::MenuItem("Output only"))
             {
                 new_node = current_id_++;
                 output_nodes_.push_back(new_node);
+                node_array_map_[new_node] = &output_nodes_;
             }
 
             if (ImGui::MenuItem("Drag float"))
@@ -220,6 +221,7 @@ public:
                 new_node = current_id_++;
                 dragfloat_nodes_.push_back(new_node);
                 dragfloat_data_[new_node] = 1.0f;
+                node_array_map_[new_node] = &dragfloat_nodes_;
             }
 
             if (ImGui::MenuItem("Big node"))
@@ -228,6 +230,7 @@ public:
                 dragfloat_data_[new_node] = 0.0f;
                 color_data_[new_node] = Color3{1.0f, 0.0f, 0.0f};
                 big_nodes_.push_back(new_node);
+                node_array_map_[new_node] = &big_nodes_;
             }
 
             ImGui::EndPopup();
@@ -240,12 +243,26 @@ public:
         ImGui::PopStyleVar();
         imnodes::EndNodeEditor();
 
+        // event handling
+        {
+            int node_deleted;
+            while (imnodes::NodeDeleted(&node_deleted))
+            {
+                auto& nodes = *node_array_map_[node_deleted];
+                std::swap(
+                    *std::find(nodes.begin(), nodes.end(), node_deleted),
+                    nodes.back());
+                nodes.pop_back();
+            }
+        }
+
         ImGui::End();
     }
 
 private:
     int current_id_;
 
+    std::unordered_map<int, std::vector<int>*> node_array_map_;
     std::vector<int> input_nodes_;
     std::vector<int> output_nodes_;
     std::vector<int> dragfloat_nodes_;
