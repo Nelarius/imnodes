@@ -104,16 +104,6 @@ struct Link
     Link() : pin1(), pin2() {}
 };
 
-struct NodeDeletedEvent
-{
-    int index;
-};
-
-struct LinkDeletedEvent
-{
-    int output_node, output_attribute, input_node, input_attribute;
-};
-
 // This is used to initialize the boolean flag in the static struct
 struct InitializeGuard
 {
@@ -364,22 +354,16 @@ struct EditorContext
     struct
     {
         int current_index;
-        ImVector<LinkDeletedEvent> events;
-    } link_delete_queue;
-
-    struct
-    {
-        int current_index;
-        ImVector<NodeDeletedEvent> events;
-    } node_delete_queue;
+        ImVector<Event> events;
+    } event_queue;
 
     // ui related fields
     ImVec2 panning;
     ImDrawList* grid_draw_list;
 
     EditorContext()
-        : node_map(), nodes(), links(), link_delete_queue(),
-          node_delete_queue(), panning(0.f, 0.f), grid_draw_list(nullptr)
+        : node_map(), nodes(), links(), event_queue(), panning(0.f, 0.f),
+          grid_draw_list(nullptr)
     {
     }
 };
@@ -404,32 +388,6 @@ namespace
 inline int node_index_to_id(int node_idx)
 {
     return editor_context_get().nodes[node_idx].id;
-}
-
-inline bool get_link_delete_event(LinkDeletedEvent& event)
-{
-    EditorContext& editor = editor_context_get();
-    if (editor.link_delete_queue.current_index <
-        editor.link_delete_queue.events.size())
-    {
-        event = editor.link_delete_queue
-                    .events[editor.link_delete_queue.current_index++];
-        return true;
-    }
-    return false;
-}
-
-inline bool get_node_delete_event(NodeDeletedEvent& event)
-{
-    EditorContext& editor = editor_context_get();
-    if (editor.node_delete_queue.current_index <
-        editor.node_delete_queue.events.size())
-    {
-        event = editor.node_delete_queue
-                    .events[editor.node_delete_queue.current_index++];
-        return true;
-    }
-    return false;
 }
 
 int find_or_create_new_node(int id)
@@ -461,6 +419,23 @@ bool link_exists(const Pin& start, const Pin& end)
     }
 
     return false;
+}
+
+inline Event event_for_link_deleted(const Link& link)
+{
+    const Pin& output_pin =
+        link.pin1.type == AttributeType_Output ? link.pin1 : link.pin2;
+    const Pin& input_pin =
+        link.pin1.type == AttributeType_Input ? link.pin1 : link.pin2;
+
+    Event event;
+    event.type = EventType_LinkDeleted;
+    event.link_deleted.output_node = output_pin.node_idx;
+    event.link_deleted.output_attribute = output_pin.attribute_idx;
+    event.link_deleted.input_node = input_pin.node_idx;
+    event.link_deleted.input_attribute = input_pin.attribute_idx;
+
+    return event;
 }
 
 void draw_grid(const EditorContext& editor)
@@ -755,11 +730,7 @@ void BeginNodeEditor()
     g.current_scope = SCOPE_EDITOR;
 
     // Reset state from previous pass
-    if (is_pin_valid(g.link_dragged.pin1) && is_pin_valid(g.link_dragged.pin2))
-    {
-        // Reset a newly created link
-        g.link_dragged = Link();
-    }
+
     g.active_node.index = INVALID_INDEX;
     g.active_node.attribute = INVALID_INDEX;
     g.moved_node.index = INVALID_INDEX;
@@ -768,10 +739,8 @@ void BeginNodeEditor()
     g.hovered_link = INVALID_INDEX;
     // reset ui events for the current editor context
     EditorContext& editor = editor_context_get();
-    editor.link_delete_queue.events.clear();
-    editor.link_delete_queue.current_index = 0;
-    editor.node_delete_queue.events.clear();
-    editor.node_delete_queue.current_index = 0;
+    editor.event_queue.current_index = 0;
+    editor.event_queue.events.clear();
 
     assert(editor.grid_draw_list == nullptr);
 
@@ -920,7 +889,33 @@ void EndNodeEditor()
             if (is_pin_valid(pin_hovered))
             {
                 g.link_dragged.pin2 = pin_hovered;
+                assert(
+                    g.link_dragged.pin1.type == AttributeType_Input ||
+                    g.link_dragged.pin1.type == AttributeType_Output);
+                assert(
+                    g.link_dragged.pin2.type == AttributeType_Input ||
+                    g.link_dragged.pin2.type == AttributeType_Output);
+                assert(g.link_dragged.pin1.type != g.link_dragged.pin2.type);
                 editor.links.push_back(g.link_dragged);
+
+                const Pin& output_pin =
+                    g.link_dragged.pin1.type == AttributeType_Output
+                        ? g.link_dragged.pin1
+                        : g.link_dragged.pin2;
+                const Pin& input_pin =
+                    g.link_dragged.pin1.type == AttributeType_Input
+                        ? g.link_dragged.pin1
+                        : g.link_dragged.pin2;
+                Event event;
+                event.type = EventType_LinkCreated;
+                event.link_created.output_node = output_pin.node_idx;
+                event.link_created.output_attribute = output_pin.attribute_idx;
+                event.link_created.input_node = input_pin.node_idx;
+                event.link_created.input_attribute = input_pin.attribute_idx;
+                editor.event_queue.events.push_back(event);
+
+                // finally, reset the newly created link
+                g.link_dragged = Link();
             }
             else
             {
@@ -962,18 +957,12 @@ void EndNodeEditor()
             for (int i = 0; i < editor.links.size(); i++)
             {
                 Link& link = editor.links[i];
-                // Remove the links that are connected to the deleted node
+                // Remove the links that are connectedg to the deleted node
                 if (link.pin1.node_idx == g.selected_node ||
                     link.pin2.node_idx == g.selected_node)
                 {
-                    int output_node = node_index_to_id(link.pin1.node_idx);
-                    int input_node = node_index_to_id(link.pin2.node_idx);
-                    LinkDeletedEvent e;
-                    e.output_node = output_node;
-                    e.output_attribute = link.pin1.attribute_idx;
-                    e.input_node = input_node;
-                    e.input_attribute = link.pin2.attribute_idx;
-                    editor.link_delete_queue.events.push_back(e);
+                    Event event = event_for_link_deleted(link);
+                    editor.event_queue.events.push_back(event);
                     deleted_links.push_back(i);
                 }
                 // Update the node indices of the links, since the node gets
@@ -1001,17 +990,20 @@ void EndNodeEditor()
                 editor.links.erase_unsorted(editor.links.Data + idx);
             }
 
-            // Finally, emit the node deleted event
-            {
-                NodeDeletedEvent e;
-                e.index = node_index_to_id(g.selected_node);
-                editor.node_delete_queue.events.push_back(e);
-                editor.node_map.SetInt(editor.nodes.back().id, g.selected_node);
-                editor.node_map.SetInt(INVALID_INDEX, g.selected_node);
-                editor.nodes.erase_unsorted(
-                    editor.nodes.Data + g.selected_node);
-                g.selected_node = INVALID_INDEX;
-            }
+            // construct and queue the event
+            Event event;
+            event.type = EventType_NodeDeleted;
+            event.node_deleted.node_idx = node_index_to_id(g.selected_node);
+            editor.event_queue.events.push_back(event);
+
+            // erase the node id from the map
+            editor.node_map.SetInt(editor.nodes.back().id, g.selected_node);
+            editor.node_map.SetInt(INVALID_INDEX, g.selected_node);
+
+            // erase the entry from the array
+            editor.nodes.erase_unsorted(editor.nodes.Data + g.selected_node);
+
+            g.selected_node = INVALID_INDEX;
         }
 
         else if (g.selected_link != INVALID_INDEX)
@@ -1019,17 +1011,9 @@ void EndNodeEditor()
             assert(g.selected_link >= 0);
             assert(g.selected_link < editor.links.size());
 
-            Link link = editor.links[g.selected_link];
-            LinkDeletedEvent e;
-            const Pin output_pin =
-                link.pin1.type == AttributeType_Output ? link.pin1 : link.pin2;
-            const Pin input_pin =
-                link.pin1.type == AttributeType_Input ? link.pin1 : link.pin2;
-            e.output_node = node_index_to_id(output_pin.node_idx);
-            e.output_attribute = output_pin.attribute_idx;
-            e.input_node = node_index_to_id(input_pin.node_idx);
-            e.input_attribute = input_pin.attribute_idx;
-            editor.link_delete_queue.events.push_back(e);
+            const Link link = editor.links[g.selected_link];
+            Event event = event_for_link_deleted(link);
+            editor.event_queue.events.push_back(event);
 
             editor.links.erase_unsorted(editor.links.Data + g.selected_link);
 
@@ -1206,75 +1190,15 @@ bool IsAttributeActive(int* node, int* attribute)
     return false;
 }
 
-bool NewLinkCreated(
-    int* output_node,
-    int* output_attribute,
-    int* input_node,
-    int* input_attribute)
+bool PollEvent(Event& event)
 {
-    // TODO: maybe this could use the event queue as well?
-    assert(g.current_scope == SCOPE_NONE);
-    if (is_pin_valid(g.link_dragged.pin1) && is_pin_valid(g.link_dragged.pin2))
+    EditorContext& editor = editor_context_get();
+    if (editor.event_queue.current_index < editor.event_queue.events.size())
     {
-        assert(
-            g.link_dragged.pin1.type == AttributeType_Input ||
-            g.link_dragged.pin1.type == AttributeType_Output);
-        assert(
-            g.link_dragged.pin2.type == AttributeType_Input ||
-            g.link_dragged.pin2.type == AttributeType_Output);
-        assert(g.link_dragged.pin1.type != g.link_dragged.pin2.type);
-        const Pin *output_pin, *input_pin;
-        if (g.link_dragged.pin1.type == AttributeType_Input)
-        {
-            output_pin = &g.link_dragged.pin2;
-            input_pin = &g.link_dragged.pin1;
-        }
-        else
-        {
-            output_pin = &g.link_dragged.pin1;
-            input_pin = &g.link_dragged.pin2;
-        }
-
-        EditorContext& editor = editor_context_get();
-        // TODO: what if the pointers are null?
-        *output_node = editor.nodes[output_pin->node_idx].id;
-        *output_attribute = output_pin->attribute_idx;
-        *input_node = editor.nodes[input_pin->node_idx].id;
-        *input_attribute = input_pin->attribute_idx;
-
+        event = editor.event_queue.events[editor.event_queue.current_index++];
         return true;
     }
 
-    return false;
-}
-
-bool NodeDeleted(int* deleted_node)
-{
-    // TODO: separate event queues for node, link events
-    NodeDeletedEvent e;
-    if (get_node_delete_event(e))
-    {
-        *deleted_node = e.index;
-        return true;
-    }
-    return false;
-}
-
-bool LinkDeleted(
-    int* output_node,
-    int* output_attribute,
-    int* input_node,
-    int* input_attribute)
-{
-    LinkDeletedEvent e;
-    if (get_link_delete_event(e))
-    {
-        *output_node = e.output_node;
-        *output_attribute = e.output_attribute;
-        *input_node = e.input_node;
-        *input_attribute = e.input_attribute;
-        return true;
-    }
     return false;
 }
 } // namespace imnodes

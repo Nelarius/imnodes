@@ -33,6 +33,41 @@ enum ColorStyle
     ColorStyle_Count
 };
 
+enum EventType
+{
+    EventType_LinkCreated,
+    EventType_NodeDeleted,
+    EventType_LinkDeleted
+};
+
+struct Event
+{
+    EventType type;
+    union
+    {
+        struct
+        {
+            int output_node;
+            int output_attribute;
+            int input_node;
+            int input_attribute;
+        } link_created;
+
+        struct
+        {
+            int node_idx;
+        } node_deleted;
+
+        struct
+        {
+            int output_node;
+            int output_attribute;
+            int input_node;
+            int input_attribute;
+        } link_deleted;
+    };
+};
+
 struct EditorContext;
 
 EditorContext* EditorContextCreate();
@@ -62,15 +97,5 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
 
 bool IsAttributeActive(int* node, int* attribute);
 
-bool NewLinkCreated(
-    int* output_node,
-    int* output_attribute,
-    int* input_node,
-    int* input_attribute);
-bool NodeDeleted(int* deleted_node);
-bool LinkDeleted(
-    int* output_node,
-    int* output_attribute,
-    int* input_node,
-    int* input_attribute);
+bool PollEvent(Event& event);
 } // namespace imnodes

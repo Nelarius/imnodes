@@ -245,14 +245,27 @@ public:
 
         // event handling
         {
-            int node_deleted;
-            while (imnodes::NodeDeleted(&node_deleted))
+            imnodes::Event event;
+            while (imnodes::PollEvent(event))
             {
-                auto& nodes = *node_array_map_[node_deleted];
-                std::swap(
-                    *std::find(nodes.begin(), nodes.end(), node_deleted),
-                    nodes.back());
-                nodes.pop_back();
+                switch (event.type)
+                {
+                    case imnodes::EventType_NodeDeleted:
+                    {
+                        auto& nodes =
+                            *node_array_map_[event.node_deleted.node_idx];
+                        std::swap(
+                            *std::find(
+                                nodes.begin(),
+                                nodes.end(),
+                                event.node_deleted.node_idx),
+                            nodes.back());
+                        nodes.pop_back();
+                        break;
+                    }
+                    default:
+                        break;
+                }
             }
         }
 
