@@ -15,6 +15,17 @@ namespace imnodes
 {
 namespace
 {
+// Additional ImGui math operators
+inline ImVec2 operator*(const float lhs, const ImVec2& rhs)
+{
+    return ImVec2(lhs * rhs.x, lhs * rhs.y);
+}
+
+inline ImVec2 operator*(const ImVec2& lhs, const float rhs)
+{
+    return ImVec2(lhs.x * rhs, lhs.y * rhs);
+}
+
 // Grid appearance
 static const float GRID_SIZE = 32.f;
 
@@ -291,6 +302,14 @@ inline float get_distance_to_cubic_bezier(
 
     const ImVec2 to_curve = point_on_curve - pos;
     return ImSqrt(ImLengthSqr(to_curve));
+}
+
+// Get a control point which you can add and subtract from p0 and p3,
+// respectively, to obtain p1 and p2.
+inline ImVec2 get_link_control_point(const ImVec2& p0, const ImVec2& p3)
+{
+    const float link_length = ImSqrt(ImLengthSqr(p3 - p0));
+    return ImVec2(0.25f * link_length, 0.f);
 }
 
 inline bool is_mouse_hovering_near_link(
@@ -622,7 +641,7 @@ void draw_link(const EditorContext& editor, const int link_idx)
             ? editor.links[link_idx].pin1
             : editor.links[link_idx].pin2;
 
-    ImVec2 start, end, normal;
+    ImVec2 start, end, cpoint;
     {
         // TODO: maybe compute the current node_rect and store it instead of
         // recomputing it all the time
@@ -632,7 +651,7 @@ void draw_link(const EditorContext& editor, const int link_idx)
             editor.nodes[pin_output.node_idx]
                 .output_attributes[pin_output.attribute_idx]);
     }
-    normal = ImVec2(50.f, 0.f);
+
     {
         ImRect node_rect = get_node_rect(editor.nodes[pin_input.node_idx]);
         end = input_pin_position(
@@ -641,8 +660,10 @@ void draw_link(const EditorContext& editor, const int link_idx)
                 .input_attributes[pin_input.attribute_idx]);
     }
 
+    cpoint = get_link_control_point(start, end);
+
     bool is_hovered =
-        is_mouse_hovering_near_link(start, start + normal, end - normal, end);
+        is_mouse_hovering_near_link(start, start + cpoint, end - cpoint, end);
     if (is_hovered)
     {
         g.hovered_link = link_idx;
@@ -666,8 +687,8 @@ void draw_link(const EditorContext& editor, const int link_idx)
 
     editor.grid_draw_list->AddBezierCurve(
         start,
-        start + normal,
-        end - normal,
+        start + cpoint,
+        end - cpoint,
         end,
         link_color,
         LINK_THICKNESS,
@@ -845,7 +866,12 @@ void EndNodeEditor()
         const Pin& pin = g.link_dragged.pin1;
         const Node& node = editor_context_get().nodes[pin.node_idx];
         ImRect node_rect = get_node_rect(node);
-        ImVec2 start, end, normal;
+        ImVec2 start, end, cpoint;
+        // Normally we compute the control point on a link going from output to
+        // input. However, the user may be dragging the the link from an input
+        // attribute. We have to flip the sign of the control point in that
+        // case.
+        float sign = 1.f;
         assert(
             pin.type == AttributeType_Input ||
             pin.type == AttributeType_Output);
@@ -853,20 +879,19 @@ void EndNodeEditor()
         {
             start = input_pin_position(
                 node_rect, node.input_attributes[pin.attribute_idx]);
-            // TODO: stretch the normal as a function of length?
-            normal = ImVec2(-50.f, 0.0f);
+            sign = -1.f;
         }
         else if (pin.type == AttributeType_Output)
         {
             start = output_pin_position(
                 node_rect, node.output_attributes[pin.attribute_idx]);
-            normal = ImVec2(50.f, 0.f);
         }
         end = ImGui::GetIO().MousePos;
+        cpoint = get_link_control_point(start, end);
         editor.grid_draw_list->AddBezierCurve(
             start,
-            start + normal,
-            end - normal,
+            start + sign * cpoint,
+            end - sign * cpoint,
             end,
             g.color_styles[ColorStyle_Link],
             LINK_THICKNESS,
