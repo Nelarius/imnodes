@@ -35,12 +35,11 @@ static const ImVec2 NODE_CONTENT_PADDING = ImVec2(8.f, 8.f);
 static const ImVec2 NODE_DUMMY_SPACING = ImVec2(80.f, 20.f);
 
 static const float LINK_THICKNESS = 3.f;
-static const int LINK_NUM_SEGMENTS = 30;
+static const float LINK_SEGMENTS_PER_LENGTH = 0.1f;
+static const float LINK_HOVER_DISTANCE = 7.0f;
 
 static const float NODE_PIN_RADIUS = 4.f;
 static const float NODE_PIN_HOVER_RADIUS = 10.f;
-
-static const float LINK_HOVER_DISTANCE = 7.0f;
 
 static const size_t NODE_NAME_STR_LEN = 32u;
 
@@ -113,6 +112,13 @@ struct Link
     Pin pin2;
 
     Link() : pin1(), pin2() {}
+};
+
+struct LinkRenderable
+{
+    // the bezier curve control points
+    ImVec2 p0, p1, p2, p3;
+    int num_segments;
 };
 
 // This is used to initialize the boolean flag in the static struct
@@ -304,12 +310,22 @@ inline float get_distance_to_cubic_bezier(
     return ImSqrt(ImLengthSqr(to_curve));
 }
 
-// Get a control point which you can add and subtract from p0 and p3,
-// respectively, to obtain p1 and p2.
-inline ImVec2 get_link_control_point(const ImVec2& p0, const ImVec2& p3)
+inline LinkRenderable get_link_renderable(
+    const ImVec2& output_pos,
+    const ImVec2& input_pos)
 {
-    const float link_length = ImSqrt(ImLengthSqr(p3 - p0));
-    return ImVec2(0.25f * link_length, 0.f);
+    const ImVec2 delta = input_pos - output_pos;
+    const float link_length = ImSqrt(ImLengthSqr(delta));
+    // const float sign = delta.x < 0.0f ? -1.f : 1.f;
+    LinkRenderable renderable;
+    const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
+    renderable.p0 = output_pos;
+    renderable.p1 = output_pos + offset;
+    renderable.p2 = input_pos - offset;
+    renderable.p3 = input_pos;
+    renderable.num_segments =
+        ImMax(int(link_length * LINK_SEGMENTS_PER_LENGTH), 1);
+    return renderable;
 }
 
 inline bool is_mouse_hovering_near_link(
@@ -459,8 +475,8 @@ inline Event event_for_link_deleted(const Link& link)
 
 void draw_grid(const EditorContext& editor)
 {
-    ImVec2 offset = editor.panning;
-    ImVec2 canvas_size = ImGui::GetWindowSize();
+    const ImVec2 offset = editor.panning;
+    const ImVec2 canvas_size = ImGui::GetWindowSize();
     for (float x = fmodf(offset.x, GRID_SIZE); x < canvas_size.x;
          x += GRID_SIZE)
     {
@@ -548,10 +564,10 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
 
     editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_FOREGROUND);
 
-    ImRect node_rect = get_node_rect(node);
+    const ImRect node_rect = get_node_rect(node);
 
     ImGui::SetCursorPos(node.origin + editor.panning);
-    ImGui::InvisibleButton("node", node_rect.GetSize());
+    ImGui::InvisibleButton(node.name, node_rect.GetSize());
 
     if (ImGui::IsItemHovered())
     {
@@ -641,11 +657,12 @@ void draw_link(const EditorContext& editor, const int link_idx)
             ? editor.links[link_idx].pin1
             : editor.links[link_idx].pin2;
 
-    ImVec2 start, end, cpoint;
+    ImVec2 start, end;
     {
         // TODO: maybe compute the current node_rect and store it instead of
         // recomputing it all the time
-        ImRect node_rect = get_node_rect(editor.nodes[pin_output.node_idx]);
+        const ImRect node_rect =
+            get_node_rect(editor.nodes[pin_output.node_idx]);
         start = output_pin_position(
             node_rect,
             editor.nodes[pin_output.node_idx]
@@ -653,17 +670,21 @@ void draw_link(const EditorContext& editor, const int link_idx)
     }
 
     {
-        ImRect node_rect = get_node_rect(editor.nodes[pin_input.node_idx]);
+        const ImRect node_rect =
+            get_node_rect(editor.nodes[pin_input.node_idx]);
         end = input_pin_position(
             node_rect,
             editor.nodes[pin_input.node_idx]
                 .input_attributes[pin_input.attribute_idx]);
     }
 
-    cpoint = get_link_control_point(start, end);
+    const LinkRenderable link_renderable = get_link_renderable(start, end);
 
-    bool is_hovered =
-        is_mouse_hovering_near_link(start, start + cpoint, end - cpoint, end);
+    const bool is_hovered = is_mouse_hovering_near_link(
+        link_renderable.p0,
+        link_renderable.p1,
+        link_renderable.p2,
+        link_renderable.p3);
     if (is_hovered)
     {
         g.hovered_link = link_idx;
@@ -683,16 +704,16 @@ void draw_link(const EditorContext& editor, const int link_idx)
         style = ColorStyle_LinkHovered;
     }
 
-    ImU32 link_color = g.color_styles[style];
+    const ImU32 link_color = g.color_styles[style];
 
     editor.grid_draw_list->AddBezierCurve(
-        start,
-        start + cpoint,
-        end - cpoint,
-        end,
+        link_renderable.p0,
+        link_renderable.p1,
+        link_renderable.p2,
+        link_renderable.p3,
         link_color,
         LINK_THICKNESS,
-        LINK_NUM_SEGMENTS);
+        link_renderable.num_segments);
 }
 } // namespace
 
@@ -865,37 +886,33 @@ void EndNodeEditor()
     {
         const Pin& pin = g.link_dragged.pin1;
         const Node& node = editor_context_get().nodes[pin.node_idx];
-        ImRect node_rect = get_node_rect(node);
-        ImVec2 start, end, cpoint;
-        // Normally we compute the control point on a link going from output to
-        // input. However, the user may be dragging the the link from an input
-        // attribute. We have to flip the sign of the control point in that
-        // case.
-        float sign = 1.f;
+        const ImRect node_rect = get_node_rect(node);
+        ImVec2 output_pos, input_pos;
         assert(
             pin.type == AttributeType_Input ||
             pin.type == AttributeType_Output);
         if (pin.type == AttributeType_Input)
         {
-            start = input_pin_position(
+            input_pos = input_pin_position(
                 node_rect, node.input_attributes[pin.attribute_idx]);
-            sign = -1.f;
+            output_pos = ImGui::GetIO().MousePos;
         }
         else if (pin.type == AttributeType_Output)
         {
-            start = output_pin_position(
+            output_pos = output_pin_position(
                 node_rect, node.output_attributes[pin.attribute_idx]);
+            input_pos = ImGui::GetIO().MousePos;
         }
-        end = ImGui::GetIO().MousePos;
-        cpoint = get_link_control_point(start, end);
+        const LinkRenderable link_renderable =
+            get_link_renderable(output_pos, input_pos);
         editor.grid_draw_list->AddBezierCurve(
-            start,
-            start + sign * cpoint,
-            end - sign * cpoint,
-            end,
+            link_renderable.p0,
+            link_renderable.p1,
+            link_renderable.p2,
+            link_renderable.p3,
             g.color_styles[ColorStyle_Link],
             LINK_THICKNESS,
-            LINK_NUM_SEGMENTS);
+            link_renderable.num_segments);
     }
 
     // Finish the new link!
@@ -1060,14 +1077,12 @@ void EndNodeEditor()
     ImGui::PopStyleVar();   // pop frame padding
     ImGui::EndGroup();
 
+    for (int idx = 0; idx < editor.nodes.size(); idx++)
     {
-        for (int idx = 0; idx < editor.nodes.size(); idx++)
-        {
-            Node& node = editor.nodes[idx];
+        Node& node = editor.nodes[idx];
 
-            node.input_attributes.clear();
-            node.output_attributes.clear();
-        }
+        node.input_attributes.clear();
+        node.output_attributes.clear();
     }
 }
 
