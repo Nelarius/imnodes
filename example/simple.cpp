@@ -1,5 +1,6 @@
 #include "node_editor.h"
 #include "imnodes.h"
+#include "imgui.h"
 
 #include <algorithm>
 #include <unordered_map>

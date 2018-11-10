@@ -53,3 +53,17 @@ workspace "imnodes"
         filter "system:macosx"
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
             linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
+
+    project "saveload"
+        location(project_location)
+        kind "WindowedApp"
+        language "C++"
+        targetdir "bin/%{cfg.buildcfg}"
+        files {"example/main.cpp", "example/save_load.cpp", "imnodes.cpp" }
+        includedirs { ".", "imgui", "gl3w/include" }
+        links { "gl3w", "imgui" }
+        filter { "action:gmake" }
+            buildoptions { "-std=c++11" }
+        filter "system:macosx"
+            includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
+            linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }

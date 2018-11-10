@@ -98,4 +98,5 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
 bool IsAttributeActive(int* node, int* attribute);
 
 bool PollEvent(Event& event);
+const char* SaveEditorStateToMemory(const EditorContext* editor = NULL);
 } // namespace imnodes

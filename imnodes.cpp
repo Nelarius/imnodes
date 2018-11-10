@@ -7,8 +7,8 @@
 #include <algorithm> // for std::sort
 #include <assert.h>
 #include <functional> // for std::greater<>
-#include <string.h>
-#include <stdint.h>
+#include <string.h>   // strlen, strncmp
+#include <stdio.h>    // for ssprintf, sscanf
 #include <stdlib.h>
 
 namespace imnodes
@@ -168,6 +168,8 @@ static struct
     int selected_node;
     int hovered_link;
     int selected_link;
+
+    ImGuiTextBuffer text_buffer;
 } g;
 
 EditorContext& editor_context_get()
@@ -1240,5 +1242,41 @@ bool PollEvent(Event& event)
     }
 
     return false;
+}
+const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
+{
+    const EditorContext& editor =
+        editor_ptr == NULL ? editor_context_get() : *editor_ptr;
+
+    g.text_buffer.clear();
+    // TODO: check to make sure that the estimate is the upper bound of element
+    g.text_buffer.reserve(64 * editor.nodes.size() + 64 * editor.links.size());
+
+    // TODO: save editor panning to disk as well
+
+    for (int i = 0; i < editor.nodes.size(); i++)
+    {
+        const Node& node = editor.nodes[i];
+        g.text_buffer.appendf("[node.%d]\n", node.id);
+        g.text_buffer.appendf("origin=%f,%f\n\n", node.origin.x, node.origin.y);
+    }
+
+    for (int i = 0; i < editor.links.size(); i++)
+    {
+        const Link& link = editor.links[i];
+        const Pin& output =
+            link.pin1.type == AttributeType_Output ? link.pin1 : link.pin2;
+        const Pin& input =
+            link.pin1.type == AttributeType_Input ? link.pin1 : link.pin2;
+
+        // links don't have a unique id for now, so just use the index
+        g.text_buffer.appendf("[link.%d]\n", i);
+        g.text_buffer.appendf(
+            "output=%d,%d\n", output.node_idx, output.attribute_idx);
+        g.text_buffer.appendf(
+            "input=%d,%d\n\n", input.node_idx, input.attribute_idx);
+    }
+
+    return g.text_buffer.c_str();
 }
 } // namespace imnodes
