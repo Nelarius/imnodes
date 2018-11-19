@@ -79,6 +79,8 @@ void Shutdown();
 
 void BeginNodeEditor();
 
+void PushColorStyle(ColorStyle item, ImU32 color);
+
 void BeginNode(int id);
 void Name(const char* name);
 
@@ -87,10 +89,9 @@ void EndAttribute();
 
 void EndNode();
 
-void EndNodeEditor();
-
-void PushColorStyle(ColorStyle item, ImU32 color);
 void PopColorStyle(ColorStyle item);
+
+void EndNodeEditor();
 
 // TODO: condition is unused
 void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
@@ -98,5 +99,13 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
 bool IsAttributeActive(int* node, int* attribute);
 
 bool PollEvent(Event& event);
+
+// Save the editor state to a string. The data is written in the TOML format.
+// If the editor is left out, then the function will save the currently set
+// editor's state.
 const char* SaveEditorStateToMemory(const EditorContext* editor = NULL);
+void LoadEditorStateFromMemory(
+    const char* data,
+    size_t data_size,
+    EditorContext* editor = NULL);
 } // namespace imnodes

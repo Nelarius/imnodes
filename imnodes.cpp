@@ -1243,6 +1243,41 @@ bool PollEvent(Event& event)
 
     return false;
 }
+
+namespace
+{
+void node_line_handler(EditorContext& editor, const char* line)
+{
+    int i;
+    float x, y;
+    if (sscanf(line, "[node.%i", &i) == 1)
+    {
+        editor.nodes.back().id = i;
+        editor.node_map.SetInt(ImGuiID(i), editor.nodes.size() - 1);
+    }
+    else if (sscanf(line, "origin=%f,%f", &x, &y) == 2)
+    {
+        editor.nodes.back().origin = ImVec2(x, y);
+    }
+}
+
+void link_line_handler(EditorContext& editor, const char* line)
+{
+    // link header isn't parsed for now
+    Pin pin;
+    if (sscanf(line, "output=%i,%i", &pin.node_idx, &pin.attribute_idx))
+    {
+        pin.type = AttributeType_Output;
+        editor.links.back().pin1 = pin;
+    }
+    else if (sscanf(line, "input=%i,%i", &pin.node_idx, &pin.attribute_idx))
+    {
+        pin.type = AttributeType_Input;
+        editor.links.back().pin2 = pin;
+    }
+}
+} // namespace
+
 const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
 {
     const EditorContext& editor =
@@ -1258,7 +1293,8 @@ const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
     {
         const Node& node = editor.nodes[i];
         g.text_buffer.appendf("[node.%d]\n", node.id);
-        g.text_buffer.appendf("origin=%f,%f\n\n", node.origin.x, node.origin.y);
+        g.text_buffer.appendf(
+            "origin=%i,%i\n\n", (int)node.origin.x, (int)node.origin.y);
     }
 
     for (int i = 0; i < editor.links.size(); i++)
@@ -1278,5 +1314,73 @@ const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
     }
 
     return g.text_buffer.c_str();
+}
+
+void LoadEditorStateFromMemory(
+    const char* data,
+    size_t data_size,
+    EditorContext* editor_ptr)
+{
+    if (data_size == 0u)
+    {
+        return;
+    }
+
+    EditorContext& editor =
+        editor_ptr == NULL ? editor_context_get() : *editor_ptr;
+
+    char* buf = (char*)ImGui::MemAlloc(data_size + 1);
+    const char* buf_end = buf + data_size;
+    memcpy(buf, data, data_size);
+    buf[data_size] = 0;
+
+    void (*line_handler)(EditorContext&, const char*);
+    line_handler = NULL;
+    char* line_end = NULL;
+    for (char* line = buf; line < buf_end; line = line_end + 1)
+    {
+        while (*line == '\n' || *line == '\r')
+        {
+            line++;
+        }
+        line_end = line;
+        while (line_end < buf_end && *line_end != '\n' && *line_end != '\r')
+        {
+            line_end++;
+        }
+        line_end[0] = 0;
+
+        if (*line == ';')
+        {
+            continue;
+        }
+
+        if (line[0] == '[' && line_end[-1] == ']')
+        {
+            line_end[-1] = 0;
+            if (strncmp(line + 1, "node", 4) == 0)
+            {
+                editor.nodes.push_back(Node());
+                line_handler = node_line_handler;
+            }
+            else if (strncmp(line + 1, "link", 4) == 0)
+            {
+                // TODO: parsing the link doesn't entirely work at the moment.
+                // All the links get built, but at runtim, one of the output
+                // pins seem to to be reset to Pin()
+                // editor.links.push_back(Link());
+                // line_handler = link_line_handler;
+            }
+            else if (strcmp(line + 1, "editor") == 0)
+            {
+                // TODO editor param handling
+            }
+        }
+
+        if (line_handler != NULL)
+        {
+            line_handler(editor, line);
+        }
+    }
 }
 } // namespace imnodes
