@@ -1292,9 +1292,9 @@ const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
     for (int i = 0; i < editor.nodes.size(); i++)
     {
         const Node& node = editor.nodes[i];
-        g.text_buffer.appendf("[node.%d]\n", node.id);
+        g.text_buffer.appendf("\n[node.%d]\n", node.id);
         g.text_buffer.appendf(
-            "origin=%i,%i\n\n", (int)node.origin.x, (int)node.origin.y);
+            "origin=%i,%i\n", (int)node.origin.x, (int)node.origin.y);
     }
 
     for (int i = 0; i < editor.links.size(); i++)
@@ -1306,11 +1306,11 @@ const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
             link.pin1.type == AttributeType_Input ? link.pin1 : link.pin2;
 
         // links don't have a unique id for now, so just use the index
-        g.text_buffer.appendf("[link.%d]\n", i);
+        g.text_buffer.appendf("\n[link.%d]\n", i);
         g.text_buffer.appendf(
             "output=%d,%d\n", output.node_idx, output.attribute_idx);
         g.text_buffer.appendf(
-            "input=%d,%d\n\n", input.node_idx, input.attribute_idx);
+            "input=%d,%d\n", input.node_idx, input.attribute_idx);
     }
 
     return g.text_buffer.c_str();
@@ -1350,7 +1350,7 @@ void LoadEditorStateFromMemory(
         }
         line_end[0] = 0;
 
-        if (*line == ';')
+        if (*line == ';' || *line == '\0')
         {
             continue;
         }
@@ -1368,8 +1368,8 @@ void LoadEditorStateFromMemory(
                 // TODO: parsing the link doesn't entirely work at the moment.
                 // All the links get built, but at runtim, one of the output
                 // pins seem to to be reset to Pin()
-                // editor.links.push_back(Link());
-                // line_handler = link_line_handler;
+                editor.links.push_back(Link());
+                line_handler = link_line_handler;
             }
             else if (strcmp(line + 1, "editor") == 0)
             {
