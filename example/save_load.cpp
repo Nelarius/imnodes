@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <fstream>
+#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -134,13 +135,13 @@ public:
             if (ImGui::MenuItem("drag float node"))
             {
                 new_node = current_id_++;
-                float_nodes_.insert(std::pair<int, float>(new_node, 0.f));
+                float_nodes_.insert(std::make_pair(new_node, 0.f));
             }
 
             if (ImGui::MenuItem("color node"))
             {
                 new_node = current_id_++;
-                color_nodes_.insert(std::pair<int, Color3>(new_node, Color3{}));
+                color_nodes_.insert(std::make_pair(new_node, Color3{}));
             }
 
             ImGui::EndPopup();
@@ -188,28 +189,103 @@ public:
 
     void save()
     {
-        std::ofstream fout;
-        fout.open("editor.ini");
-
-        for (const auto& elem : float_nodes_)
         {
-            fout << "[float-node]\n";
-            fout << "id=" << elem.first << "\n";
-            fout << "data=" << elem.second << "\n\n";
+            std::ofstream fout;
+            fout.open("editor.ini");
+
+            for (const auto& elem : float_nodes_)
+            {
+                fout << "[float-node]\n";
+                fout << "id=" << elem.first << "\n";
+                fout << "data=" << elem.second << "\n\n";
+            }
+
+            for (const auto& elem : color_nodes_)
+            {
+                fout << "[color-node]\n";
+                fout << "id=" << elem.first << "\n";
+                fout << "data=" << elem.second.data[0] << ","
+                     << elem.second.data[1] << "," << elem.second.data[2]
+                     << "\n\n";
+            }
+
+            fout.close();
         }
 
-        for (const auto& elem : color_nodes_)
         {
-            fout << "[color-node]\n";
-            fout << "id=" << elem.first << "\n";
-            fout << "data=" << elem.second.data[0] << "," << elem.second.data[1]
-                 << ", " << elem.second.data[2] << "\n\n";
-        }
+            std::ofstream fout;
+            fout.open("imnodes.ini");
 
-        fout.close();
+            fout << imnodes::SaveEditorStateToMemory();
+
+            fout.close();
+        }
     }
 
-    void load() {}
+    void load()
+    {
+        {
+            std::ifstream fin("editor.ini");
+            if (fin.is_open())
+            {
+                // a simple, stupid ini parser
+                std::string line;
+                while (std::getline(fin, line))
+                {
+                    if (line == "[float-node]")
+                    {
+                        int id;
+                        float value;
+                        std::getline(fin, line);
+                        std::sscanf(line.c_str(), "id=%i", &id);
+                        std::getline(fin, line);
+                        std::sscanf(line.c_str(), "data=%f", &value);
+                        float_nodes_.insert(std::make_pair(id, value));
+
+                        if (id > current_id_)
+                        {
+                            current_id_ = id;
+                        }
+                    }
+                    else if (line == "[color-node]")
+                    {
+                        int id;
+                        Color3 color;
+                        std::getline(fin, line);
+                        std::sscanf(line.c_str(), "id=%i", &id);
+                        std::getline(fin, line);
+                        std::sscanf(
+                            line.c_str(),
+                            "data=%f,%f,%f",
+                            color.data,
+                            color.data + 1,
+                            color.data + 2);
+                        color_nodes_.insert(std::make_pair(id, color));
+
+                        if (id > current_id_)
+                        {
+                            current_id_ = id;
+                        }
+                    }
+                }
+            }
+        }
+
+        {
+            std::ifstream fin("imnodes.ini", std::ios::binary | std::ios::ate);
+            if (fin.is_open())
+            {
+                auto size = fin.tellg();
+                std::string file(size, '\0');
+                fin.seekg(0);
+                if (fin.read(&file[0], size))
+                {
+                    imnodes::LoadEditorStateFromMemory(
+                        file.c_str(), file.size());
+                }
+            }
+        }
+    }
 
 private:
     int current_id_;
