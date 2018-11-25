@@ -1365,9 +1365,6 @@ void LoadEditorStateFromMemory(
             }
             else if (strncmp(line + 1, "link", 4) == 0)
             {
-                // TODO: parsing the link doesn't entirely work at the moment.
-                // All the links get built, but at runtim, one of the output
-                // pins seem to to be reset to Pin()
                 editor.links.push_back(Link());
                 line_handler = link_line_handler;
             }
