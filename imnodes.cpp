@@ -1379,5 +1379,6 @@ void LoadEditorStateFromMemory(
             line_handler(editor, line);
         }
     }
+    ImGui::MemFree(buf);
 }
 } // namespace imnodes
