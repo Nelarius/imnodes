@@ -458,7 +458,9 @@ bool link_exists(const Pin& start, const Pin& end)
     return false;
 }
 
-inline Event event_for_link_deleted(const Link& link)
+inline Event event_for_link_deleted(
+    const EditorContext& editor,
+    const Link& link)
 {
     const Pin& output_pin =
         link.pin1.type == AttributeType_Output ? link.pin1 : link.pin2;
@@ -467,9 +469,9 @@ inline Event event_for_link_deleted(const Link& link)
 
     Event event;
     event.type = EventType_LinkDeleted;
-    event.link_deleted.output_node = output_pin.node_idx;
+    event.link_deleted.output_node = editor.nodes[output_pin.node_idx].id;
     event.link_deleted.output_attribute = output_pin.attribute_idx;
-    event.link_deleted.input_node = input_pin.node_idx;
+    event.link_deleted.input_node = editor.nodes[input_pin.node_idx].id;
     event.link_deleted.input_attribute = input_pin.attribute_idx;
 
     return event;
@@ -952,9 +954,11 @@ void EndNodeEditor()
                         : g.link_dragged.pin2;
                 Event event;
                 event.type = EventType_LinkCreated;
-                event.link_created.output_node = output_pin.node_idx;
+                event.link_created.output_node =
+                    editor.nodes[output_pin.node_idx].id;
                 event.link_created.output_attribute = output_pin.attribute_idx;
-                event.link_created.input_node = input_pin.node_idx;
+                event.link_created.input_node =
+                    editor.nodes[input_pin.node_idx].id;
                 event.link_created.input_attribute = input_pin.attribute_idx;
                 editor.event_queue.events.push_back(event);
 
@@ -1005,7 +1009,7 @@ void EndNodeEditor()
                 if (link.pin1.node_idx == g.selected_node ||
                     link.pin2.node_idx == g.selected_node)
                 {
-                    Event event = event_for_link_deleted(link);
+                    Event event = event_for_link_deleted(editor, link);
                     editor.event_queue.events.push_back(event);
                     deleted_links.push_back(i);
                 }
@@ -1056,7 +1060,7 @@ void EndNodeEditor()
             assert(g.selected_link < editor.links.size());
 
             const Link link = editor.links[g.selected_link];
-            Event event = event_for_link_deleted(link);
+            Event event = event_for_link_deleted(editor, link);
             editor.event_queue.events.push_back(event);
 
             editor.links.erase_unsorted(editor.links.Data + g.selected_link);
