@@ -1,6 +1,7 @@
 #pragma once
 
 #include "imgui.h"
+#include <stddef.h>
 
 namespace imnodes
 {
@@ -100,12 +101,24 @@ bool IsAttributeActive(int* node, int* attribute);
 
 bool PollEvent(Event& event);
 
-// Save the editor state to a string. The data is written in the TOML format.
+// Save the editor state to a string. The data is written in the INI format.
 // If the editor is left out, then the function will save the currently set
 // editor's state.
-const char* SaveEditorStateToMemory(const EditorContext* editor = NULL);
+const char* SaveCurrentEditorStateToMemory(size_t* data_size = NULL);
+const char* SaveEditorStateToMemory(
+    const EditorContext* editor,
+    size_t* data_size = NULL);
+
+void LoadCurrentEditorStateFromMemory(const char* data, size_t data_size);
 void LoadEditorStateFromMemory(
+    EditorContext* editor,
     const char* data,
-    size_t data_size,
-    EditorContext* editor = NULL);
+    size_t data_size);
+
+void SaveCurrentEditorStateToDisk(const char* file_name);
+void SaveEditorStateToDisk(const EditorContext* editor, const char* file_name);
+
+void LoadCurrentEditorStateFromDisk(const char* file_name);
+void LoadEditorStateFromDisk(EditorContext* editor, const char* file_name);
+
 } // namespace imnodes

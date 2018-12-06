@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <functional> // for std::greater<>
 #include <string.h>   // strlen, strncmp
-#include <stdio.h>    // for ssprintf, sscanf
+#include <stdio.h>    // for fwrite, ssprintf, sscanf
 #include <stdlib.h>
 
 namespace imnodes
@@ -1282,10 +1282,17 @@ void link_line_handler(EditorContext& editor, const char* line)
 }
 } // namespace
 
-const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
+const char* SaveCurrentEditorStateToMemory(size_t* data_size)
 {
-    const EditorContext& editor =
-        editor_ptr == NULL ? editor_context_get() : *editor_ptr;
+    return SaveEditorStateToMemory(&editor_context_get());
+}
+
+const char* SaveEditorStateToMemory(
+    const EditorContext* editor_ptr,
+    size_t* data_size)
+{
+    assert(editor_ptr != NULL);
+    const EditorContext& editor = *editor_ptr;
 
     g.text_buffer.clear();
     // TODO: check to make sure that the estimate is the upper bound of element
@@ -1317,13 +1324,23 @@ const char* SaveEditorStateToMemory(const EditorContext* editor_ptr)
             "input=%d,%d\n", input.node_idx, input.attribute_idx);
     }
 
+    if (data_size != NULL)
+    {
+        *data_size = g.text_buffer.size();
+    }
+
     return g.text_buffer.c_str();
 }
 
+void LoadCurrentEditorStateFromMemory(const char* data, size_t data_size)
+{
+    LoadEditorStateFromMemory(&editor_context_get(), data, data_size);
+}
+
 void LoadEditorStateFromMemory(
+    EditorContext* editor_ptr,
     const char* data,
-    size_t data_size,
-    EditorContext* editor_ptr)
+    size_t data_size)
 {
     if (data_size == 0u)
     {
@@ -1384,5 +1401,43 @@ void LoadEditorStateFromMemory(
         }
     }
     ImGui::MemFree(buf);
+}
+
+void SaveCurrentEditorStateToDisk(const char* file_name)
+{
+    SaveEditorStateToDisk(&editor_context_get(), file_name);
+}
+
+void SaveEditorStateToDisk(const EditorContext* editor, const char* file_name)
+{
+    size_t data_size = 0u;
+    const char* data = SaveEditorStateToMemory(editor, &data_size);
+    FILE* file = ImFileOpen(file_name, "wt");
+    if (!file)
+    {
+        return;
+    }
+
+    fwrite(data, sizeof(char), data_size, file);
+    fclose(file);
+}
+
+void LoadCurrentEditorStateFromDisk(const char* file_name)
+{
+    LoadEditorStateFromDisk(&editor_context_get(), file_name);
+}
+
+void LoadEditorStateFromDisk(EditorContext* editor, const char* file_name)
+{
+    size_t data_size = 0u;
+    char* file_data = (char*)ImFileLoadToMemory(file_name, "rb", &data_size);
+
+    if (!file_data)
+    {
+        return;
+    }
+
+    LoadEditorStateFromMemory(editor, file_data, data_size);
+    ImGui::MemFree(file_data);
 }
 } // namespace imnodes

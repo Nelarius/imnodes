@@ -212,14 +212,7 @@ public:
             fout.close();
         }
 
-        {
-            std::ofstream fout;
-            fout.open("imnodes.ini");
-
-            fout << imnodes::SaveEditorStateToMemory();
-
-            fout.close();
-        }
+        imnodes::SaveCurrentEditorStateToDisk("imnodes.ini");
     }
 
     void load()
@@ -271,20 +264,7 @@ public:
             }
         }
 
-        {
-            std::ifstream fin("imnodes.ini", std::ios::binary | std::ios::ate);
-            if (fin.is_open())
-            {
-                auto size = fin.tellg();
-                std::string file(size, '\0');
-                fin.seekg(0);
-                if (fin.read(&file[0], size))
-                {
-                    imnodes::LoadEditorStateFromMemory(
-                        file.c_str(), file.size());
-                }
-            }
-        }
+        imnodes::LoadCurrentEditorStateFromDisk("imnodes.ini");
     }
 
 private:
