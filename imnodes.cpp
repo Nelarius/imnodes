@@ -1280,6 +1280,11 @@ void link_line_handler(EditorContext& editor, const char* line)
         editor.links.back().pin2 = pin;
     }
 }
+
+void editor_line_handler(EditorContext& editor, const char* line)
+{
+    sscanf(line, "panning=%f,%f", &editor.panning.x, &editor.panning.y);
+}
 } // namespace
 
 const char* SaveCurrentEditorStateToMemory(size_t* data_size)
@@ -1298,7 +1303,10 @@ const char* SaveEditorStateToMemory(
     // TODO: check to make sure that the estimate is the upper bound of element
     g.text_buffer.reserve(64 * editor.nodes.size() + 64 * editor.links.size());
 
-    // TODO: save editor panning to disk as well
+    g.text_buffer.appendf(
+        "[editor]\npanning=%i,%i\n",
+        (int)editor.panning.x,
+        (int)editor.panning.y);
 
     for (int i = 0; i < editor.nodes.size(); i++)
     {
@@ -1391,7 +1399,7 @@ void LoadEditorStateFromMemory(
             }
             else if (strcmp(line + 1, "editor") == 0)
             {
-                // TODO editor param handling
+                line_handler = editor_line_handler;
             }
         }
 
