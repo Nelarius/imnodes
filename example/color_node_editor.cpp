@@ -4,6 +4,8 @@
 
 #include <algorithm> // for std::swap
 #include <cassert>
+#include <chrono>
+#include <cmath>
 #include <stack>
 #include <unordered_set>
 #include <vector>
@@ -108,6 +110,8 @@ private:
 enum NodeType
 {
     Node_Number,
+    Node_NumberLink, // the number isn't stored in the node, but is provided by
+                     // another node
     Node_Operation,
     Node_Output
 };
@@ -181,17 +185,6 @@ public:
         remove_adjacency(node2, node1);
     }
 
-    void clear()
-    {
-        nodes_.clear();
-
-        for (auto& adjacency : adjacencies_)
-        {
-            adjacency.clear();
-        }
-        adjacencies_.clear();
-    }
-
     ImU32 evaluate(const size_t root_node)
     {
         // this function does a depth-first evaluation of the graph
@@ -228,6 +221,8 @@ public:
             {
                 case Node_Number:
                     eval_stack.push(nodes_[node].number);
+                    break;
+                case Node_NumberLink:
                     break;
                 case Node_Operation:
                     nodes_[node].operation(eval_stack);
@@ -271,6 +266,49 @@ private:
 };
 
 inline int make_id(int node, int attribute) { return (node << 16) | attribute; }
+
+struct TimeContext
+{
+    std::chrono::steady_clock::time_point start;
+
+    TimeContext() : start(std::chrono::steady_clock::now()) {}
+};
+
+TimeContext time_context;
+
+void operation_time(std::stack<float>& stack)
+{
+    const float seconds =
+        std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1>>>(
+            std::chrono::steady_clock::now() - time_context.start)
+            .count();
+    stack.push(seconds);
+}
+
+void operation_sine(std::stack<float>& stack)
+{
+    const float x = stack.top();
+    stack.pop();
+    stack.push(std::sin(x));
+}
+
+void operation_multiply(std::stack<float>& stack)
+{
+    const float rhs = stack.top();
+    stack.pop();
+    const float lhs = stack.top();
+    stack.pop();
+    stack.push(lhs * rhs);
+}
+
+void operation_add(std::stack<float>& stack)
+{
+    const float rhs = stack.top();
+    stack.pop();
+    const float lhs = stack.top();
+    stack.pop();
+    stack.push(lhs + rhs);
+}
 
 class ColorNodeEditor
 {
@@ -347,6 +385,148 @@ public:
             imnodes::EndNode();
         }
 
+        for (const auto& node : sine_nodes_)
+        {
+            const float node_width = 100.0f;
+            imnodes::BeginNode(node.op);
+            imnodes::Name("sine");
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 0), imnodes::AttributeType_Input);
+                const float label_width = ImGui::CalcTextSize("number").x;
+                ImGui::Text("number");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(node_width - label_width);
+                ImGui::DragFloat(
+                    "##hidelabel",
+                    &node_graph_[node.input].number,
+                    0.01f,
+                    0.f,
+                    1.0f);
+                ImGui::PopItemWidth();
+                imnodes::EndAttribute();
+            }
+
+            ImGui::Spacing();
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 1), imnodes::AttributeType_Output);
+                const float label_width = ImGui::CalcTextSize("output").x;
+                ImGui::Indent(node_width - label_width);
+                ImGui::Text("output");
+                imnodes::EndAttribute();
+            }
+
+            imnodes::EndNode();
+        }
+
+        for (const auto& node : time_nodes_)
+        {
+            imnodes::BeginNode(node);
+            imnodes::Name("time");
+
+            imnodes::BeginAttribute(
+                make_id(int(node), 0), imnodes::AttributeType_Output);
+            ImGui::Text("output");
+            imnodes::EndAttribute();
+
+            imnodes::EndNode();
+        }
+
+        for (const auto& node : mul_nodes_)
+        {
+            const float node_width = 100.0f;
+            imnodes::BeginNode(node.op);
+            imnodes::Name("multiply");
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 0), imnodes::AttributeType_Input);
+                const float label_width = ImGui::CalcTextSize("left").x;
+                ImGui::Text("left");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(node_width - label_width);
+                ImGui::DragFloat(
+                    "##hidelabel", &node_graph_[node.lhs].number, 0.01f);
+                ImGui::PopItemWidth();
+                imnodes::EndAttribute();
+            }
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 1), imnodes::AttributeType_Input);
+                const float label_width = ImGui::CalcTextSize("right").x;
+                ImGui::Text("right");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(node_width - label_width);
+                ImGui::DragFloat(
+                    "##hidelabel", &node_graph_[node.rhs].number, 0.01f);
+                ImGui::PopItemWidth();
+                imnodes::EndAttribute();
+            }
+
+            ImGui::Spacing();
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 2), imnodes::AttributeType_Output);
+                const float label_width = ImGui::CalcTextSize("result").x;
+                ImGui::Indent(node_width - label_width);
+                ImGui::Text("result");
+                imnodes::EndAttribute();
+            }
+
+            imnodes::EndNode();
+        }
+
+        for (const auto& node : add_nodes_)
+        {
+            const float node_width = 100.0f;
+            imnodes::BeginNode(node.op);
+            imnodes::Name("add");
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 0), imnodes::AttributeType_Input);
+                const float label_width = ImGui::CalcTextSize("left").x;
+                ImGui::Text("left");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(node_width - label_width);
+                ImGui::DragFloat(
+                    "##hidelabel", &node_graph_[node.lhs].number, 0.01f);
+                ImGui::PopItemWidth();
+                imnodes::EndAttribute();
+            }
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 1), imnodes::AttributeType_Input);
+                const float label_width = ImGui::CalcTextSize("right").x;
+                ImGui::Text("right");
+                ImGui::SameLine();
+                ImGui::PushItemWidth(node_width - label_width);
+                ImGui::DragFloat(
+                    "##hidelabel", &node_graph_[node.rhs].number, 0.01f);
+                ImGui::PopItemWidth();
+                imnodes::EndAttribute();
+            }
+
+            ImGui::Spacing();
+
+            {
+                imnodes::BeginAttribute(
+                    make_id(int(node.op), 2), imnodes::AttributeType_Output);
+                const float label_width = ImGui::CalcTextSize("result").x;
+                ImGui::Indent(node_width - label_width);
+                ImGui::Text("result");
+                imnodes::EndAttribute();
+            }
+
+            imnodes::EndNode();
+        }
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
         if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() &&
             ImGui::IsMouseClicked(1))
@@ -379,26 +559,75 @@ public:
                 node_graph_.add_edge(node.red, node.out);
                 node_graph_.add_edge(node.green, node.out);
                 node_graph_.add_edge(node.blue, node.out);
+
+                imnodes::SetNodePos(node.out, click_pos, ImGuiCond_Appearing);
             }
 
             if (ImGui::MenuItem("time"))
             {
-                // TODO
+                Node op = Node{Node_Operation, 0.f};
+                op.operation = operation_time;
+
+                const size_t node = node_graph_.add_node(op);
+                time_nodes_.push_back(node);
+
+                imnodes::SetNodePos(node, click_pos, ImGuiCond_Appearing);
             }
 
             if (ImGui::MenuItem("sine"))
             {
-                // TODO
+                SineNode node;
+
+                Node num{Node_Number, 0.f};
+                Node op{Node_Operation, 0.f};
+                op.operation = operation_sine;
+
+                node.input = node_graph_.add_node(num);
+                node.op = node_graph_.add_node(op);
+
+                sine_nodes_.push_back(node);
+
+                imnodes::SetNodePos(node.op, click_pos, ImGuiCond_Appearing);
             }
 
             if (ImGui::MenuItem("multiply"))
             {
-                // TODO
+                MultiplyNode node;
+
+                Node num{Node_Number, 0.f};
+                Node op{Node_Operation, 0.f};
+                op.operation = operation_multiply;
+
+                node.lhs = node_graph_.add_node(num);
+                node.rhs = node_graph_.add_node(num);
+                node.op = node_graph_.add_node(op);
+
+                node_graph_.add_edge(node.lhs, node.op);
+                node_graph_.add_edge(node.rhs, node.op);
+
+                mul_nodes_.push_back(node);
+
+                imnodes::SetNodePos(node.op, click_pos, ImGuiCond_Appearing);
             }
 
             if (ImGui::MenuItem("add"))
             {
-                // TODO
+                AddNode node;
+
+                Node num{Node_Number, 0.f};
+                Node op{Node_Operation, 0.f};
+                op.operation = operation_add;
+
+                node.lhs = node_graph_.add_node(num);
+                node.rhs = node_graph_.add_node(num);
+                node.op = node_graph_.add_node(op);
+
+                node_graph_.add_edge(node.lhs, node.op);
+                node_graph_.add_edge(node.rhs, node.op);
+
+                add_nodes_.push_back(node);
+
+                imnodes::SetNodePos(node.op, click_pos, ImGuiCond_Appearing);
             }
             ImGui::EndPopup();
         }
@@ -425,8 +654,28 @@ private:
         size_t red, green, blue, out;
     };
 
+    struct SineNode
+    {
+        size_t input, op;
+    };
+
+    struct MultiplyNode
+    {
+        size_t lhs, rhs, op;
+    };
+
+    struct AddNode
+    {
+        size_t lhs, rhs, op;
+    };
+
     Graph node_graph_;
     std::vector<OutputNode> output_nodes_;
+    std::vector<size_t>
+        time_nodes_; // just a single node representing the operation
+    std::vector<SineNode> sine_nodes_;
+    std::vector<MultiplyNode> mul_nodes_;
+    std::vector<AddNode> add_nodes_;
 }; // namespace
 
 static ColorNodeEditor node_lang;
