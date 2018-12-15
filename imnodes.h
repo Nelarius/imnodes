@@ -85,8 +85,12 @@ void PushColorStyle(ColorStyle item, ImU32 color);
 void BeginNode(int id);
 void Name(const char* name);
 
+// The attribute ids must be unique with regards to other attribute ids.
 int BeginAttribute(int id, AttributeType type);
 void EndAttribute();
+
+// The attributes ids used here must match the ids used in BeginAttribute()
+void Link(int start_attr, int end_attr);
 
 void EndNode();
 
@@ -97,9 +101,22 @@ void EndNodeEditor();
 // TODO: condition is unused
 void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
 
-bool IsAttributeActive(int* node, int* attribute);
-
 bool PollEvent(Event& event);
+
+// new replacements for events
+bool IsNodeHovered(int* node_id);
+bool IsLinkHovered(int* start_id, int* end_id);
+bool IsPinHovered(int* attribute_id);
+
+bool IsNodeSelected(int* node_id);
+bool IsLinkSelected(int* start_id, int* end_id);
+
+// Is the user dradding a new link?
+bool IsLinkStarted(int* started_at);
+// Did the user drop the new link before connecting it to a second attribute?
+bool IsLinkDropped();
+// Did the user create a new link?
+bool IsLinkCreated(int* started_at, int* ended_at);
 
 // Save the editor state to a string. The data is written in the INI format.
 // If the editor is left out, then the function will save the currently set

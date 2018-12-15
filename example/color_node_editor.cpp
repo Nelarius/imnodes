@@ -2,12 +2,15 @@
 #include "imnodes.h"
 #include "node_editor.h"
 
+#include <SDL_keycode.h>
 #include <algorithm> // for std::swap
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <stack>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace example
@@ -137,10 +140,10 @@ public:
     using AdjacencyArray = StaticArray<size_t, 3u>;
     using AdjacencyIterator = AdjacencyArray::Iterator;
     using ConstAdjacencyIterator = AdjacencyArray::ConstIterator;
-    using NodeIterator = std::vector<Node>::iterator;
-    using ConstNodeIterator = std::vector<Node>::const_iterator;
+    using NodeIterator = std::unordered_map<size_t, Node>::iterator;
+    using ConstNodeIterator = std::unordered_map<size_t, Node>::const_iterator;
 
-    Graph() = default;
+    Graph() : current_id_(0u), nodes_(), adjacencies_() {}
 
     // Element access
 
@@ -149,37 +152,37 @@ public:
         return const_cast<Node&>(
             static_cast<const Graph*>(this)->operator[](i));
     }
-    inline const Node& operator[](const size_t i) const
+    inline const Node& operator[](const size_t id) const
     {
-        assert(i < nodes_.size());
-        return nodes_[i];
+        assert(nodes_.find(id) != nodes_.end());
+        return nodes_.find(id)->second;
     }
 
     // Capacity
 
-    inline size_t num_adjacencies(const size_t node) const
+    inline size_t num_adjacencies(const size_t node_id) const
     {
-        assert(node < nodes_.size());
-        return adjacencies_[node].size();
+        assert(adjacencies_.find(node_id) != adjacencies_.end());
+        return adjacencies_.find(node_id)->second.size();
     }
 
     // Modifiers
 
     size_t add_node(const Node& node)
     {
-        size_t handle = nodes_.size();
-        nodes_.push_back(node);
-        adjacencies_.push_back(AdjacencyArray());
-        return handle;
+        const size_t id = current_id_++;
+        nodes_.insert(std::make_pair(id, node));
+        adjacencies_.insert(std::make_pair(id, AdjacencyArray()));
+        return id;
     }
 
-    void add_edge(size_t node1, size_t node2)
+    void add_edge(const size_t node1, const size_t node2)
     {
         adjacencies_[node1].push_back(node2);
         adjacencies_[node2].push_back(node1);
     }
 
-    void erase_edge(size_t node1, size_t node2)
+    void erase_edge(const size_t node1, const size_t node2)
     {
         remove_adjacency(node1, node2);
         remove_adjacency(node2, node1);
@@ -212,11 +215,11 @@ public:
             }
         }
 
+        // unwind the stack and call each operation along the way
         while (!postorder.empty())
         {
             const size_t node = postorder.top();
             postorder.pop();
-            // unwinding the stack
             switch (nodes_[node].type)
             {
                 case Node_Number:
@@ -261,11 +264,10 @@ private:
         }
     }
 
-    std::vector<Node> nodes_;
-    std::vector<AdjacencyArray> adjacencies_;
+    size_t current_id_;
+    std::unordered_map<size_t, Node> nodes_;
+    std::unordered_map<size_t, AdjacencyArray> adjacencies_;
 };
-
-inline int make_id(int node, int attribute) { return (node << 16) | attribute; }
 
 struct TimeContext
 {
@@ -330,7 +332,7 @@ public:
             ImGui::Dummy(ImVec2(node_width, 0.f));
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.out), 0), imnodes::AttributeType_Input);
+                    int(node.red), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("r").x;
                 ImGui::Text("r");
                 ImGui::SameLine();
@@ -349,7 +351,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.out), 1), imnodes::AttributeType_Input);
+                    int(node.green), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("g").x;
                 ImGui::Text("g");
                 ImGui::SameLine();
@@ -368,7 +370,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.out), 2), imnodes::AttributeType_Input);
+                    int(node.blue), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("b").x;
                 ImGui::Text("b");
                 ImGui::SameLine();
@@ -393,7 +395,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 0), imnodes::AttributeType_Input);
+                    int(node.input), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("number").x;
                 ImGui::Text("number");
                 ImGui::SameLine();
@@ -412,7 +414,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 1), imnodes::AttributeType_Output);
+                    int(node.op), imnodes::AttributeType_Output);
                 const float label_width = ImGui::CalcTextSize("output").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("output");
@@ -427,8 +429,7 @@ public:
             imnodes::BeginNode(node);
             imnodes::Name("time");
 
-            imnodes::BeginAttribute(
-                make_id(int(node), 0), imnodes::AttributeType_Output);
+            imnodes::BeginAttribute(int(node), imnodes::AttributeType_Output);
             ImGui::Text("output");
             imnodes::EndAttribute();
 
@@ -443,7 +444,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 0), imnodes::AttributeType_Input);
+                    int(node.lhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("left").x;
                 ImGui::Text("left");
                 ImGui::SameLine();
@@ -456,7 +457,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 1), imnodes::AttributeType_Input);
+                    int(node.rhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("right").x;
                 ImGui::Text("right");
                 ImGui::SameLine();
@@ -471,7 +472,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 2), imnodes::AttributeType_Output);
+                    int(node.op), imnodes::AttributeType_Output);
                 const float label_width = ImGui::CalcTextSize("result").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("result");
@@ -489,7 +490,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 0), imnodes::AttributeType_Input);
+                    int(node.lhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("left").x;
                 ImGui::Text("left");
                 ImGui::SameLine();
@@ -502,7 +503,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 1), imnodes::AttributeType_Input);
+                    int(node.rhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("right").x;
                 ImGui::Text("right");
                 ImGui::SameLine();
@@ -517,7 +518,7 @@ public:
 
             {
                 imnodes::BeginAttribute(
-                    make_id(int(node.op), 2), imnodes::AttributeType_Output);
+                    int(node.op), imnodes::AttributeType_Output);
                 const float label_width = ImGui::CalcTextSize("result").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("result");
@@ -527,9 +528,14 @@ public:
             imnodes::EndNode();
         }
 
+        // TODO: render links here
+
+        const bool open_popup =
+            ImGui::IsMouseClicked(1) || ImGui::IsKeyReleased(SDL_SCANCODE_A);
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
         if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() &&
-            ImGui::IsMouseClicked(1))
+            open_popup)
         {
             ImGui::OpenPopup("add node");
         }
@@ -634,6 +640,24 @@ public:
         ImGui::PopStyleVar();
 
         imnodes::EndNodeEditor();
+
+        // TODO: Handle events here
+        ui_.reset();
+
+        imnodes::IsPinHovered(&ui_.pin_hovered.index);
+
+        imnodes::IsNodeHovered(&ui_.node_selected.index);
+
+        if (imnodes::IsLinkSelected(&ui_.link_start.index, &ui_.link_end.index))
+        {
+            ui_.is_link_selected = true;
+        }
+
+        if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
+        {
+            // TODO delete links and nodes here
+        }
+
         ImGui::End();
 
         ImU32 color = IM_COL32(255, 20, 147, 255);
@@ -669,6 +693,56 @@ private:
         size_t lhs, rhs, op;
     };
 
+    struct Index
+    {
+        int index;
+
+        inline bool is_valid() const { return index >= 0; }
+
+        inline void invalidate() { index = invalid_index; }
+
+        inline operator int() const
+        {
+            assert(is_valid());
+            return index;
+        }
+
+        inline Index& operator=(int i)
+        {
+            index = i;
+            return *this;
+        }
+
+        Index() : index(invalid_index) {}
+
+    private:
+        static const int invalid_index = -1;
+    };
+
+    struct Ui
+    {
+        Index pin_hovered;
+        Index node_selected;
+        bool is_link_selected;
+        Index link_start, link_end;
+
+        Ui()
+            : pin_hovered(), node_selected(), is_link_selected(false),
+              link_start(), link_end()
+        {
+        }
+
+        inline void reset()
+        {
+            // reset frame data
+            pin_hovered.invalidate();
+            node_selected.invalidate();
+            is_link_selected = false;
+            link_start.invalidate();
+            link_end.invalidate();
+        }
+    };
+
     Graph node_graph_;
     std::vector<OutputNode> output_nodes_;
     std::vector<size_t>
@@ -676,6 +750,8 @@ private:
     std::vector<SineNode> sine_nodes_;
     std::vector<MultiplyNode> mul_nodes_;
     std::vector<AddNode> add_nodes_;
+
+    Ui ui_;
 }; // namespace
 
 static ColorNodeEditor node_lang;
