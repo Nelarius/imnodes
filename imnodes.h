@@ -34,41 +34,6 @@ enum ColorStyle
     ColorStyle_Count
 };
 
-enum EventType
-{
-    EventType_LinkCreated,
-    EventType_NodeDeleted,
-    EventType_LinkDeleted
-};
-
-struct Event
-{
-    EventType type;
-    union
-    {
-        struct
-        {
-            int output_node;
-            int output_attribute;
-            int input_node;
-            int input_attribute;
-        } link_created;
-
-        struct
-        {
-            int node_idx;
-        } node_deleted;
-
-        struct
-        {
-            int output_node;
-            int output_attribute;
-            int input_node;
-            int input_attribute;
-        } link_deleted;
-    };
-};
-
 struct EditorContext;
 
 EditorContext* EditorContextCreate();
@@ -100,8 +65,6 @@ void EndNodeEditor();
 
 // TODO: condition is unused
 void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
-
-bool PollEvent(Event& event);
 
 // new replacements for events
 bool IsNodeHovered(int* node_id);
