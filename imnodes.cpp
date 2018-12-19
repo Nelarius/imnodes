@@ -3,7 +3,6 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
 
-#include <algorithm> // for std::sort
 #include <assert.h>
 #include <functional> // for std::greater<>
 #include <string.h>   // strlen, strncmp
@@ -68,8 +67,7 @@ struct NodeData
     ImRect content_rect;
     ImU32 color_styles[ColorStyle_Count];
 
-    ImVector<ImRect> input_attributes;
-    ImVector<ImRect> output_attributes;
+    ImVector<ImRect> attribute_rects;
 
     NodeData()
         : id(0u),
@@ -77,40 +75,89 @@ struct NodeData
               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
           origin(100.0f, 100.0f),
           content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_styles(),
-          input_attributes(), output_attributes()
+          attribute_rects()
     {
     }
 };
 
-struct Pin
+struct PinData
 {
+    int id;
     int node_idx;
     int attribute_idx;
     AttributeType type;
 
-    Pin()
+    PinData()
         : node_idx(INVALID_INDEX), attribute_idx(INVALID_INDEX),
           type(AttributeType_None)
     {
     }
-    Pin(int nidx, int aindx, AttributeType t)
+    PinData(int nidx, int aindx, AttributeType t)
         : node_idx(nidx), attribute_idx(aindx), type(t)
     {
     }
 };
 
-bool operator==(const Pin& lhs, const Pin& rhs)
+bool operator==(const PinData& lhs, const PinData& rhs)
 {
     return lhs.node_idx == rhs.node_idx &&
            lhs.attribute_idx == rhs.attribute_idx && lhs.type == rhs.type;
 }
 
+struct PinPool
+{
+    ImVector<PinData> pool;
+    ImVector<bool> in_use;
+    ImVector<int> free_list;
+    ImGuiStorage id_map;
+
+    PinPool() : pool(), in_use(), free_list(), id_map() {}
+
+    inline void update()
+    {
+        free_list.clear();
+        for (int i = 0; i < in_use.size(); ++i)
+        {
+            if (!in_use[i])
+            {
+                id_map.SetInt(pool[i].id, INVALID_INDEX);
+                free_list.push_back(i);
+            }
+        }
+
+        // set all values to false
+        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
+    }
+
+    // returns a reference to the pin which was created or found
+    inline PinData& find_or_create_pin(int attr_id)
+    {
+        int index = id_map.GetInt(ImGuiID(attr_id), INVALID_INDEX);
+        if (index == INVALID_INDEX)
+        {
+            if (free_list.size() > 0)
+            {
+                index = free_list.back();
+                free_list.pop_back();
+            }
+            else
+            {
+                index = pool.size();
+                pool.push_back(PinData());
+                in_use.push_back(true);
+            }
+            id_map.SetInt(ImGuiID(attr_id), index);
+        }
+        in_use[index] = true;
+        return pool[index];
+    }
+};
+
 struct LinkData
 {
-    Pin pin1;
-    Pin pin2;
+    int start_attr, end_attr;
 
-    LinkData() : pin1(), pin2() {}
+    LinkData() : start_attr(INVALID_INDEX), end_attr(INVALID_INDEX) {}
 };
 
 struct LinkBezierData
@@ -118,6 +165,63 @@ struct LinkBezierData
     // the bezier curve control points
     ImVec2 p0, p1, p2, p3;
     int num_segments;
+};
+
+struct LinkPool
+{
+    ImVector<LinkData> pool;
+    ImVector<bool> in_use;
+    ImVector<int> free_list;
+    ImGuiStorage id_map;
+
+    LinkPool() : pool(), in_use(), free_list(), id_map() {}
+
+    inline void update()
+    {
+        free_list.clear();
+        for (int i = 0; i < in_use.size(); ++i)
+        {
+            if (!in_use[i])
+            {
+                const int data[2] = {pool[i].start_attr, pool[i].end_attr};
+                const int id = ImHash((const void*)&data, sizeof(data));
+                id_map.SetInt(id, INVALID_INDEX);
+                free_list.push_back(i);
+            }
+        }
+
+        // set all values to false
+        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
+    }
+
+    // sets the start and end fields of the found or created link
+    inline void find_or_create_link(int start, int end)
+    {
+        // TODO: we could check that the link in the other direction
+        // doesn't already exist
+        const int data[2] = {start, end};
+        const int id = ImHash((const void*)&data, sizeof(data));
+        int index = id_map.GetInt(ImGuiID(id), INVALID_INDEX);
+        if (index == INVALID_INDEX)
+        {
+            if (free_list.size() > 0)
+            {
+                index = free_list.back();
+                free_list.pop_back();
+            }
+            else
+            {
+                index = pool.size();
+                pool.push_back(LinkData());
+                in_use.push_back(true);
+            }
+            id_map.SetInt(ImGuiID(id), index);
+            LinkData& link = pool[index];
+            link.start_attr = start;
+            link.end_attr = end;
+        }
+        in_use[index] = true;
+    }
 };
 
 // This is used to initialize the boolean flag in the static struct
@@ -128,6 +232,7 @@ struct InitializeGuard
     InitializeGuard() : initialized(false) {}
 };
 
+// this struct should only store per-frame data
 static struct
 {
     InitializeGuard guard;
@@ -139,7 +244,7 @@ static struct
     ImU32 color_styles[ColorStyle_Count];
     ImVector<ImU32> color_style_stack;
 
-    LinkData link_dragged;
+    LinkData link_created; // per-frame data, so can be stored in g
 
     struct
     {
@@ -149,24 +254,25 @@ static struct
             AttributeType type;
             int index;
         } attribute;
-    } current_node;
+    } node_current;
 
     struct
     {
         int index;
         int attribute;
-    } active_node;
+    } node_active;
 
     struct
     {
         int index;
         ImVec2 position;
-    } moved_node;
+    } node_moved;
 
-    int hovered_node;
-    int selected_node;
-    int hovered_link;
-    int selected_link;
+    int node_hovered;
+    int node_selected;
+    int link_hovered;
+    int link_selected;
+    int pin_hovered;
 
     ImGuiTextBuffer text_buffer;
 } g;
@@ -303,7 +409,7 @@ inline float get_distance_to_cubic_bezier(
     const int iterations =
         int(ImClamp(length * iterations_per_length, 2.0f, 8.f));
 
-    float t = get_closest_point_on_cubic_bezier(
+    const float t = get_closest_point_on_cubic_bezier(
         iterations, segments, pos, p0, p1, p2, p3);
     ImVec2 point_on_curve = eval_bezier(t, p0, p1, p2, p3);
 
@@ -311,22 +417,23 @@ inline float get_distance_to_cubic_bezier(
     return ImSqrt(ImLengthSqr(to_curve));
 }
 
-inline LinkBezierData get_link_renderable(
-    const ImVec2& output_pos,
-    const ImVec2& input_pos)
+inline LinkBezierData get_link_renderable(ImVec2 start, ImVec2 end)
 {
-    const ImVec2 delta = input_pos - output_pos;
+    // function arguments assed by value, since we mutate them
+    const ImVec2 delta = end - start;
     const float link_length = ImSqrt(ImLengthSqr(delta));
-    // const float sign = delta.x < 0.0f ? -1.f : 1.f;
-    LinkBezierData renderable;
     const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
-    renderable.p0 = output_pos;
-    renderable.p1 = output_pos + offset;
-    renderable.p2 = input_pos - offset;
-    renderable.p3 = input_pos;
-    renderable.num_segments =
-        ImMax(int(link_length * LINK_SEGMENTS_PER_LENGTH), 1);
-    return renderable;
+    if (start.x > end.x)
+    {
+        ImSwap(start, end);
+    }
+    LinkBezierData bezier;
+    bezier.p0 = start;
+    bezier.p1 = start + offset;
+    bezier.p2 = end - offset;
+    bezier.p3 = end;
+    bezier.num_segments = ImMax(int(link_length * LINK_SEGMENTS_PER_LENGTH), 1);
+    return bezier;
 }
 
 inline bool is_mouse_hovering_near_link(
@@ -336,7 +443,7 @@ inline bool is_mouse_hovering_near_link(
     const ImVec2& p3)
 {
     bool near = false;
-    ImVec2 mouse_pos = ImGui::GetIO().MousePos;
+    const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
 
     // First, do an AABB test to see whether it the distance
     // to the line is worth checking in greater detail
@@ -348,7 +455,7 @@ inline bool is_mouse_hovering_near_link(
     if ((mouse_pos.x > xmin && mouse_pos.x < xmax) &&
         (mouse_pos.y > ymin && mouse_pos.y < ymax))
     {
-        float distance =
+        const float distance =
             get_distance_to_cubic_bezier(mouse_pos, p0, p1, p2, p3);
         if (distance < LINK_HOVER_DISTANCE)
         {
@@ -359,24 +466,15 @@ inline bool is_mouse_hovering_near_link(
     return near;
 }
 
-inline ImVec2 input_pin_position(
+inline ImVec2 pin_position(
     const ImRect& node_rect,
-    const ImRect& attr_rect)
+    const ImRect& attr_rect,
+    AttributeType type)
 {
-    return ImVec2(node_rect.Min.x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
-}
-
-inline ImVec2 output_pin_position(
-    const ImRect& node_rect,
-    const ImRect& attr_rect)
-{
-    return ImVec2(node_rect.Max.x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
-}
-
-inline bool is_pin_valid(const Pin& pin)
-{
-    return pin.node_idx != INVALID_INDEX &&
-           pin.attribute_idx != INVALID_INDEX && pin.type != AttributeType_None;
+    assert(type == AttributeType_Input || type == AttributeType_Output);
+    const float x =
+        type == AttributeType_Input ? node_rect.Min.x : node_rect.Max.x;
+    return ImVec2(x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
 }
 } // namespace
 
@@ -385,15 +483,18 @@ struct EditorContext
     ImGuiStorage node_map;
     ImVector<NodeData> nodes;
     ImVector<ImGuiID> keys;
-    ImVector<LinkData> links;
+    PinPool pins;
+    LinkPool links;
 
     // ui related fields
     ImVec2 panning;
     ImDrawList* grid_draw_list;
 
+    LinkData link_dragged;
+
     EditorContext()
-        : node_map(), nodes(), links(), panning(0.f, 0.f),
-          grid_draw_list(nullptr)
+        : node_map(), nodes(), pins(), links(), panning(0.f, 0.f),
+          grid_draw_list(nullptr), link_dragged()
     {
     }
 };
@@ -438,19 +539,6 @@ int find_or_create_new_node(int id)
     return idx;
 }
 
-bool link_exists(const Pin& start, const Pin& end)
-{
-    const EditorContext& editor = editor_context_get();
-    for (int i = 0u; i < editor.links.size(); i++)
-    {
-        const LinkData& link = editor.links[i];
-        if (link.pin1 == start && link.pin2 == end)
-            return true;
-    }
-
-    return false;
-}
-
 void draw_grid(const EditorContext& editor)
 {
     const ImVec2 offset = editor.panning;
@@ -473,69 +561,28 @@ void draw_grid(const EditorContext& editor)
     }
 }
 
-void draw_pins(
-    const EditorContext& editor,
-    int node_idx,
-    AttributeType attribute_type,
-    Pin& pin_hovered)
+void draw_pin(const EditorContext& editor, const PinData& pin)
 {
-    const NodeData& node = editor.nodes[node_idx];
-    assert(
-        attribute_type == AttributeType_Input ||
-        attribute_type == AttributeType_Output);
-    const ImVector<ImRect>& attributes = attribute_type == AttributeType_Input
-                                             ? node.input_attributes
-                                             : node.output_attributes;
+    const NodeData& node = editor.nodes[pin.node_idx];
     const ImRect node_rect = get_node_rect(node);
-    for (int idx = 0u; idx < attributes.size(); idx++)
+    const ImVec2 pin_pos = pin_position(
+        node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
+    if (is_mouse_hovering_near_point(pin_pos, NODE_PIN_HOVER_RADIUS))
     {
-        ImVec2 pin_pos = attribute_type == AttributeType_Input
-                             ? input_pin_position(node_rect, attributes[idx])
-                             : output_pin_position(node_rect, attributes[idx]);
-        if (is_mouse_hovering_near_point(pin_pos, NODE_PIN_HOVER_RADIUS))
-        {
-            const Pin& link_start = g.link_dragged.pin1;
-            bool hovered_pin_is_valid = true;
-            if (is_pin_valid(link_start))
-            {
-                // Ensure that the pin is not linking to the same node, and that
-                // the link is output
-                // -> input.
-                // Also ensure that the link doesn't already exist
-                hovered_pin_is_valid =
-                    link_start.node_idx != node_idx &&
-                    link_start.type != attribute_type &&
-                    !link_exists(
-                        link_start, Pin(node_idx, idx, attribute_type));
-            }
-
-            if (hovered_pin_is_valid)
-            {
-                editor.grid_draw_list->AddCircleFilled(
-                    pin_pos,
-                    NODE_PIN_RADIUS,
-                    node.color_styles[ColorStyle_PinHovered]);
-                pin_hovered = Pin(node_idx, idx, attribute_type);
-            }
-            else
-            {
-                editor.grid_draw_list->AddCircleFilled(
-                    pin_pos,
-                    NODE_PIN_RADIUS,
-                    node.color_styles[ColorStyle_PinInvalid]);
-            }
-        }
-        else
-        {
-            editor.grid_draw_list->AddCircleFilled(
-                pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_Pin]);
-        }
-        editor.grid_draw_list->AddCircle(
-            pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinOutline]);
+        g.pin_hovered = pin.id;
+        editor.grid_draw_list->AddCircleFilled(
+            pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinHovered]);
     }
+    else
+    {
+        editor.grid_draw_list->AddCircleFilled(
+            pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_Pin]);
+    }
+    editor.grid_draw_list->AddCircle(
+        pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinOutline]);
 }
 
-void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
+void draw_node(const EditorContext& editor, int node_idx)
 {
     const NodeData& node = editor.nodes[node_idx];
     ImGui::PushID(node.id);
@@ -549,32 +596,31 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
 
     if (ImGui::IsItemHovered())
     {
-        g.hovered_node = node_idx;
+        g.node_hovered = node_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            g.selected_node = g.hovered_node;
+            g.node_selected = g.node_hovered;
         }
     }
 
     // Check to see whether the node moved during the frame. The node's position
-    // is updated after the node has been drawn (because the used has already
-    // rendered the UI!). Also check to see that the
-    if (ImGui::IsItemActive() && pin_hovered.node_idx != node_idx &&
-        ImGui::IsMouseDragging(0))
+    // is updated after the node has been drawn (because the user has already
+    // rendered the UI!).
+    if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0))
     {
-        g.moved_node.index = node_idx;
-        g.moved_node.position = node.origin + ImGui::GetIO().MouseDelta;
+        g.node_moved.index = node_idx;
+        g.node_moved.position = node.origin + ImGui::GetIO().MouseDelta;
     }
 
     ColorStyle color_style_node = ColorStyle_NodeBackground;
     ColorStyle color_style_title = ColorStyle_TitleBar;
 
-    if (g.selected_node == node_idx)
+    if (g.node_selected == node_idx)
     {
         color_style_node = ColorStyle_NodeBackgroundSelected;
         color_style_title = ColorStyle_TitleBarSelected;
     }
-    else if (g.hovered_node == node_idx)
+    else if (g.node_hovered == node_idx)
     {
         color_style_node = ColorStyle_NodeBackgroundHovered;
         color_style_title = ColorStyle_TitleBarHovered;
@@ -617,43 +663,40 @@ void draw_node(const EditorContext& editor, int node_idx, Pin& pin_hovered)
             NODE_CORNER_ROUNDNESS);
     }
 
-    // input & output attribute pins:
-    draw_pins(editor, node_idx, AttributeType_Input, pin_hovered);
-    draw_pins(editor, node_idx, AttributeType_Output, pin_hovered);
-
     ImGui::PopID();
 }
 
-void draw_link(const EditorContext& editor, const int link_idx)
+void draw_link(const EditorContext& editor, int link_idx)
 {
-    const Pin& pin_input =
-        editor.links[link_idx].pin1.type == AttributeType_Input
-            ? editor.links[link_idx].pin1
-            : editor.links[link_idx].pin2;
-    const Pin& pin_output =
-        editor.links[link_idx].pin1.type == AttributeType_Output
-            ? editor.links[link_idx].pin1
-            : editor.links[link_idx].pin2;
+    const LinkData& link = editor.links.pool[link_idx];
+
+    const int start_idx = editor.pins.id_map.GetInt(link.start_attr);
+    const int end_idx = editor.pins.id_map.GetInt(link.end_attr);
+    assert(start_idx != INVALID_INDEX);
+    assert(end_idx != INVALID_INDEX);
+    const PinData& pin_start = editor.pins.pool[start_idx];
+    const PinData& pin_end = editor.pins.pool[end_idx];
 
     ImVec2 start, end;
     {
         // TODO: maybe compute the current node_rect and store it instead of
         // recomputing it all the time
         const ImRect node_rect =
-            get_node_rect(editor.nodes[pin_output.node_idx]);
-        start = output_pin_position(
+            get_node_rect(editor.nodes[pin_start.node_idx]);
+        start = pin_position(
             node_rect,
-            editor.nodes[pin_output.node_idx]
-                .output_attributes[pin_output.attribute_idx]);
+            editor.nodes[pin_start.node_idx]
+                .attribute_rects[pin_start.attribute_idx],
+            pin_start.type);
     }
 
     {
-        const ImRect node_rect =
-            get_node_rect(editor.nodes[pin_input.node_idx]);
-        end = input_pin_position(
+        const ImRect node_rect = get_node_rect(editor.nodes[pin_end.node_idx]);
+        end = pin_position(
             node_rect,
-            editor.nodes[pin_input.node_idx]
-                .input_attributes[pin_input.attribute_idx]);
+            editor.nodes[pin_end.node_idx]
+                .attribute_rects[pin_end.attribute_idx],
+            pin_end.type);
     }
 
     const LinkBezierData link_renderable = get_link_renderable(start, end);
@@ -665,15 +708,15 @@ void draw_link(const EditorContext& editor, const int link_idx)
         link_renderable.p3);
     if (is_hovered)
     {
-        g.hovered_link = link_idx;
+        g.link_hovered = link_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            g.selected_link = link_idx;
+            g.link_selected = link_idx;
         }
     }
 
     ColorStyle style = ColorStyle_Link;
-    if (g.selected_link == link_idx)
+    if (g.link_selected == link_idx)
     {
         style = ColorStyle_LinkSelected;
     }
@@ -708,16 +751,16 @@ void Initialize()
     g.default_editor_ctx = EditorContextCreate();
     EditorContextSet(g.default_editor_ctx);
 
-    g.current_node.index = INVALID_INDEX;
-    g.current_node.attribute.type = AttributeType_None;
-    g.current_node.attribute.index = INVALID_INDEX;
+    g.node_current.index = INVALID_INDEX;
+    g.node_current.attribute.type = AttributeType_None;
+    g.node_current.attribute.index = INVALID_INDEX;
 
-    g.link_dragged = LinkData();
+    g.link_created = LinkData();
 
-    g.hovered_node = INVALID_INDEX;
-    g.selected_node = INVALID_INDEX;
-    g.hovered_link = INVALID_INDEX;
-    g.selected_link = INVALID_INDEX;
+    g.node_hovered = INVALID_INDEX;
+    g.node_selected = INVALID_INDEX;
+    g.link_hovered = INVALID_INDEX;
+    g.link_selected = INVALID_INDEX;
 
     g.color_styles[ColorStyle_NodeBackground] = IM_COL32(60, 60, 60, 255);
     g.color_styles[ColorStyle_NodeBackgroundHovered] =
@@ -734,7 +777,6 @@ void Initialize()
     g.color_styles[ColorStyle_LinkSelected] = IM_COL32(255, 255, 255, 255);
     g.color_styles[ColorStyle_Pin] = IM_COL32(150, 150, 150, 255);
     g.color_styles[ColorStyle_PinHovered] = IM_COL32(200, 200, 100, 255);
-    g.color_styles[ColorStyle_PinInvalid] = IM_COL32(255, 0, 0, 255);
     g.color_styles[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
     g.color_styles[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.color_styles[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
@@ -751,14 +793,18 @@ void BeginNodeEditor()
 
     // Reset state from previous pass
 
-    g.active_node.index = INVALID_INDEX;
-    g.active_node.attribute = INVALID_INDEX;
-    g.moved_node.index = INVALID_INDEX;
-    g.moved_node.position = ImVec2(0.0f, 0.0f);
-    g.hovered_node = INVALID_INDEX;
-    g.hovered_link = INVALID_INDEX;
+    g.link_created = LinkData();
+    g.node_active.index = INVALID_INDEX;
+    g.node_active.attribute = INVALID_INDEX;
+    g.node_moved.index = INVALID_INDEX;
+    g.node_moved.position = ImVec2(0.0f, 0.0f);
+    g.node_hovered = INVALID_INDEX;
+    g.link_hovered = INVALID_INDEX;
+    g.pin_hovered = INVALID_INDEX;
     // reset ui events for the current editor context
     EditorContext& editor = editor_context_get();
+    editor.pins.update();
+    editor.links.update();
 
     assert(editor.grid_draw_list == nullptr);
 
@@ -800,157 +846,104 @@ void EndNodeEditor()
 
     const bool is_mouse_clicked = ImGui::IsMouseClicked(0);
 
-    /***
-     *         ___          __                         __
-     *     ___/ (_)__ ___  / /__ ___ __  ___  ___  ___/ /__ ___
-     *    / _  / (_-</ _ \/ / _ `/ // / / _ \/ _ \/ _  / -_|_-<
-     *    \_,_/_/___/ .__/_/\_,_/\_, / /_//_/\___/\_,_/\__/___/
-     *             /_/          /___/
-     */
-
-    Pin pin_hovered = Pin();
-
     for (int node_idx = 0; node_idx < editor.nodes.size(); node_idx++)
     {
         // TODO: perhaps consider putting this inside a BeginChild()  block
         // to see if that would solve the overlapping node problem
-        draw_node(editor, node_idx, pin_hovered);
+        draw_node(editor, node_idx);
+    }
+
+    for (int i = 0; i < editor.pins.pool.size(); i++)
+    {
+        if (editor.pins.in_use[i])
+        {
+            draw_pin(editor, editor.pins.pool[i]);
+        }
     }
 
     // check to see if the mouse was near any node
-    if (g.hovered_node == INVALID_INDEX)
+    if (g.node_hovered == INVALID_INDEX)
     {
         if (is_mouse_clicked)
         {
-            g.selected_node = INVALID_INDEX;
+            g.node_selected = INVALID_INDEX;
         }
     }
-
-    /***
-     *         ___          __            ___      __
-     *     ___/ (_)__ ___  / /__ ___ __  / (_)__  / /__ ___
-     *    / _  / (_-</ _ \/ / _ `/ // / / / / _ \/  '_/(_-<
-     *    \_,_/_/___/ .__/_/\_,_/\_, / /_/_/_//_/_/\_\/___/
-     *             /_/          /___/
-     */
 
     editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_BACKGROUND);
 
-    for (int i = 0; i < editor.links.size(); i++)
+    for (int i = 0; i < editor.links.pool.size(); ++i)
     {
-        draw_link(editor, i);
+        if (editor.links.in_use[i])
+        {
+            draw_link(editor, i);
+        }
     }
 
-    if (g.hovered_link == INVALID_INDEX)
+    if (g.link_hovered == INVALID_INDEX)
     {
         if (is_mouse_clicked)
         {
-            g.selected_link = INVALID_INDEX;
+            g.link_selected = INVALID_INDEX;
         }
     }
 
-    // See if a new link is created on a pin
+    // See if the user started to drag a link from a pin
 
     if (is_mouse_clicked)
     {
-        g.link_dragged.pin1 = pin_hovered;
+        editor.link_dragged.start_attr = g.pin_hovered;
     }
 
-    // Render the link being dragged
-
-    if (ImGui::IsMouseDown(0) && is_pin_valid(g.link_dragged.pin1))
+    if (editor.link_dragged.start_attr != INVALID_INDEX)
     {
-        const Pin& pin = g.link_dragged.pin1;
-        const NodeData& node = editor_context_get().nodes[pin.node_idx];
-        const ImRect node_rect = get_node_rect(node);
-        ImVec2 output_pos, input_pos;
-        assert(
-            pin.type == AttributeType_Input ||
-            pin.type == AttributeType_Output);
-        if (pin.type == AttributeType_Input)
+        // Render the link being dragged
+        if (ImGui::IsMouseDown(0))
         {
-            input_pos = input_pin_position(
-                node_rect, node.input_attributes[pin.attribute_idx]);
-            output_pos = ImGui::GetIO().MousePos;
+            int pin_idx = editor.pins.id_map.GetInt(
+                ImGuiID(editor.link_dragged.start_attr), INVALID_INDEX);
+            assert(pin_idx != INVALID_INDEX);
+            const PinData& pin = editor.pins.pool[pin_idx];
+            const NodeData& node = editor_context_get().nodes[pin.node_idx];
+            const ImRect node_rect = get_node_rect(node);
+
+            const ImVec2 start_pos = pin_position(
+                node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
+            const ImVec2 end_pos = ImGui::GetIO().MousePos;
+
+            const LinkBezierData link_renderable =
+                get_link_renderable(start_pos, end_pos);
+            editor.grid_draw_list->AddBezierCurve(
+                link_renderable.p0,
+                link_renderable.p1,
+                link_renderable.p2,
+                link_renderable.p3,
+                g.color_styles[ColorStyle_Link],
+                LINK_THICKNESS,
+                link_renderable.num_segments);
         }
-        else if (pin.type == AttributeType_Output)
+
+        // Finish the new link
+
+        if (ImGui::IsMouseReleased(0))
         {
-            output_pos = output_pin_position(
-                node_rect, node.output_attributes[pin.attribute_idx]);
-            input_pos = ImGui::GetIO().MousePos;
-        }
-        const LinkBezierData link_renderable =
-            get_link_renderable(output_pos, input_pos);
-        editor.grid_draw_list->AddBezierCurve(
-            link_renderable.p0,
-            link_renderable.p1,
-            link_renderable.p2,
-            link_renderable.p3,
-            g.color_styles[ColorStyle_Link],
-            LINK_THICKNESS,
-            link_renderable.num_segments);
-    }
-
-    // Finish the new link!
-
-    if (ImGui::IsMouseReleased(0))
-    {
-        // Ensure that a link was actually started before pushing anything into
-        // the vector.
-        //
-        // It's possible to hover over a pin without starting a link by clicking
-        // & dragging on a node. The node is moved with a frame delay -- so the
-        // mouse might be hovering over a pin when it's released resulting in
-        // pin1 never being assigned to a valid node.
-        if (is_pin_valid(g.link_dragged.pin1))
-        {
-            if (is_pin_valid(pin_hovered))
+            if (g.pin_hovered != INVALID_INDEX)
             {
-                g.link_dragged.pin2 = pin_hovered;
-                assert(
-                    g.link_dragged.pin1.type == AttributeType_Input ||
-                    g.link_dragged.pin1.type == AttributeType_Output);
-                assert(
-                    g.link_dragged.pin2.type == AttributeType_Input ||
-                    g.link_dragged.pin2.type == AttributeType_Output);
-                assert(g.link_dragged.pin1.type != g.link_dragged.pin2.type);
-                editor.links.push_back(g.link_dragged);
+                editor.link_dragged.end_attr = g.pin_hovered;
 
-                const Pin& output_pin =
-                    g.link_dragged.pin1.type == AttributeType_Output
-                        ? g.link_dragged.pin1
-                        : g.link_dragged.pin2;
-                const Pin& input_pin =
-                    g.link_dragged.pin1.type == AttributeType_Input
-                        ? g.link_dragged.pin1
-                        : g.link_dragged.pin2;
-
-                // TODO: here we need to store the link data:
-                // a starting attribute and an ending attribute
-
-                // finally, reset the newly created link
-                g.link_dragged = LinkData();
+                g.link_created.start_attr = editor.link_dragged.start_attr;
+                g.link_created.end_attr = editor.link_dragged.end_attr;
             }
-            else
-            {
-                g.link_dragged.pin1 = Pin();
-            }
+            // finally, reset the dragged link
+            editor.link_dragged = LinkData();
         }
     }
 
-    /***
-     *       ____      _     __
-     *      / _(_)__  (_)__ / /
-     *     / _/ / _ \/ (_-</ _ \
-     *    /_//_/_//_/_/___/_//_/
-     *
-     */
-
-    if (g.moved_node.index != INVALID_INDEX &&
-        g.link_dragged.pin1.node_idx == INVALID_INDEX)
+    if (g.node_moved.index != INVALID_INDEX &&
+        editor.link_dragged.start_attr == INVALID_INDEX)
     {
         // Don't move the node if we're dragging a link
-        editor.nodes[g.moved_node.index].origin = g.moved_node.position;
+        editor.nodes[g.node_moved.index].origin = g.node_moved.position;
     }
 
     // set channel 0 before merging, or else UI rendering is broken
@@ -976,8 +969,7 @@ void EndNodeEditor()
     {
         NodeData& node = editor.nodes[idx];
 
-        node.input_attributes.clear();
-        node.output_attributes.clear();
+        node.attribute_rects.clear();
     }
 }
 
@@ -986,13 +978,13 @@ void BeginNode(int node_id)
     // Remember to call BeginNodeEditor before calling BeginNode
     assert(g.current_scope == SCOPE_EDITOR);
     g.current_scope = SCOPE_NODE;
-    assert(g.current_node.index == INVALID_INDEX);
+    assert(g.node_current.index == INVALID_INDEX);
 
     EditorContext& editor = editor_context_get();
 
     {
         int idx = find_or_create_new_node(node_id);
-        g.current_node.index = idx;
+        g.node_current.index = idx;
         memcpy(
             editor.nodes[idx].color_styles,
             g.color_styles,
@@ -1000,7 +992,7 @@ void BeginNode(int node_id)
     }
 
     ImGui::SetCursorPos(
-        get_node_content_origin(editor.nodes[g.current_node.index]) +
+        get_node_content_origin(editor.nodes[g.node_current.index]) +
         editor.panning);
 
     ImGui::PushID(node_id);
@@ -1011,7 +1003,7 @@ void Name(const char* name)
 {
     assert(g.current_scope == SCOPE_NODE);
 
-    NodeData& node = editor_context_get().nodes[g.current_node.index];
+    NodeData& node = editor_context_get().nodes[g.node_current.index];
     assert(strlen(name) < NODE_NAME_STR_LEN);
     memset(node.name, 0, NODE_NAME_STR_LEN);
     memcpy(node.name, name, strlen(name));
@@ -1026,11 +1018,11 @@ void EndNode()
 
     ImGui::EndGroup();
     ImGui::PopID();
-    editor.nodes[g.current_node.index].content_rect = get_item_rect();
-    g.current_node.index = INVALID_INDEX;
+    editor.nodes[g.node_current.index].content_rect = get_item_rect();
+    g.node_current.index = INVALID_INDEX;
 }
 
-int BeginAttribute(int id, AttributeType type)
+void BeginAttribute(int id, AttributeType type)
 {
     // Make sure to call BeginNode() before calling
     // BeginAttribute()
@@ -1040,23 +1032,18 @@ int BeginAttribute(int id, AttributeType type)
     ImGui::BeginGroup();
     ImGui::PushID(id);
 
-    g.current_node.attribute.type = type;
+    g.node_current.attribute.type = type;
 
-    switch (type)
-    {
-        case AttributeType_Input:
-            g.current_node.attribute.index = editor_context_get()
-                                                 .nodes[g.current_node.index]
-                                                 .input_attributes.size();
-        case AttributeType_Output:
-            g.current_node.attribute.index = editor_context_get()
-                                                 .nodes[g.current_node.index]
-                                                 .output_attributes.size();
-        default:
-            g.current_node.attribute.index = INVALID_INDEX;
-    }
+    EditorContext& editor = editor_context_get();
 
-    return g.current_node.attribute.index;
+    g.node_current.attribute.index =
+        editor.nodes[g.node_current.index].attribute_rects.size();
+
+    PinData& pin = editor.pins.find_or_create_pin(id);
+    pin.id = id;
+    pin.node_idx = g.node_current.index;
+    pin.attribute_idx = g.node_current.attribute.index;
+    pin.type = type;
 }
 
 void EndAttribute()
@@ -1069,20 +1056,19 @@ void EndAttribute()
 
     if (ImGui::IsItemActive())
     {
-        g.active_node.index = g.current_node.index;
-        g.active_node.attribute = g.current_node.attribute.index;
+        g.node_active.index = g.node_current.index;
+        g.node_active.attribute = g.node_current.attribute.index;
     }
 
-    NodeData& current_node = editor_context_get().nodes[g.current_node.index];
+    NodeData& node_current = editor_context_get().nodes[g.node_current.index];
 
-    if (g.current_node.attribute.type == AttributeType_Input)
-    {
-        current_node.input_attributes.push_back(get_item_rect());
-    }
-    else if (g.current_node.attribute.type == AttributeType_Output)
-    {
-        current_node.output_attributes.push_back(get_item_rect());
-    }
+    node_current.attribute_rects.push_back(get_item_rect());
+}
+
+void Link(const int start_attr, const int end_attr)
+{
+    EditorContext& editor = editor_context_get();
+    editor.links.find_or_create_link(start_attr, end_attr);
 }
 
 void PushColorStyle(ColorStyle item, ImU32 color)
@@ -1113,10 +1099,10 @@ void SetNodePos(
 bool IsNodeHovered(int* const node_id)
 {
     assert(node_id != NULL);
-    const bool is_hovered = g.hovered_node != INVALID_INDEX;
+    const bool is_hovered = g.node_hovered != INVALID_INDEX;
     if (is_hovered)
     {
-        *node_id = g.hovered_node;
+        *node_id = g.node_hovered;
         return true;
     }
     return false;
@@ -1131,10 +1117,10 @@ bool IsPinHovered(int* attr_id) { return false; }
 bool IsNodeSelected(int* const node_id)
 {
     assert(node_id != NULL);
-    const bool is_selected = g.selected_node != INVALID_INDEX;
+    const bool is_selected = g.node_selected != INVALID_INDEX;
     if (is_selected)
     {
-        *node_id = g.selected_node;
+        *node_id = g.node_selected;
         return true;
     }
     return false;
@@ -1145,7 +1131,7 @@ bool IsLinkSelected(int* const start_id, int* const end_id)
     assert(start_id != NULL);
     assert(end_id != NULL);
 
-    const bool is_selected = g.selected_link != INVALID_INDEX;
+    const bool is_selected = g.link_selected != INVALID_INDEX;
     if (is_selected)
     {
         // TODO: argh, links should just be an attribute ids, not pins
@@ -1173,7 +1159,13 @@ bool IsLinkCreated(int* const started_at, int* const ended_at)
     assert(started_at != NULL);
     assert(ended_at != NULL);
 
-    assert(false);
+    if ((g.link_created.start_attr != INVALID_INDEX) &&
+        (g.link_created.end_attr != INVALID_INDEX))
+    {
+        *started_at = g.link_created.start_attr;
+        *ended_at = g.link_created.end_attr;
+        return true;
+    }
 
     return false;
 }
@@ -1192,22 +1184,6 @@ void node_line_handler(EditorContext& editor, const char* line)
     else if (sscanf(line, "origin=%f,%f", &x, &y) == 2)
     {
         editor.nodes.back().origin = ImVec2(x, y);
-    }
-}
-
-void link_line_handler(EditorContext& editor, const char* line)
-{
-    // link header isn't parsed for now
-    Pin pin;
-    if (sscanf(line, "output=%i,%i", &pin.node_idx, &pin.attribute_idx))
-    {
-        pin.type = AttributeType_Output;
-        editor.links.back().pin1 = pin;
-    }
-    else if (sscanf(line, "input=%i,%i", &pin.node_idx, &pin.attribute_idx))
-    {
-        pin.type = AttributeType_Input;
-        editor.links.back().pin2 = pin;
     }
 }
 
@@ -1231,7 +1207,7 @@ const char* SaveEditorStateToMemory(
 
     g.text_buffer.clear();
     // TODO: check to make sure that the estimate is the upper bound of element
-    g.text_buffer.reserve(64 * editor.nodes.size() + 64 * editor.links.size());
+    g.text_buffer.reserve(64 * editor.nodes.size());
 
     g.text_buffer.appendf(
         "[editor]\npanning=%i,%i\n",
@@ -1244,22 +1220,6 @@ const char* SaveEditorStateToMemory(
         g.text_buffer.appendf("\n[node.%d]\n", node.id);
         g.text_buffer.appendf(
             "origin=%i,%i\n", (int)node.origin.x, (int)node.origin.y);
-    }
-
-    for (int i = 0; i < editor.links.size(); i++)
-    {
-        const LinkData& link = editor.links[i];
-        const Pin& output =
-            link.pin1.type == AttributeType_Output ? link.pin1 : link.pin2;
-        const Pin& input =
-            link.pin1.type == AttributeType_Input ? link.pin1 : link.pin2;
-
-        // links don't have a unique id for now, so just use the index
-        g.text_buffer.appendf("\n[link.%d]\n", i);
-        g.text_buffer.appendf(
-            "output=%d,%d\n", output.node_idx, output.attribute_idx);
-        g.text_buffer.appendf(
-            "input=%d,%d\n", input.node_idx, input.attribute_idx);
     }
 
     if (data_size != NULL)
@@ -1321,11 +1281,6 @@ void LoadEditorStateFromMemory(
             {
                 editor.nodes.push_back(NodeData());
                 line_handler = node_line_handler;
-            }
-            else if (strncmp(line + 1, "link", 4) == 0)
-            {
-                editor.links.push_back(LinkData());
-                line_handler = link_line_handler;
             }
             else if (strcmp(line + 1, "editor") == 0)
             {

@@ -27,7 +27,6 @@ enum ColorStyle
     ColorStyle_LinkSelected,
     ColorStyle_Pin,
     ColorStyle_PinHovered,
-    ColorStyle_PinInvalid,
     ColorStyle_PinOutline,
     ColorStyle_GridBackground,
     ColorStyle_GridLine,
@@ -51,13 +50,13 @@ void BeginNode(int id);
 void Name(const char* name);
 
 // The attribute ids must be unique with regards to other attribute ids.
-int BeginAttribute(int id, AttributeType type);
+void BeginAttribute(int id, AttributeType type);
 void EndAttribute();
+
+void EndNode();
 
 // The attributes ids used here must match the ids used in BeginAttribute()
 void Link(int start_attr, int end_attr);
-
-void EndNode();
 
 void PopColorStyle(ColorStyle item);
 
