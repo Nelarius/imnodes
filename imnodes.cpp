@@ -273,6 +273,7 @@ static struct
     int link_hovered;
     int link_selected;
     int pin_hovered;
+    bool link_dropped;
 
     ImGuiTextBuffer text_buffer;
 } g;
@@ -561,15 +562,16 @@ void draw_grid(const EditorContext& editor)
     }
 }
 
-void draw_pin(const EditorContext& editor, const PinData& pin)
+void draw_pin(const EditorContext& editor, const int pin_idx)
 {
+    const PinData& pin = editor.pins.pool[pin_idx];
     const NodeData& node = editor.nodes[pin.node_idx];
     const ImRect node_rect = get_node_rect(node);
     const ImVec2 pin_pos = pin_position(
         node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
     if (is_mouse_hovering_near_point(pin_pos, NODE_PIN_HOVER_RADIUS))
     {
-        g.pin_hovered = pin.id;
+        g.pin_hovered = pin_idx;
         editor.grid_draw_list->AddCircleFilled(
             pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinHovered]);
     }
@@ -801,6 +803,7 @@ void BeginNodeEditor()
     g.node_hovered = INVALID_INDEX;
     g.link_hovered = INVALID_INDEX;
     g.pin_hovered = INVALID_INDEX;
+    g.link_dropped = false;
     // reset ui events for the current editor context
     EditorContext& editor = editor_context_get();
     editor.pins.update();
@@ -857,7 +860,7 @@ void EndNodeEditor()
     {
         if (editor.pins.in_use[i])
         {
-            draw_pin(editor, editor.pins.pool[i]);
+            draw_pin(editor, i);
         }
     }
 
@@ -890,9 +893,9 @@ void EndNodeEditor()
 
     // See if the user started to drag a link from a pin
 
-    if (is_mouse_clicked)
+    if (is_mouse_clicked && g.pin_hovered != INVALID_INDEX)
     {
-        editor.link_dragged.start_attr = g.pin_hovered;
+        editor.link_dragged.start_attr = editor.pins.pool[g.pin_hovered].id;
     }
 
     if (editor.link_dragged.start_attr != INVALID_INDEX)
@@ -927,12 +930,19 @@ void EndNodeEditor()
 
         if (ImGui::IsMouseReleased(0))
         {
+            // The link was created if the mouse is released near a pin
             if (g.pin_hovered != INVALID_INDEX)
             {
-                editor.link_dragged.end_attr = g.pin_hovered;
+                editor.link_dragged.end_attr =
+                    editor.pins.pool[g.pin_hovered].id;
 
                 g.link_created.start_attr = editor.link_dragged.start_attr;
                 g.link_created.end_attr = editor.link_dragged.end_attr;
+            }
+            // else the link is dropped
+            else
+            {
+                g.link_dropped = true;
             }
             // finally, reset the dragged link
             editor.link_dragged = LinkData();
@@ -1099,6 +1109,7 @@ void SetNodePos(
 bool IsNodeHovered(int* const node_id)
 {
     assert(node_id != NULL);
+
     const bool is_hovered = g.node_hovered != INVALID_INDEX;
     if (is_hovered)
     {
@@ -1108,15 +1119,38 @@ bool IsNodeHovered(int* const node_id)
     return false;
 }
 
-// TODO
-bool IsLinkHovered(int* start_id, int* end_id) { return false; }
+bool IsLinkHovered(int* const started_at, int* const ended_at)
+{
+    assert(started_at != NULL);
+    assert(ended_at != NULL);
 
-// TODO
-bool IsPinHovered(int* attr_id) { return false; }
+    const bool is_hovered = g.link_hovered != INVALID_INDEX;
+    if (is_hovered)
+    {
+        const EditorContext& editor = editor_context_get();
+        *started_at = editor.links.pool[g.link_hovered].start_attr;
+        *ended_at = editor.links.pool[g.link_hovered].end_attr;
+    }
+    return is_hovered;
+}
+
+bool IsPinHovered(int* const attr)
+{
+    assert(attr != NULL);
+
+    const bool is_hovered = g.pin_hovered != INVALID_INDEX;
+    if (is_hovered)
+    {
+        const EditorContext& editor = editor_context_get();
+        *attr = editor.pins.pool[g.pin_hovered].id;
+    }
+    return is_hovered;
+}
 
 bool IsNodeSelected(int* const node_id)
 {
     assert(node_id != NULL);
+
     const bool is_selected = g.node_selected != INVALID_INDEX;
     if (is_selected)
     {
@@ -1126,33 +1160,35 @@ bool IsNodeSelected(int* const node_id)
     return false;
 }
 
-bool IsLinkSelected(int* const start_id, int* const end_id)
+bool IsLinkSelected(int* const started_at, int* const ended_at)
 {
-    assert(start_id != NULL);
-    assert(end_id != NULL);
+    assert(started_at != NULL);
+    assert(ended_at != NULL);
 
     const bool is_selected = g.link_selected != INVALID_INDEX;
     if (is_selected)
     {
-        // TODO: argh, links should just be an attribute ids, not pins
-        assert(false);
+        const EditorContext& editor = editor_context_get();
+        *started_at = editor.links.pool[g.link_selected].start_attr;
+        *ended_at = editor.links.pool[g.link_selected].end_attr;
     }
     return is_selected;
 }
 
 bool IsLinkStarted(int* const started_at)
 {
-    assert(false);
+    assert(started_at != NULL);
 
-    return false;
+    const EditorContext& editor = editor_context_get();
+    const bool is_started = editor.link_dragged.start_attr != INVALID_INDEX;
+    if (is_started)
+    {
+        *started_at = editor.link_dragged.start_attr;
+    }
+    return is_started;
 }
 
-bool IsLinkDropped()
-{
-    assert(false);
-
-    return false;
-}
+bool IsLinkDropped() { return g.link_dropped; }
 
 bool IsLinkCreated(int* const started_at, int* const ended_at)
 {
