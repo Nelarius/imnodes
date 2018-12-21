@@ -80,6 +80,55 @@ struct NodeData
     }
 };
 
+struct NodePool
+{
+    ImVector<NodeData> pool;
+    ImVector<bool> in_use;
+    ImVector<int> free_list;
+    ImGuiStorage id_map;
+
+    NodePool() : pool(), in_use(), free_list(), id_map() {}
+
+    inline void update()
+    {
+        free_list.clear();
+        for (int i = 0; i < in_use.size(); ++i)
+        {
+            if (!in_use[i])
+            {
+                id_map.SetInt(pool[i].id, INVALID_INDEX);
+                free_list.push_back(i);
+            }
+        }
+
+        // set all values to false
+        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
+    }
+
+    // returns a reference to the node which was created or found
+    inline NodeData& find_or_create_node(int id)
+    {
+        int index = id_map.GetInt(ImGuiID(id), INVALID_INDEX);
+        if (index == INVALID_INDEX)
+        {
+            if (free_list.size() > 0)
+            {
+                index = free_list.back();
+                free_list.pop_back();
+            }
+            else
+            {
+                index = pool.size();
+                pool.push_back(NodeData());
+                in_use.push_back(true);
+            }
+            id_map.SetInt(ImGuiID(id), index);
+        }
+        in_use[index] = true;
+        return pool[index];
+    }
+};
+
 struct PinData
 {
     int id;
@@ -481,9 +530,7 @@ inline ImVec2 pin_position(
 
 struct EditorContext
 {
-    ImGuiStorage node_map;
-    ImVector<NodeData> nodes;
-    ImVector<ImGuiID> keys;
+    NodePool nodes;
     PinPool pins;
     LinkPool links;
 
@@ -494,8 +541,8 @@ struct EditorContext
     LinkData link_dragged;
 
     EditorContext()
-        : node_map(), nodes(), pins(), links(), panning(0.f, 0.f),
-          grid_draw_list(nullptr), link_dragged()
+        : nodes(), pins(), links(), panning(0.f, 0.f), grid_draw_list(nullptr),
+          link_dragged()
     {
     }
 };
@@ -517,29 +564,6 @@ void EditorContextSet(EditorContext* ctx) { g.editor_ctx = ctx; }
 
 namespace
 {
-inline int node_index_to_id(int node_idx)
-{
-    return editor_context_get().nodes[node_idx].id;
-}
-
-int find_or_create_new_node(int id)
-{
-    EditorContext& editor = editor_context_get();
-
-    int idx = editor.node_map.GetInt(ImGuiID(id), INVALID_INDEX);
-    if (idx == INVALID_INDEX)
-    {
-        idx = editor.nodes.size();
-        editor.nodes.push_back(NodeData());
-        editor.keys.push_back(ImGuiID(id));
-        assert(idx != INVALID_INDEX);
-        // TODO: set more new node id state here?
-        editor.nodes[idx].id = ImGuiID(id);
-        editor.node_map.SetInt(ImGuiID(id), idx);
-    }
-    return idx;
-}
-
 void draw_grid(const EditorContext& editor)
 {
     const ImVec2 offset = editor.panning;
@@ -565,7 +589,7 @@ void draw_grid(const EditorContext& editor)
 void draw_pin(const EditorContext& editor, const int pin_idx)
 {
     const PinData& pin = editor.pins.pool[pin_idx];
-    const NodeData& node = editor.nodes[pin.node_idx];
+    const NodeData& node = editor.nodes.pool[pin.node_idx];
     const ImRect node_rect = get_node_rect(node);
     const ImVec2 pin_pos = pin_position(
         node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
@@ -586,7 +610,7 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
 
 void draw_node(const EditorContext& editor, int node_idx)
 {
-    const NodeData& node = editor.nodes[node_idx];
+    const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::PushID(node.id);
 
     editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_FOREGROUND);
@@ -684,19 +708,20 @@ void draw_link(const EditorContext& editor, int link_idx)
         // TODO: maybe compute the current node_rect and store it instead of
         // recomputing it all the time
         const ImRect node_rect =
-            get_node_rect(editor.nodes[pin_start.node_idx]);
+            get_node_rect(editor.nodes.pool[pin_start.node_idx]);
         start = pin_position(
             node_rect,
-            editor.nodes[pin_start.node_idx]
+            editor.nodes.pool[pin_start.node_idx]
                 .attribute_rects[pin_start.attribute_idx],
             pin_start.type);
     }
 
     {
-        const ImRect node_rect = get_node_rect(editor.nodes[pin_end.node_idx]);
+        const ImRect node_rect =
+            get_node_rect(editor.nodes.pool[pin_end.node_idx]);
         end = pin_position(
             node_rect,
-            editor.nodes[pin_end.node_idx]
+            editor.nodes.pool[pin_end.node_idx]
                 .attribute_rects[pin_end.attribute_idx],
             pin_end.type);
     }
@@ -806,6 +831,7 @@ void BeginNodeEditor()
     g.link_dropped = false;
     // reset ui events for the current editor context
     EditorContext& editor = editor_context_get();
+    editor.nodes.update();
     editor.pins.update();
     editor.links.update();
 
@@ -849,11 +875,14 @@ void EndNodeEditor()
 
     const bool is_mouse_clicked = ImGui::IsMouseClicked(0);
 
-    for (int node_idx = 0; node_idx < editor.nodes.size(); node_idx++)
+    for (int i = 0; i < editor.nodes.pool.size(); i++)
     {
         // TODO: perhaps consider putting this inside a BeginChild()  block
         // to see if that would solve the overlapping node problem
-        draw_node(editor, node_idx);
+        if (editor.nodes.in_use[i])
+        {
+            draw_node(editor, i);
+        }
     }
 
     for (int i = 0; i < editor.pins.pool.size(); i++)
@@ -907,7 +936,8 @@ void EndNodeEditor()
                 ImGuiID(editor.link_dragged.start_attr), INVALID_INDEX);
             assert(pin_idx != INVALID_INDEX);
             const PinData& pin = editor.pins.pool[pin_idx];
-            const NodeData& node = editor_context_get().nodes[pin.node_idx];
+            const NodeData& node =
+                editor_context_get().nodes.pool[pin.node_idx];
             const ImRect node_rect = get_node_rect(node);
 
             const ImVec2 start_pos = pin_position(
@@ -953,7 +983,7 @@ void EndNodeEditor()
         editor.link_dragged.start_attr == INVALID_INDEX)
     {
         // Don't move the node if we're dragging a link
-        editor.nodes[g.node_moved.index].origin = g.node_moved.position;
+        editor.nodes.pool[g.node_moved.index].origin = g.node_moved.position;
     }
 
     // set channel 0 before merging, or else UI rendering is broken
@@ -975,9 +1005,9 @@ void EndNodeEditor()
     ImGui::PopStyleVar();   // pop frame padding
     ImGui::EndGroup();
 
-    for (int idx = 0; idx < editor.nodes.size(); idx++)
+    for (int idx = 0; idx < editor.nodes.pool.size(); idx++)
     {
-        NodeData& node = editor.nodes[idx];
+        NodeData& node = editor.nodes.pool[idx];
 
         node.attribute_rects.clear();
     }
@@ -992,18 +1022,16 @@ void BeginNode(int node_id)
 
     EditorContext& editor = editor_context_get();
 
+    NodeData& node = editor.nodes.find_or_create_node(node_id);
+    node.id = node_id;
+    memcpy(node.color_styles, g.color_styles, sizeof(g.color_styles));
     {
-        int idx = find_or_create_new_node(node_id);
+        int idx = editor.nodes.id_map.GetInt(node_id, INVALID_INDEX);
+        assert(idx != INVALID_INDEX);
         g.node_current.index = idx;
-        memcpy(
-            editor.nodes[idx].color_styles,
-            g.color_styles,
-            sizeof(g.color_styles));
     }
 
-    ImGui::SetCursorPos(
-        get_node_content_origin(editor.nodes[g.node_current.index]) +
-        editor.panning);
+    ImGui::SetCursorPos(get_node_content_origin(node) + editor.panning);
 
     ImGui::PushID(node_id);
     ImGui::BeginGroup();
@@ -1013,7 +1041,7 @@ void Name(const char* name)
 {
     assert(g.current_scope == SCOPE_NODE);
 
-    NodeData& node = editor_context_get().nodes[g.node_current.index];
+    NodeData& node = editor_context_get().nodes.pool[g.node_current.index];
     assert(strlen(name) < NODE_NAME_STR_LEN);
     memset(node.name, 0, NODE_NAME_STR_LEN);
     memcpy(node.name, name, strlen(name));
@@ -1028,7 +1056,7 @@ void EndNode()
 
     ImGui::EndGroup();
     ImGui::PopID();
-    editor.nodes[g.node_current.index].content_rect = get_item_rect();
+    editor.nodes.pool[g.node_current.index].content_rect = get_item_rect();
     g.node_current.index = INVALID_INDEX;
 }
 
@@ -1047,7 +1075,7 @@ void BeginAttribute(int id, AttributeType type)
     EditorContext& editor = editor_context_get();
 
     g.node_current.attribute.index =
-        editor.nodes[g.node_current.index].attribute_rects.size();
+        editor.nodes.pool[g.node_current.index].attribute_rects.size();
 
     PinData& pin = editor.pins.find_or_create_pin(id);
     pin.id = id;
@@ -1070,7 +1098,8 @@ void EndAttribute()
         g.node_active.attribute = g.node_current.attribute.index;
     }
 
-    NodeData& node_current = editor_context_get().nodes[g.node_current.index];
+    NodeData& node_current =
+        editor_context_get().nodes.pool[g.node_current.index];
 
     node_current.attribute_rects.push_back(get_item_rect());
 }
@@ -1101,13 +1130,15 @@ void SetNodePos(
     ImGuiCond condition)
 {
     assert(g.guard.initialized);
-    int index = find_or_create_new_node(node_id);
-    editor_context_get().nodes[index].origin =
+    EditorContext& editor = editor_context_get();
+    NodeData& node = editor.nodes.find_or_create_node(node_id);
+    node.origin =
         screen_space_pos - editor_context_get().panning - g.grid_origin;
 }
 
 bool IsNodeHovered(int* const node_id)
 {
+    assert(g.current_scope == SCOPE_NONE);
     assert(node_id != NULL);
 
     const bool is_hovered = g.node_hovered != INVALID_INDEX;
@@ -1121,6 +1152,7 @@ bool IsNodeHovered(int* const node_id)
 
 bool IsLinkHovered(int* const started_at, int* const ended_at)
 {
+    assert(g.current_scope == SCOPE_NONE);
     assert(started_at != NULL);
     assert(ended_at != NULL);
 
@@ -1136,6 +1168,7 @@ bool IsLinkHovered(int* const started_at, int* const ended_at)
 
 bool IsPinHovered(int* const attr)
 {
+    assert(g.current_scope == SCOPE_NONE);
     assert(attr != NULL);
 
     const bool is_hovered = g.pin_hovered != INVALID_INDEX;
@@ -1149,12 +1182,14 @@ bool IsPinHovered(int* const attr)
 
 bool IsNodeSelected(int* const node_id)
 {
+    assert(g.current_scope == SCOPE_NONE);
     assert(node_id != NULL);
 
     const bool is_selected = g.node_selected != INVALID_INDEX;
     if (is_selected)
     {
-        *node_id = g.node_selected;
+        const EditorContext& editor = editor_context_get();
+        *node_id = editor.nodes.pool[g.node_selected].id;
         return true;
     }
     return false;
@@ -1162,6 +1197,7 @@ bool IsNodeSelected(int* const node_id)
 
 bool IsLinkSelected(int* const started_at, int* const ended_at)
 {
+    assert(g.current_scope == SCOPE_NONE);
     assert(started_at != NULL);
     assert(ended_at != NULL);
 
@@ -1177,6 +1213,7 @@ bool IsLinkSelected(int* const started_at, int* const ended_at)
 
 bool IsLinkStarted(int* const started_at)
 {
+    assert(g.current_scope == SCOPE_NONE);
     assert(started_at != NULL);
 
     const EditorContext& editor = editor_context_get();
@@ -1188,10 +1225,15 @@ bool IsLinkStarted(int* const started_at)
     return is_started;
 }
 
-bool IsLinkDropped() { return g.link_dropped; }
+bool IsLinkDropped()
+{
+    assert(g.current_scope == SCOPE_NONE);
+    return g.link_dropped;
+}
 
 bool IsLinkCreated(int* const started_at, int* const ended_at)
 {
+    assert(g.current_scope == SCOPE_NONE);
     assert(started_at != NULL);
     assert(ended_at != NULL);
 
@@ -1214,12 +1256,16 @@ void node_line_handler(EditorContext& editor, const char* line)
     float x, y;
     if (sscanf(line, "[node.%i", &i) == 1)
     {
-        editor.nodes.back().id = i;
-        editor.node_map.SetInt(ImGuiID(i), editor.nodes.size() - 1);
+        NodeData& node = editor.nodes.find_or_create_node(i);
+        node.id = i;
+        // the next case won't work unless this assumption is true
+        assert(
+            editor.nodes.id_map.GetInt(i, INVALID_INDEX) ==
+            editor.nodes.pool.size() - 1);
     }
     else if (sscanf(line, "origin=%f,%f", &x, &y) == 2)
     {
-        editor.nodes.back().origin = ImVec2(x, y);
+        editor.nodes.pool.back().origin = ImVec2(x, y);
     }
 }
 
@@ -1243,19 +1289,22 @@ const char* SaveEditorStateToMemory(
 
     g.text_buffer.clear();
     // TODO: check to make sure that the estimate is the upper bound of element
-    g.text_buffer.reserve(64 * editor.nodes.size());
+    g.text_buffer.reserve(64 * editor.nodes.pool.size());
 
     g.text_buffer.appendf(
         "[editor]\npanning=%i,%i\n",
         (int)editor.panning.x,
         (int)editor.panning.y);
 
-    for (int i = 0; i < editor.nodes.size(); i++)
+    for (int i = 0; i < editor.nodes.pool.size(); i++)
     {
-        const NodeData& node = editor.nodes[i];
-        g.text_buffer.appendf("\n[node.%d]\n", node.id);
-        g.text_buffer.appendf(
-            "origin=%i,%i\n", (int)node.origin.x, (int)node.origin.y);
+        if (editor.nodes.in_use[i])
+        {
+            const NodeData& node = editor.nodes.pool[i];
+            g.text_buffer.appendf("\n[node.%d]\n", node.id);
+            g.text_buffer.appendf(
+                "origin=%i,%i\n", (int)node.origin.x, (int)node.origin.y);
+        }
     }
 
     if (data_size != NULL)
@@ -1315,7 +1364,6 @@ void LoadEditorStateFromMemory(
             line_end[-1] = 0;
             if (strncmp(line + 1, "node", 4) == 0)
             {
-                editor.nodes.push_back(NodeData());
                 line_handler = node_line_handler;
             }
             else if (strcmp(line + 1, "editor") == 0)
