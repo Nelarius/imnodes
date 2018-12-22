@@ -721,17 +721,17 @@ public:
         // TODO: Handle events here
         ui_.reset();
 
-        imnodes::IsPinHovered(&ui_.pin_hovered.index);
+        imnodes::IsPinHovered(&ui_.pin_hovered.id);
 
-        imnodes::IsNodeHovered(&ui_.node_selected.index);
+        imnodes::IsNodeHovered(&ui_.node_selected.id);
 
-        if (imnodes::IsLinkSelected(&ui_.link_start.index, &ui_.link_end.index))
+        if (imnodes::IsLinkSelected(&ui_.link_start.id, &ui_.link_end.id))
         {
             // TODO: is this needed? why not just handle the event here
             ui_.is_link_selected = true;
         }
 
-        imnodes::IsNodeSelected(&ui_.node_selected.index);
+        imnodes::IsNodeSelected(&ui_.node_selected.id);
 
         if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
         {
@@ -743,7 +743,7 @@ public:
             if (ui_.node_selected.is_valid())
             {
                 if (output_nodes_.size() > 0 &&
-                    output_nodes_[0].out == ui_.node_selected.index)
+                    output_nodes_[0].out == ui_.node_selected.id)
                 {
                     const auto& node = output_nodes_[0];
                     graph_.erase_node(node.red);
@@ -757,7 +757,7 @@ public:
 
         // Now Ui::link_start and Ui::link_end can be re-used
 
-        if (imnodes::IsLinkCreated(&ui_.link_start.index, &ui_.link_end.index))
+        if (imnodes::IsLinkCreated(&ui_.link_start.id, &ui_.link_end.id))
         {
             graph_.add_edge(ui_.link_start, ui_.link_end);
         }
@@ -797,29 +797,29 @@ private:
         size_t lhs, rhs, op;
     };
 
-    struct Index
+    struct Id
     {
-        int index;
+        int id;
 
-        inline bool is_valid() const { return index >= 0; }
+        inline bool is_valid() const { return id >= 0; }
 
-        inline void invalidate() { index = invalid_index; }
+        inline void invalidate() { id = invalid_index; }
 
         inline operator int() const
         {
             assert(is_valid());
-            return index;
+            return id;
         }
 
-        inline Index& operator=(int i)
+        inline Id& operator=(int i)
         {
-            index = i;
+            id = i;
             return *this;
         }
 
-        inline bool operator==(int i) const { return index == i; }
+        inline bool operator==(int i) const { return id == i; }
 
-        Index() : index(invalid_index) {}
+        Id() : id(invalid_index) {}
 
     private:
         static const int invalid_index = -1;
@@ -827,11 +827,11 @@ private:
 
     struct Ui
     {
-        Index pin_hovered;
-        Index node_selected;
+        Id pin_hovered;
+        Id node_selected;
         bool is_link_selected;
         bool is_link_created;
-        Index link_start, link_end;
+        Id link_start, link_end;
 
         Ui()
             : pin_hovered(), node_selected(), is_link_selected(false),
