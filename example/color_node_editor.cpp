@@ -41,7 +41,7 @@ public:
     {
         assert(size_ > 0u);
         assert(size_ <= N);
-        return *(storage_ + (size_ - 1));
+        return storage_[size_ - 1];
     }
 
     inline T& operator[](const size_t i)
@@ -52,7 +52,26 @@ public:
     inline const T& operator[](const size_t i) const
     {
         assert(i < size_);
-        return *(data() + size_);
+        return storage_[i];
+    }
+
+    inline Iterator find(const T& t)
+    {
+        return const_cast<Iterator>(
+            static_cast<const StaticArray*>(this)->find(t));
+    }
+    inline ConstIterator find(const T& t) const
+    {
+        auto iter = begin();
+        while (iter != end())
+        {
+            if (*iter == t)
+            {
+                return iter;
+            }
+            ++iter;
+        }
+        return iter;
     }
 
     // Capacity
@@ -68,7 +87,7 @@ public:
     inline void push_back(const T& elem)
     {
         assert(size_ < N);
-        data()[size_] = elem;
+        storage_[size_] = elem;
         ++size_;
     }
 
@@ -113,8 +132,8 @@ private:
 enum NodeType
 {
     Node_Number,
-    Node_NumberLink, // the number isn't stored in the node, but is provided by
-                     // another node
+    Node_NumberExpression, // the number isn't stored in the node, but is
+                           // provided by another node
     Node_Operation,
     Node_Output
 };
@@ -133,37 +152,69 @@ struct Node
     };
 };
 
+struct Edge
+{
+    // the from, to variables store the node ids of the nodes contained in the
+    // edge.
+    size_t from, to;
+
+    Edge(size_t f, size_t t) : from(f), to(t) {}
+
+    // seems like std::unordered_map requires this to be
+    // default-constructible...
+    Edge() : from(), to() {}
+
+    inline size_t opposite(size_t n) const { return n == from ? to : from; }
+};
+
 class Graph
 {
 public:
     // the graph has a limited number of adjacencies, simplifies memory usage
-    using AdjacencyArray = StaticArray<size_t, 3u>;
-    using AdjacencyIterator = AdjacencyArray::Iterator;
-    using ConstAdjacencyIterator = AdjacencyArray::ConstIterator;
-    using NodeIterator = std::unordered_map<size_t, Node>::iterator;
-    using ConstNodeIterator = std::unordered_map<size_t, Node>::const_iterator;
+    using AdjacencyArray = StaticArray<size_t, 6u>;
 
-    Graph() : current_id_(0u), nodes_(), adjacencies_() {}
+    using EdgeIterator = std::unordered_map<size_t, Edge>::iterator;
+    using ConstEdgeIterator = std::unordered_map<size_t, Edge>::const_iterator;
+
+    Graph() : current_id_(0u), nodes_(), edge_adjacencies_(), edges_() {}
 
     // Element access
 
-    inline Node& operator[](const size_t i)
+    inline Node& node(const size_t node_id)
     {
         return const_cast<Node&>(
-            static_cast<const Graph*>(this)->operator[](i));
+            static_cast<const Graph*>(this)->node(node_id));
     }
-    inline const Node& operator[](const size_t id) const
+    inline const Node& node(const size_t node_id) const
     {
-        assert(nodes_.find(id) != nodes_.end());
-        return nodes_.find(id)->second;
+        assert(nodes_.find(node_id) != nodes_.end());
+        return nodes_.at(node_id);
     }
+
+    inline Edge& edge(const size_t edge_id)
+    {
+        return const_cast<Edge&>(
+            static_cast<const Graph*>(this)->edge(edge_id));
+    }
+    inline const Edge& edge(const size_t edge_id) const
+    {
+        assert(edges_.find(edge_id) != edges_.end());
+        return edges_.at(edge_id);
+    }
+
+    inline EdgeIterator begin_edges() { return edges_.begin(); }
+    inline ConstEdgeIterator end_edges() const { return edges_.begin(); }
+
+    inline EdgeIterator end_edges() { return edges_.end(); }
+    inline ConstEdgeIterator end_edge() const { return edges_.end(); }
 
     // Capacity
 
     inline size_t num_adjacencies(const size_t node_id) const
     {
-        assert(adjacencies_.find(node_id) != adjacencies_.end());
-        return adjacencies_.find(node_id)->second.size();
+        const auto iter = edge_adjacencies_.find(node_id);
+        assert(iter != edge_adjacencies_.end());
+        return iter->second.size();
     }
 
     // Modifiers
@@ -172,20 +223,48 @@ public:
     {
         const size_t id = current_id_++;
         nodes_.insert(std::make_pair(id, node));
-        adjacencies_.insert(std::make_pair(id, AdjacencyArray()));
+        edge_adjacencies_.insert(std::make_pair(id, AdjacencyArray()));
         return id;
     }
 
-    void add_edge(const size_t node1, const size_t node2)
+    void erase_node(const size_t node_id)
     {
-        adjacencies_[node1].push_back(node2);
-        adjacencies_[node2].push_back(node1);
+        for (size_t edge : edge_adjacencies_[node_id])
+        {
+            erase_edge(edge);
+        }
+        nodes_.erase(node_id);
+        edge_adjacencies_.erase(node_id);
     }
 
-    void erase_edge(const size_t node1, const size_t node2)
+    size_t add_edge(const size_t from, const size_t to)
     {
-        remove_adjacency(node1, node2);
-        remove_adjacency(node2, node1);
+        const size_t id = current_id_++;
+        edges_.insert(std::make_pair(id, Edge(from, to)));
+        edge_adjacencies_[from].push_back(id);
+        edge_adjacencies_[to].push_back(id);
+        return id;
+    }
+
+    void erase_edge(const size_t edge_id)
+    {
+        auto edge = edges_.find(edge_id);
+
+        {
+            auto& adjacencies = edge_adjacencies_[edge->second.from];
+            auto iter = adjacencies.find(edge_id);
+            assert(iter != adjacencies.end());
+            adjacencies.swap_erase(iter);
+        }
+
+        {
+            auto& adjacencies = edge_adjacencies_[edge->second.to];
+            auto iter = adjacencies.find(edge_id);
+            assert(iter != adjacencies.end());
+            adjacencies.swap_erase(iter);
+        }
+
+        edges_.erase(edge);
     }
 
     ImU32 evaluate(const size_t root_node)
@@ -206,8 +285,9 @@ public:
             postorder.push(node);
             visited.insert(node);
 
-            for (const size_t neighbor : adjacencies_[node])
+            for (const size_t edge : edge_adjacencies_[node])
             {
+                const size_t neighbor = edges_[edge].opposite(node);
                 if (visited.find(neighbor) != visited.end())
                     continue;
 
@@ -225,7 +305,7 @@ public:
                 case Node_Number:
                     eval_stack.push(nodes_[node].number);
                     break;
-                case Node_NumberLink:
+                case Node_NumberExpression:
                     break;
                 case Node_Operation:
                     nodes_[node].operation(eval_stack);
@@ -250,23 +330,12 @@ public:
     }
 
 private:
-    inline void remove_adjacency(size_t at_node, size_t index)
-    {
-        for (auto iter = adjacencies_[at_node].begin();
-             iter != adjacencies_[at_node].end();
-             ++iter)
-        {
-            if (*iter == index)
-            {
-                adjacencies_[at_node].swap_erase(iter);
-                break;
-            }
-        }
-    }
-
     size_t current_id_;
     std::unordered_map<size_t, Node> nodes_;
-    std::unordered_map<size_t, AdjacencyArray> adjacencies_;
+    // the edges which each node is adjacent to -- the adjacency array
+    // stores edge ids
+    std::unordered_map<size_t, AdjacencyArray> edge_adjacencies_;
+    std::unordered_map<size_t, Edge> edges_;
 };
 
 struct TimeContext
@@ -320,7 +389,7 @@ public:
 
     void show()
     {
-        ImGui::Begin("Node language example");
+        ImGui::Begin("Color node editor");
         imnodes::BeginNodeEditor();
 
         for (const auto& node : output_nodes_)
@@ -339,7 +408,7 @@ public:
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
                     "##hidelabel",
-                    &node_graph_[node.red].number,
+                    &graph_.node(node.red).number,
                     0.01f,
                     0.f,
                     1.0f);
@@ -358,7 +427,7 @@ public:
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
                     "##hidelabel",
-                    &node_graph_[node.green].number,
+                    &graph_.node(node.green).number,
                     0.01f,
                     0.f,
                     1.f);
@@ -377,7 +446,7 @@ public:
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
                     "##hidelabel",
-                    &node_graph_[node.blue].number,
+                    &graph_.node(node.blue).number,
                     0.01f,
                     0.f,
                     1.0f);
@@ -402,7 +471,7 @@ public:
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
                     "##hidelabel",
-                    &node_graph_[node.input].number,
+                    &graph_.node(node.input).number,
                     0.01f,
                     0.f,
                     1.0f);
@@ -450,7 +519,7 @@ public:
                 ImGui::SameLine();
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
-                    "##hidelabel", &node_graph_[node.lhs].number, 0.01f);
+                    "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
                 ImGui::PopItemWidth();
                 imnodes::EndAttribute();
             }
@@ -463,7 +532,7 @@ public:
                 ImGui::SameLine();
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
-                    "##hidelabel", &node_graph_[node.rhs].number, 0.01f);
+                    "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
                 ImGui::PopItemWidth();
                 imnodes::EndAttribute();
             }
@@ -496,7 +565,7 @@ public:
                 ImGui::SameLine();
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
-                    "##hidelabel", &node_graph_[node.lhs].number, 0.01f);
+                    "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
                 ImGui::PopItemWidth();
                 imnodes::EndAttribute();
             }
@@ -509,7 +578,7 @@ public:
                 ImGui::SameLine();
                 ImGui::PushItemWidth(node_width - label_width);
                 ImGui::DragFloat(
-                    "##hidelabel", &node_graph_[node.rhs].number, 0.01f);
+                    "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
                 ImGui::PopItemWidth();
                 imnodes::EndAttribute();
             }
@@ -528,7 +597,15 @@ public:
             imnodes::EndNode();
         }
 
-        // TODO: render links here
+        for (auto iter = graph_.begin_edges(); iter != graph_.end_edges();
+             ++iter)
+        {
+            // don't render internal edges
+            const NodeType type = graph_.node(iter->second.to).type;
+            if (type == Node_Operation || type == Node_Output)
+                continue;
+            imnodes::Link(iter->second.from, iter->second.to);
+        }
 
         const bool open_popup =
             ImGui::IsMouseClicked(1) || ImGui::IsKeyReleased(SDL_SCANCODE_A);
@@ -555,16 +632,16 @@ public:
                 Node num = Node{Node_Number, 0.f};
                 Node out = Node{Node_Output, 0.f};
 
-                node.red = node_graph_.add_node(num);
-                node.green = node_graph_.add_node(num);
-                node.blue = node_graph_.add_node(num);
-                node.out = node_graph_.add_node(out);
+                node.red = graph_.add_node(num);
+                node.green = graph_.add_node(num);
+                node.blue = graph_.add_node(num);
+                node.out = graph_.add_node(out);
 
                 output_nodes_.push_back(node);
 
-                node_graph_.add_edge(node.red, node.out);
-                node_graph_.add_edge(node.green, node.out);
-                node_graph_.add_edge(node.blue, node.out);
+                graph_.add_edge(node.red, node.out);
+                graph_.add_edge(node.green, node.out);
+                graph_.add_edge(node.blue, node.out);
 
                 imnodes::SetNodePos(node.out, click_pos, ImGuiCond_Appearing);
             }
@@ -574,7 +651,7 @@ public:
                 Node op = Node{Node_Operation, 0.f};
                 op.operation = operation_time;
 
-                const size_t node = node_graph_.add_node(op);
+                const size_t node = graph_.add_node(op);
                 time_nodes_.push_back(node);
 
                 imnodes::SetNodePos(node, click_pos, ImGuiCond_Appearing);
@@ -588,8 +665,8 @@ public:
                 Node op{Node_Operation, 0.f};
                 op.operation = operation_sine;
 
-                node.input = node_graph_.add_node(num);
-                node.op = node_graph_.add_node(op);
+                node.input = graph_.add_node(num);
+                node.op = graph_.add_node(op);
 
                 sine_nodes_.push_back(node);
 
@@ -604,12 +681,12 @@ public:
                 Node op{Node_Operation, 0.f};
                 op.operation = operation_multiply;
 
-                node.lhs = node_graph_.add_node(num);
-                node.rhs = node_graph_.add_node(num);
-                node.op = node_graph_.add_node(op);
+                node.lhs = graph_.add_node(num);
+                node.rhs = graph_.add_node(num);
+                node.op = graph_.add_node(op);
 
-                node_graph_.add_edge(node.lhs, node.op);
-                node_graph_.add_edge(node.rhs, node.op);
+                graph_.add_edge(node.lhs, node.op);
+                graph_.add_edge(node.rhs, node.op);
 
                 mul_nodes_.push_back(node);
 
@@ -624,12 +701,12 @@ public:
                 Node op{Node_Operation, 0.f};
                 op.operation = operation_add;
 
-                node.lhs = node_graph_.add_node(num);
-                node.rhs = node_graph_.add_node(num);
-                node.op = node_graph_.add_node(op);
+                node.lhs = graph_.add_node(num);
+                node.rhs = graph_.add_node(num);
+                node.op = graph_.add_node(op);
 
-                node_graph_.add_edge(node.lhs, node.op);
-                node_graph_.add_edge(node.rhs, node.op);
+                graph_.add_edge(node.lhs, node.op);
+                graph_.add_edge(node.rhs, node.op);
 
                 add_nodes_.push_back(node);
 
@@ -650,12 +727,39 @@ public:
 
         if (imnodes::IsLinkSelected(&ui_.link_start.index, &ui_.link_end.index))
         {
+            // TODO: is this needed? why not just handle the event here
             ui_.is_link_selected = true;
         }
 
+        imnodes::IsNodeSelected(&ui_.node_selected.index);
+
         if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
         {
-            // TODO delete links and nodes here
+            if (ui_.is_link_selected)
+            {
+                // TODO
+            }
+
+            if (ui_.node_selected.is_valid())
+            {
+                if (output_nodes_.size() > 0 &&
+                    output_nodes_[0].out == ui_.node_selected.index)
+                {
+                    const auto& node = output_nodes_[0];
+                    graph_.erase_node(node.red);
+                    graph_.erase_node(node.green);
+                    graph_.erase_node(node.blue);
+                    graph_.erase_node(node.out);
+                    output_nodes_.pop_back();
+                }
+            }
+        }
+
+        // Now Ui::link_start and Ui::link_end can be re-used
+
+        if (imnodes::IsLinkCreated(&ui_.link_start.index, &ui_.link_end.index))
+        {
+            graph_.add_edge(ui_.link_start, ui_.link_end);
         }
 
         ImGui::End();
@@ -663,7 +767,7 @@ public:
         ImU32 color = IM_COL32(255, 20, 147, 255);
         if (output_nodes_.size() > 0u)
         {
-            color = node_graph_.evaluate(output_nodes_[0u].out);
+            color = graph_.evaluate(output_nodes_[0u].out);
         }
 
         ImGui::PushStyleColor(ImGuiCol_WindowBg, color);
@@ -713,6 +817,8 @@ private:
             return *this;
         }
 
+        inline bool operator==(int i) const { return index == i; }
+
         Index() : index(invalid_index) {}
 
     private:
@@ -724,6 +830,7 @@ private:
         Index pin_hovered;
         Index node_selected;
         bool is_link_selected;
+        bool is_link_created;
         Index link_start, link_end;
 
         Ui()
@@ -743,8 +850,8 @@ private:
         }
     };
 
-    Graph node_graph_;
-    std::vector<OutputNode> output_nodes_;
+    Graph graph_;
+    StaticArray<OutputNode, 1> output_nodes_;
     std::vector<size_t>
         time_nodes_; // just a single node representing the operation
     std::vector<SineNode> sine_nodes_;
@@ -754,12 +861,12 @@ private:
     Ui ui_;
 }; // namespace
 
-static ColorNodeEditor node_lang;
+static ColorNodeEditor color_editor;
 } // namespace
 
 void NodeEditorInitialize() {}
 
-void NodeEditorShow() { node_lang.show(); }
+void NodeEditorShow() { color_editor.show(); }
 
 void NodeEditorShutdown() {}
 } // namespace example
