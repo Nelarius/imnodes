@@ -668,6 +668,8 @@ public:
                 node.input = graph_.add_node(num);
                 node.op = graph_.add_node(op);
 
+                graph_.add_edge(node.input, node.op);
+
                 sine_nodes_.push_back(node);
 
                 imnodes::SetNodePos(node.op, click_pos, ImGuiCond_Appearing);
