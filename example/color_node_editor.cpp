@@ -17,6 +17,12 @@ namespace example
 {
 namespace
 {
+template<class T>
+T clamp(T x, T a, T b)
+{
+    return std::min(b, std::max(x, a));
+}
+
 // The type T must be POD
 template<class T, size_t N>
 class StaticArray
@@ -97,10 +103,7 @@ public:
         --size_;
     }
 
-    inline void swap_erase(size_t remove_at)
-    {
-        swap_remove(data() + remove_at);
-    }
+    inline void swap_erase(size_t remove_at) { swap_erase(data() + remove_at); }
     inline void swap_erase(Iterator iter)
     {
         assert(size_ > 0u);
@@ -167,6 +170,7 @@ struct Edge
     inline size_t opposite(size_t n) const { return n == from ? to : from; }
 };
 
+// a directional graph
 class Graph
 {
 public:
@@ -242,7 +246,6 @@ public:
         const size_t id = current_id_++;
         edges_.insert(std::make_pair(id, Edge(from, to)));
         edge_adjacencies_[from].push_back(id);
-        edge_adjacencies_[to].push_back(id);
         return id;
     }
 
@@ -274,7 +277,6 @@ public:
         std::stack<float> eval_stack;
         std::stack<size_t> preorder;
         std::stack<size_t> postorder;
-        std::unordered_set<size_t> visited;
 
         preorder.push(root_node);
 
@@ -282,15 +284,13 @@ public:
         {
             const size_t node = preorder.top();
             preorder.pop();
+
             postorder.push(node);
-            visited.insert(node);
 
             for (const size_t edge : edge_adjacencies_[node])
             {
                 const size_t neighbor = edges_[edge].opposite(node);
-                if (visited.find(neighbor) != visited.end())
-                    continue;
-
+                assert(neighbor != root_node);
                 preorder.push(neighbor);
             }
         }
@@ -319,11 +319,11 @@ public:
 
         // there should be three values on the stack
         assert(eval_stack.size() == 3);
-        const int b = 255 * eval_stack.top();
+        const int b = 255 * clamp(eval_stack.top(), 0.f, 1.f);
         eval_stack.pop();
-        const int g = 255 * eval_stack.top();
+        const int g = 255 * clamp(eval_stack.top(), 0.f, 1.f);
         eval_stack.pop();
-        const int r = 255 * eval_stack.top();
+        const int r = 255 * clamp(eval_stack.top(), 0.f, 1.f);
         eval_stack.pop();
 
         return IM_COL32(r, g, b, 255);
@@ -341,26 +341,34 @@ private:
 struct TimeContext
 {
     std::chrono::steady_clock::time_point start;
+    float seconds_elapsed;
 
-    TimeContext() : start(std::chrono::steady_clock::now()) {}
+    TimeContext()
+        : start(std::chrono::steady_clock::now()), seconds_elapsed(0.f)
+    {
+    }
+
+    void update()
+    {
+        seconds_elapsed = std::chrono::duration_cast<
+                              std::chrono::duration<float, std::ratio<1>>>(
+                              std::chrono::steady_clock::now() - start)
+                              .count();
+    }
 };
 
 TimeContext time_context;
 
 void operation_time(std::stack<float>& stack)
 {
-    const float seconds =
-        std::chrono::duration_cast<std::chrono::duration<float, std::ratio<1>>>(
-            std::chrono::steady_clock::now() - time_context.start)
-            .count();
-    stack.push(seconds);
+    stack.push(time_context.seconds_elapsed);
 }
 
 void operation_sine(std::stack<float>& stack)
 {
     const float x = stack.top();
     stack.pop();
-    stack.push(std::sin(x));
+    stack.push(std::abs(std::sin(x)));
 }
 
 void operation_multiply(std::stack<float>& stack)
@@ -389,7 +397,11 @@ public:
 
     void show()
     {
+        time_context.update();
+
         ImGui::Begin("Color node editor");
+        ImGui::Text("A -- add node");
+        ImGui::Text("X -- delete selected node or link");
         imnodes::BeginNodeEditor();
 
         for (const auto& node : output_nodes_)
@@ -404,15 +416,18 @@ public:
                     int(node.red), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("r").x;
                 ImGui::Text("r");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel",
-                    &graph_.node(node.red).number,
-                    0.01f,
-                    0.f,
-                    1.0f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.red).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel",
+                        &graph_.node(node.red).number,
+                        0.01f,
+                        0.f,
+                        1.0f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
 
@@ -423,15 +438,18 @@ public:
                     int(node.green), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("g").x;
                 ImGui::Text("g");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel",
-                    &graph_.node(node.green).number,
-                    0.01f,
-                    0.f,
-                    1.f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.green).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel",
+                        &graph_.node(node.green).number,
+                        0.01f,
+                        0.f,
+                        1.f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
 
@@ -442,15 +460,18 @@ public:
                     int(node.blue), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("b").x;
                 ImGui::Text("b");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel",
-                    &graph_.node(node.blue).number,
-                    0.01f,
-                    0.f,
-                    1.0f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.blue).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel",
+                        &graph_.node(node.blue).number,
+                        0.01f,
+                        0.f,
+                        1.0f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
             imnodes::EndNode();
@@ -467,15 +488,18 @@ public:
                     int(node.input), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("number").x;
                 ImGui::Text("number");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel",
-                    &graph_.node(node.input).number,
-                    0.01f,
-                    0.f,
-                    1.0f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.input).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel",
+                        &graph_.node(node.input).number,
+                        0.01f,
+                        0.f,
+                        1.0f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
 
@@ -516,11 +540,14 @@ public:
                     int(node.lhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("left").x;
                 ImGui::Text("left");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.lhs).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
 
@@ -529,11 +556,14 @@ public:
                     int(node.rhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("right").x;
                 ImGui::Text("right");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.rhs).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
 
@@ -562,11 +592,14 @@ public:
                     int(node.lhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("left").x;
                 ImGui::Text("left");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.lhs).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
 
@@ -575,11 +608,14 @@ public:
                     int(node.rhs), imnodes::AttributeType_Input);
                 const float label_width = ImGui::CalcTextSize("right").x;
                 ImGui::Text("right");
-                ImGui::SameLine();
-                ImGui::PushItemWidth(node_width - label_width);
-                ImGui::DragFloat(
-                    "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
-                ImGui::PopItemWidth();
+                if (graph_.node(node.rhs).type == Node_Number)
+                {
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(node_width - label_width);
+                    ImGui::DragFloat(
+                        "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
+                    ImGui::PopItemWidth();
+                }
                 imnodes::EndAttribute();
             }
 
@@ -601,8 +637,13 @@ public:
              ++iter)
         {
             // don't render internal edges
+            // internal edges always look like
+            //
+            // Node_Output | Node_Operation
+            // ->
+            // Node_Number | Node_NumberExpression
             const NodeType type = graph_.node(iter->second.to).type;
-            if (type == Node_Operation || type == Node_Output)
+            if (type == Node_Number || type == Node_NumberExpression)
                 continue;
             imnodes::Link(iter->second.from, iter->second.to);
         }
@@ -639,9 +680,9 @@ public:
 
                 output_nodes_.push_back(node);
 
-                graph_.add_edge(node.red, node.out);
-                graph_.add_edge(node.green, node.out);
-                graph_.add_edge(node.blue, node.out);
+                graph_.add_edge(node.out, node.red);
+                graph_.add_edge(node.out, node.green);
+                graph_.add_edge(node.out, node.blue);
 
                 imnodes::SetNodePos(node.out, click_pos, ImGuiCond_Appearing);
             }
@@ -668,7 +709,7 @@ public:
                 node.input = graph_.add_node(num);
                 node.op = graph_.add_node(op);
 
-                graph_.add_edge(node.input, node.op);
+                graph_.add_edge(node.op, node.input);
 
                 sine_nodes_.push_back(node);
 
@@ -687,8 +728,8 @@ public:
                 node.rhs = graph_.add_node(num);
                 node.op = graph_.add_node(op);
 
-                graph_.add_edge(node.lhs, node.op);
-                graph_.add_edge(node.rhs, node.op);
+                graph_.add_edge(node.op, node.lhs);
+                graph_.add_edge(node.op, node.rhs);
 
                 mul_nodes_.push_back(node);
 
@@ -707,8 +748,8 @@ public:
                 node.rhs = graph_.add_node(num);
                 node.op = graph_.add_node(op);
 
-                graph_.add_edge(node.lhs, node.op);
-                graph_.add_edge(node.rhs, node.op);
+                graph_.add_edge(node.op, node.lhs);
+                graph_.add_edge(node.op, node.rhs);
 
                 add_nodes_.push_back(node);
 
@@ -720,7 +761,6 @@ public:
 
         imnodes::EndNodeEditor();
 
-        // TODO: Handle events here
         ui_.reset();
 
         imnodes::IsPinHovered(&ui_.pin_hovered.id);
@@ -761,7 +801,24 @@ public:
 
         if (imnodes::IsLinkCreated(&ui_.link_start.id, &ui_.link_end.id))
         {
-            graph_.add_edge(ui_.link_start, ui_.link_end);
+            // in the expression graph, we want the edge to always go from the
+            // number to the operation, since the graph is directed!
+            const size_t from_id =
+                graph_.node(ui_.link_start).type == Node_Number ? ui_.link_start
+                                                                : ui_.link_end;
+            const size_t to_id =
+                graph_.node(ui_.link_end).type == Node_Operation
+                    ? ui_.link_end
+                    : ui_.link_start;
+            Node& node_from = graph_.node(from_id);
+            Node& node_to = graph_.node(to_id);
+            node_from.type = node_from.type == Node_Number
+                                 ? Node_NumberExpression
+                                 : node_from.type;
+            assert(
+                node_to.type != Node_Number &&
+                node_to.type != Node_NumberExpression);
+            graph_.add_edge(from_id, to_id);
         }
 
         ImGui::End();
