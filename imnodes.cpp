@@ -4,9 +4,9 @@
 #include "imgui_internal.h"
 
 #include <assert.h>
-#include <functional> // for std::greater<>
-#include <string.h>   // strlen, strncmp
-#include <stdio.h>    // for fwrite, ssprintf, sscanf
+#include <new>
+#include <string.h> // strlen, strncmp
+#include <stdio.h>  // for fwrite, ssprintf, sscanf
 #include <stdlib.h>
 
 namespace imnodes
