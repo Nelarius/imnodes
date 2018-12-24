@@ -59,6 +59,62 @@ enum ImGuiChannels
     CHANNEL_COUNT
 };
 
+// The object T must have the following interface:
+//
+// struct T
+// {
+//     T();
+//
+//     int id;
+// };
+template<typename T>
+struct ObjectPool
+{
+    ImVector<T> pool;
+    ImVector<bool> in_use;
+    ImVector<int> free_list;
+    ImGuiStorage id_map;
+
+    ObjectPool() : pool(), in_use(), free_list(), id_map() {}
+
+    inline void update()
+    {
+        free_list.clear();
+        for (int i = 0; i < in_use.size(); ++i)
+        {
+            if (!in_use[i])
+            {
+                id_map.SetInt(pool[i].id, INVALID_INDEX);
+                free_list.push_back(i);
+            }
+        }
+        // set all values to false
+        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
+    }
+
+    inline T& find_or_create_new(int id)
+    {
+        int index = id_map.GetInt(ImGuiID(id), INVALID_INDEX);
+        if (index == INVALID_INDEX)
+        {
+            if (free_list.size() > 0)
+            {
+                index = free_list.back();
+                free_list.pop_back();
+            }
+            else
+            {
+                index = pool.size();
+                pool.push_back(T());
+                in_use.push_back(true);
+            }
+            id_map.SetInt(id, index);
+        }
+        in_use[index] = true;
+        return pool[index];
+    }
+};
+
 struct NodeData
 {
     int id;
@@ -77,55 +133,6 @@ struct NodeData
           content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_styles(),
           attribute_rects()
     {
-    }
-};
-
-struct NodePool
-{
-    ImVector<NodeData> pool;
-    ImVector<bool> in_use;
-    ImVector<int> free_list;
-    ImGuiStorage id_map;
-
-    NodePool() : pool(), in_use(), free_list(), id_map() {}
-
-    inline void update()
-    {
-        free_list.clear();
-        for (int i = 0; i < in_use.size(); ++i)
-        {
-            if (!in_use[i])
-            {
-                id_map.SetInt(pool[i].id, INVALID_INDEX);
-                free_list.push_back(i);
-            }
-        }
-
-        // set all values to false
-        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
-    }
-
-    // returns a reference to the node which was created or found
-    inline NodeData& find_or_create_node(int id)
-    {
-        int index = id_map.GetInt(ImGuiID(id), INVALID_INDEX);
-        if (index == INVALID_INDEX)
-        {
-            if (free_list.size() > 0)
-            {
-                index = free_list.back();
-                free_list.pop_back();
-            }
-            else
-            {
-                index = pool.size();
-                pool.push_back(NodeData());
-                in_use.push_back(true);
-            }
-            id_map.SetInt(ImGuiID(id), index);
-        }
-        in_use[index] = true;
-        return pool[index];
     }
 };
 
@@ -153,57 +160,9 @@ bool operator==(const PinData& lhs, const PinData& rhs)
            lhs.attribute_idx == rhs.attribute_idx && lhs.type == rhs.type;
 }
 
-struct PinPool
-{
-    ImVector<PinData> pool;
-    ImVector<bool> in_use;
-    ImVector<int> free_list;
-    ImGuiStorage id_map;
-
-    PinPool() : pool(), in_use(), free_list(), id_map() {}
-
-    inline void update()
-    {
-        free_list.clear();
-        for (int i = 0; i < in_use.size(); ++i)
-        {
-            if (!in_use[i])
-            {
-                id_map.SetInt(pool[i].id, INVALID_INDEX);
-                free_list.push_back(i);
-            }
-        }
-
-        // set all values to false
-        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
-    }
-
-    // returns a reference to the pin which was created or found
-    inline PinData& find_or_create_pin(int attr_id)
-    {
-        int index = id_map.GetInt(ImGuiID(attr_id), INVALID_INDEX);
-        if (index == INVALID_INDEX)
-        {
-            if (free_list.size() > 0)
-            {
-                index = free_list.back();
-                free_list.pop_back();
-            }
-            else
-            {
-                index = pool.size();
-                pool.push_back(PinData());
-                in_use.push_back(true);
-            }
-            id_map.SetInt(ImGuiID(attr_id), index);
-        }
-        in_use[index] = true;
-        return pool[index];
-    }
-};
-
 struct LinkData
 {
+    int id;
     int start_attr, end_attr;
 
     LinkData() : start_attr(INVALID_INDEX), end_attr(INVALID_INDEX) {}
@@ -214,63 +173,6 @@ struct LinkBezierData
     // the bezier curve control points
     ImVec2 p0, p1, p2, p3;
     int num_segments;
-};
-
-struct LinkPool
-{
-    ImVector<LinkData> pool;
-    ImVector<bool> in_use;
-    ImVector<int> free_list;
-    ImGuiStorage id_map;
-
-    LinkPool() : pool(), in_use(), free_list(), id_map() {}
-
-    inline void update()
-    {
-        free_list.clear();
-        for (int i = 0; i < in_use.size(); ++i)
-        {
-            if (!in_use[i])
-            {
-                const int data[2] = {pool[i].start_attr, pool[i].end_attr};
-                const int id = ImHash((const void*)&data, sizeof(data));
-                id_map.SetInt(id, INVALID_INDEX);
-                free_list.push_back(i);
-            }
-        }
-
-        // set all values to false
-        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
-    }
-
-    // sets the start and end fields of the found or created link
-    inline void find_or_create_link(int start, int end)
-    {
-        // TODO: we could check that the link in the other direction
-        // doesn't already exist
-        const int data[2] = {start, end};
-        const int id = ImHash((const void*)&data, sizeof(data));
-        int index = id_map.GetInt(ImGuiID(id), INVALID_INDEX);
-        if (index == INVALID_INDEX)
-        {
-            if (free_list.size() > 0)
-            {
-                index = free_list.back();
-                free_list.pop_back();
-            }
-            else
-            {
-                index = pool.size();
-                pool.push_back(LinkData());
-                in_use.push_back(true);
-            }
-            id_map.SetInt(ImGuiID(id), index);
-            LinkData& link = pool[index];
-            link.start_attr = start;
-            link.end_attr = end;
-        }
-        in_use[index] = true;
-    }
 };
 
 // This is used to initialize the boolean flag in the static struct
@@ -530,9 +432,9 @@ inline ImVec2 pin_position(
 
 struct EditorContext
 {
-    NodePool nodes;
-    PinPool pins;
-    LinkPool links;
+    ObjectPool<NodeData> nodes;
+    ObjectPool<PinData> pins;
+    ObjectPool<LinkData> links;
 
     // ui related fields
     ImVec2 panning;
@@ -1022,11 +924,11 @@ void BeginNode(int node_id)
 
     EditorContext& editor = editor_context_get();
 
-    NodeData& node = editor.nodes.find_or_create_node(node_id);
+    NodeData& node = editor.nodes.find_or_create_new(node_id);
     node.id = node_id;
     memcpy(node.color_styles, g.color_styles, sizeof(g.color_styles));
     {
-        int idx = editor.nodes.id_map.GetInt(node_id, INVALID_INDEX);
+        const int idx = editor.nodes.id_map.GetInt(node_id, INVALID_INDEX);
         assert(idx != INVALID_INDEX);
         g.node_current.index = idx;
     }
@@ -1077,7 +979,7 @@ void BeginAttribute(int id, AttributeType type)
     g.node_current.attribute.index =
         editor.nodes.pool[g.node_current.index].attribute_rects.size();
 
-    PinData& pin = editor.pins.find_or_create_pin(id);
+    PinData& pin = editor.pins.find_or_create_new(id);
     pin.id = id;
     pin.node_idx = g.node_current.index;
     pin.attribute_idx = g.node_current.attribute.index;
@@ -1104,10 +1006,13 @@ void EndAttribute()
     node_current.attribute_rects.push_back(get_item_rect());
 }
 
-void Link(const int start_attr, const int end_attr)
+void Link(int id, const int start_attr, const int end_attr)
 {
     EditorContext& editor = editor_context_get();
-    editor.links.find_or_create_link(start_attr, end_attr);
+    LinkData& link = editor.links.find_or_create_new(id);
+    link.id = id;
+    link.start_attr = start_attr;
+    link.end_attr = end_attr;
 }
 
 void PushColorStyle(ColorStyle item, ImU32 color)
@@ -1131,7 +1036,7 @@ void SetNodePos(
 {
     assert(g.guard.initialized);
     EditorContext& editor = editor_context_get();
-    NodeData& node = editor.nodes.find_or_create_node(node_id);
+    NodeData& node = editor.nodes.find_or_create_new(node_id);
     node.origin =
         screen_space_pos - editor_context_get().panning - g.grid_origin;
 }
@@ -1150,18 +1055,16 @@ bool IsNodeHovered(int* const node_id)
     return false;
 }
 
-bool IsLinkHovered(int* const started_at, int* const ended_at)
+bool IsLinkHovered(int* const link_id)
 {
     assert(g.current_scope == SCOPE_NONE);
-    assert(started_at != NULL);
-    assert(ended_at != NULL);
+    assert(link_id != NULL);
 
     const bool is_hovered = g.link_hovered != INVALID_INDEX;
     if (is_hovered)
     {
         const EditorContext& editor = editor_context_get();
-        *started_at = editor.links.pool[g.link_hovered].start_attr;
-        *ended_at = editor.links.pool[g.link_hovered].end_attr;
+        *link_id = editor.links.pool[g.link_hovered].id;
     }
     return is_hovered;
 }
@@ -1195,18 +1098,16 @@ bool IsNodeSelected(int* const node_id)
     return false;
 }
 
-bool IsLinkSelected(int* const started_at, int* const ended_at)
+bool IsLinkSelected(int* const link_id)
 {
     assert(g.current_scope == SCOPE_NONE);
-    assert(started_at != NULL);
-    assert(ended_at != NULL);
+    assert(link_id != NULL);
 
     const bool is_selected = g.link_selected != INVALID_INDEX;
     if (is_selected)
     {
         const EditorContext& editor = editor_context_get();
-        *started_at = editor.links.pool[g.link_selected].start_attr;
-        *ended_at = editor.links.pool[g.link_selected].end_attr;
+        *link_id = editor.links.pool[g.link_selected].id;
     }
     return is_selected;
 }
@@ -1256,7 +1157,7 @@ void node_line_handler(EditorContext& editor, const char* line)
     float x, y;
     if (sscanf(line, "[node.%i", &i) == 1)
     {
-        NodeData& node = editor.nodes.find_or_create_node(i);
+        NodeData& node = editor.nodes.find_or_create_new(i);
         node.id = i;
         // the next case won't work unless this assumption is true
         assert(

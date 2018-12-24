@@ -56,7 +56,7 @@ void EndAttribute();
 void EndNode();
 
 // The attributes ids used here must match the ids used in BeginAttribute()
-void Link(int start_attr, int end_attr);
+void Link(int id, int start_attr, int end_attr);
 
 void PopColorStyle(ColorStyle item);
 
@@ -67,18 +67,18 @@ void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
 
 // new replacements for events
 bool IsNodeHovered(int* node_id);
-bool IsLinkHovered(int* start_id, int* end_id);
+bool IsLinkHovered(int* link_id);
 bool IsPinHovered(int* attribute_id);
 
 bool IsNodeSelected(int* node_id);
-bool IsLinkSelected(int* start_id, int* end_id);
+bool IsLinkSelected(int* link_id);
 
-// Is the user dradding a new link?
-bool IsLinkStarted(int* started_at);
+// Is the user dragging a new link?
+bool IsLinkStarted(int* started_at_attr);
 // Did the user drop the new link before connecting it to a second attribute?
 bool IsLinkDropped();
 // Did the user create a new link?
-bool IsLinkCreated(int* started_at, int* ended_at);
+bool IsLinkCreated(int* started_at_attr, int* ended_at_attr);
 
 // Save the editor state to a string. The data is written in the INI format.
 // If the editor is left out, then the function will save the currently set
