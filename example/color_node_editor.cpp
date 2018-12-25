@@ -175,12 +175,16 @@ class Graph
 {
 public:
     // the graph has a limited number of adjacencies, simplifies memory usage
-    using AdjacencyArray = StaticArray<size_t, 6u>;
+    using AdjacencyArray = StaticArray<size_t, 3u>;
 
     using EdgeIterator = std::unordered_map<size_t, Edge>::iterator;
     using ConstEdgeIterator = std::unordered_map<size_t, Edge>::const_iterator;
 
-    Graph() : current_id_(0u), nodes_(), edge_adjacencies_(), edges_() {}
+    Graph()
+        : current_id_(0u), nodes_(), edges_from_node_(), edges_to_node_(),
+          edges_()
+    {
+    }
 
     // Element access
 
@@ -212,59 +216,65 @@ public:
     inline EdgeIterator end_edges() { return edges_.end(); }
     inline ConstEdgeIterator end_edge() const { return edges_.end(); }
 
-    // Capacity
-
-    inline size_t num_adjacencies(const size_t node_id) const
-    {
-        const auto iter = edge_adjacencies_.find(node_id);
-        assert(iter != edge_adjacencies_.end());
-        return iter->second.size();
-    }
-
     // Modifiers
 
     size_t add_node(const Node& node)
     {
         const size_t id = current_id_++;
         nodes_.insert(std::make_pair(id, node));
-        edge_adjacencies_.insert(std::make_pair(id, AdjacencyArray()));
+        edges_from_node_.insert(std::make_pair(id, AdjacencyArray()));
+        edges_to_node_.insert(std::make_pair(id, AdjacencyArray()));
         return id;
     }
 
     void erase_node(const size_t node_id)
     {
-        for (size_t edge : edge_adjacencies_[node_id])
+        // first, collect all the edges from the adjacency lists
+        // since erasing an edge invalidates the adjacency list iterators
+        StaticArray<size_t, 6> edges_to_erase;
+        for (size_t edge : edges_from_node_[node_id])
+        {
+            edges_to_erase.push_back(edge);
+        }
+        for (size_t edge : edges_to_node_[node_id])
+        {
+            edges_to_erase.push_back(edge);
+        }
+        for (size_t edge : edges_to_erase)
         {
             erase_edge(edge);
         }
         nodes_.erase(node_id);
-        edge_adjacencies_.erase(node_id);
+        edges_from_node_.erase(node_id);
+        edges_to_node_.erase(node_id);
     }
 
     size_t add_edge(const size_t from, const size_t to)
     {
         const size_t id = current_id_++;
         edges_.insert(std::make_pair(id, Edge(from, to)));
-        edge_adjacencies_[from].push_back(id);
+        edges_from_node_[from].push_back(id);
+        edges_to_node_[to].push_back(id);
         return id;
     }
 
     void erase_edge(const size_t edge_id)
     {
         auto edge = edges_.find(edge_id);
+        assert(edge != edges_.end());
 
         {
-            auto& adjacencies = edge_adjacencies_[edge->second.from];
-            auto iter = adjacencies.find(edge_id);
-            assert(iter != adjacencies.end());
-            adjacencies.swap_erase(iter);
+            auto& edges_from = edges_from_node_[edge->second.from];
+            auto iter = edges_from.find(edge_id);
+            assert(iter != edges_from.end());
+            edges_from.swap_erase(iter);
         }
 
         {
-            auto& adjacencies = edge_adjacencies_[edge->second.to];
-            auto iter = adjacencies.find(edge_id);
-            assert(iter != adjacencies.end());
-            adjacencies.swap_erase(iter);
+            auto& edges_to = edges_to_node_[edge->second.to];
+            auto iter = edges_to.find(edge_id);
+            assert(iter != edges_to.end());
+            edges_to.swap_erase(iter);
         }
 
         edges_.erase(edge);
@@ -287,7 +297,7 @@ public:
 
             postorder.push(node);
 
-            for (const size_t edge : edge_adjacencies_[node])
+            for (const size_t edge : edges_from_node_[node])
             {
                 const size_t neighbor = edges_[edge].opposite(node);
                 assert(neighbor != root_node);
@@ -332,9 +342,8 @@ public:
 private:
     size_t current_id_;
     std::unordered_map<size_t, Node> nodes_;
-    // the edges which each node is adjacent to -- the adjacency array
-    // stores edge ids
-    std::unordered_map<size_t, AdjacencyArray> edge_adjacencies_;
+    std::unordered_map<size_t, AdjacencyArray> edges_from_node_;
+    std::unordered_map<size_t, AdjacencyArray> edges_to_node_;
     std::unordered_map<size_t, Edge> edges_;
 };
 
@@ -645,7 +654,7 @@ public:
             const NodeType type = graph_.node(iter->second.to).type;
             if (type == Node_Number || type == Node_NumberExpression)
                 continue;
-            imnodes::Link(iter->second.from, iter->second.to);
+            imnodes::Link(iter->first, iter->second.from, iter->second.to);
         }
 
         const bool open_popup =
@@ -763,41 +772,26 @@ public:
 
         ui_.reset();
 
-        imnodes::IsPinHovered(&ui_.pin_hovered.id);
-
-        imnodes::IsNodeHovered(&ui_.node_selected.id);
-
-        if (imnodes::IsLinkSelected(&ui_.link_start.id, &ui_.link_end.id))
+        Id link_selected;
+        if (imnodes::IsLinkSelected(&link_selected.id))
         {
-            // TODO: is this needed? why not just handle the event here
-            ui_.is_link_selected = true;
-        }
-
-        imnodes::IsNodeSelected(&ui_.node_selected.id);
-
-        if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
-        {
-            if (ui_.is_link_selected)
+            if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
             {
-                // TODO
-            }
-
-            if (ui_.node_selected.is_valid())
-            {
-                if (output_nodes_.size() > 0 &&
-                    output_nodes_[0].out == ui_.node_selected.id)
-                {
-                    const auto& node = output_nodes_[0];
-                    graph_.erase_node(node.red);
-                    graph_.erase_node(node.green);
-                    graph_.erase_node(node.blue);
-                    graph_.erase_node(node.out);
-                    output_nodes_.pop_back();
-                }
+                Node& node = graph_.node(graph_.edge(link_selected).from);
+                assert(node.type == Node_NumberExpression);
+                node.type = Node_Number;
+                graph_.erase_edge(size_t(link_selected));
             }
         }
 
-        // Now Ui::link_start and Ui::link_end can be re-used
+        Id node_selected;
+        if (imnodes::IsNodeSelected(&node_selected.id))
+        {
+            if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
+            {
+                find_and_remove_node(node_selected);
+            }
+        }
 
         if (imnodes::IsLinkCreated(&ui_.link_start.id, &ui_.link_end.id))
         {
@@ -887,14 +881,10 @@ private:
     struct Ui
     {
         Id pin_hovered;
-        Id node_selected;
-        bool is_link_selected;
         bool is_link_created;
         Id link_start, link_end;
 
-        Ui()
-            : pin_hovered(), node_selected(), is_link_selected(false),
-              link_start(), link_end()
+        Ui() : pin_hovered(), is_link_created(false), link_start(), link_end()
         {
         }
 
@@ -902,12 +892,105 @@ private:
         {
             // reset frame data
             pin_hovered.invalidate();
-            node_selected.invalidate();
-            is_link_selected = false;
+            is_link_created = false;
             link_start.invalidate();
             link_end.invalidate();
         }
     };
+
+    inline void find_and_remove_node(const int id)
+    {
+        // this function is a spectacular feat of engineering...
+
+        if (remove_output_node(id))
+            return;
+
+        if (remove_time_node(id))
+            return;
+
+        if (remove_sine_node(id))
+            return;
+
+        if (remove_mul_node(id))
+            return;
+
+        remove_add_node(id);
+    }
+
+    inline bool remove_output_node(const int id)
+    {
+        if (output_nodes_.size() > 0u && output_nodes_[0].out == id)
+        {
+            const auto& node = output_nodes_[0];
+            graph_.erase_node(node.out);
+            graph_.erase_node(node.red);
+            graph_.erase_node(node.green);
+            graph_.erase_node(node.blue);
+            output_nodes_.pop_back();
+            return true;
+        }
+        return false;
+    }
+
+    inline bool remove_time_node(const int id)
+    {
+        auto iter =
+            std::find(time_nodes_.begin(), time_nodes_.end(), size_t(id));
+        if (iter != time_nodes_.end())
+        {
+            graph_.erase_node(*iter);
+            time_nodes_.erase(iter);
+            return true;
+        }
+        return false;
+    }
+
+    inline bool remove_sine_node(const int id)
+    {
+        for (auto iter = sine_nodes_.begin(); iter != sine_nodes_.end(); ++iter)
+        {
+            if (iter->op == id)
+            {
+                graph_.erase_node(iter->op);
+                graph_.erase_node(iter->input);
+                sine_nodes_.erase(iter);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    inline bool remove_mul_node(const int id)
+    {
+        for (auto iter = mul_nodes_.begin(); iter != mul_nodes_.end(); ++iter)
+        {
+            if (iter->op == id)
+            {
+                graph_.erase_node(iter->op);
+                graph_.erase_node(iter->lhs);
+                graph_.erase_node(iter->rhs);
+                mul_nodes_.erase(iter);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    inline bool remove_add_node(const int id)
+    {
+        for (auto iter = add_nodes_.begin(); iter != add_nodes_.end(); ++iter)
+        {
+            if (iter->op == id)
+            {
+                graph_.erase_node(iter->op);
+                graph_.erase_node(iter->lhs);
+                graph_.erase_node(iter->rhs);
+                add_nodes_.erase(iter);
+                return true;
+            }
+        }
+        return false;
+    }
 
     Graph graph_;
     StaticArray<OutputNode, 1> output_nodes_;
