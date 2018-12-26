@@ -863,7 +863,10 @@ void EndNodeEditor()
         if (ImGui::IsMouseReleased(0))
         {
             // The link was created if the mouse is released near a pin
-            if (g.pin_hovered != INVALID_INDEX)
+            // Check that the pin isn't the same on that the link was started
+            // on!
+            if (g.pin_hovered != INVALID_INDEX &&
+                g.pin_hovered != editor.link_dragged.start_attr)
             {
                 editor.link_dragged.end_attr =
                     editor.pins.pool[g.pin_hovered].id;
