@@ -9,8 +9,7 @@ enum AttributeType
 {
     AttributeType_None,
     AttributeType_Input,
-    AttributeType_Output,
-    AttributeType_Internal
+    AttributeType_Output
 };
 
 enum ColorStyle
