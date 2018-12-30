@@ -1,5 +1,6 @@
 #include "imnodes.h"
 
+#include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
 
@@ -1062,7 +1063,7 @@ void Link(int id, const int start_attr, const int end_attr)
     link.color_style.selected = g.color_styles[ColorStyle_LinkSelected];
 }
 
-void PushColorStyle(ColorStyle item, ImU32 color)
+void PushColorStyle(ColorStyle item, unsigned int color)
 {
     assert(g.guard.initialized);
     g.color_style_stack.push_back(
@@ -1078,10 +1079,7 @@ void PopColorStyle()
     g.color_style_stack.pop_back();
 }
 
-void SetNodePos(
-    int node_id,
-    const ImVec2& screen_space_pos,
-    ImGuiCond condition)
+void SetNodePos(int node_id, const ImVec2& screen_space_pos)
 {
     assert(g.guard.initialized);
     EditorContext& editor = editor_context_get();

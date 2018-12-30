@@ -1,7 +1,8 @@
 #pragma once
 
-#include "imgui.h"
 #include <stddef.h>
+
+struct ImVec2;
 
 namespace imnodes
 {
@@ -43,7 +44,7 @@ void Shutdown();
 
 void BeginNodeEditor();
 
-void PushColorStyle(ColorStyle item, ImU32 color);
+void PushColorStyle(ColorStyle item, unsigned int color);
 
 void BeginNode(int id);
 void Name(const char* name);
@@ -62,7 +63,7 @@ void PopColorStyle();
 void EndNodeEditor();
 
 // TODO: condition is unused
-void SetNodePos(int node_id, const ImVec2& pos, ImGuiCond condition);
+void SetNodePos(int node_id, const ImVec2& pos);
 
 // new replacements for events
 bool IsNodeHovered(int* node_id);
