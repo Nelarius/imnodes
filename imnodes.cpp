@@ -121,7 +121,12 @@ struct NodeData
     char name[NODE_NAME_STR_LEN];
     ImVec2 origin;
     ImRect content_rect;
-    ImU32 color_styles[ColorStyle_Count];
+
+    struct
+    {
+        ImU32 background, background_hovered, background_selected, outline,
+            titlebar, titlebar_hovered, titlebar_selected;
+    } color_style;
 
     ImVector<ImRect> attribute_rects;
 
@@ -130,7 +135,7 @@ struct NodeData
           name(
               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
           origin(100.0f, 100.0f),
-          content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_styles(),
+          content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
           attribute_rects()
     {
     }
@@ -143,13 +148,19 @@ struct PinData
     int attribute_idx;
     AttributeType type;
 
+    struct
+    {
+        ImU32 background, hovered, outline;
+    } color_style;
+
     PinData()
         : node_idx(INVALID_INDEX), attribute_idx(INVALID_INDEX),
-          type(AttributeType_None)
+          type(AttributeType_None), color_style()
     {
     }
+
     PinData(int nidx, int aindx, AttributeType t)
-        : node_idx(nidx), attribute_idx(aindx), type(t)
+        : node_idx(nidx), attribute_idx(aindx), type(t), color_style()
     {
     }
 };
@@ -165,7 +176,15 @@ struct LinkData
     int id;
     int start_attr, end_attr;
 
-    LinkData() : start_attr(INVALID_INDEX), end_attr(INVALID_INDEX) {}
+    struct
+    {
+        ImU32 base, hovered, selected;
+    } color_style;
+
+    LinkData()
+        : start_attr(INVALID_INDEX), end_attr(INVALID_INDEX), color_style()
+    {
+    }
 };
 
 struct LinkBezierData
@@ -183,6 +202,14 @@ struct InitializeGuard
     InitializeGuard() : initialized(false) {}
 };
 
+struct ColorStyleElement
+{
+    ImU32 color;
+    ColorStyle item;
+
+    ColorStyleElement(ImU32 c, ColorStyle s) : color(c), item(s) {}
+};
+
 // this struct should only store per-frame data
 static struct
 {
@@ -193,7 +220,7 @@ static struct
     ScopeFlags current_scope;
 
     ImU32 color_styles[ColorStyle_Count];
-    ImVector<ImU32> color_style_stack;
+    ImVector<ColorStyleElement> color_style_stack;
 
     LinkData link_created; // per-frame data, so can be stored in g
 
@@ -499,15 +526,15 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
     {
         g.pin_hovered = pin_idx;
         editor.grid_draw_list->AddCircleFilled(
-            pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinHovered]);
+            pin_pos, NODE_PIN_RADIUS, pin.color_style.hovered);
     }
     else
     {
         editor.grid_draw_list->AddCircleFilled(
-            pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_Pin]);
+            pin_pos, NODE_PIN_RADIUS, pin.color_style.background);
     }
     editor.grid_draw_list->AddCircle(
-        pin_pos, NODE_PIN_RADIUS, node.color_styles[ColorStyle_PinOutline]);
+        pin_pos, NODE_PIN_RADIUS, pin.color_style.outline);
 }
 
 void draw_node(const EditorContext& editor, int node_idx)
@@ -540,18 +567,18 @@ void draw_node(const EditorContext& editor, int node_idx)
         g.node_moved.position = node.origin + ImGui::GetIO().MouseDelta;
     }
 
-    ColorStyle color_style_node = ColorStyle_NodeBackground;
-    ColorStyle color_style_title = ColorStyle_TitleBar;
+    ImU32 node_background = node.color_style.background;
+    ImU32 titlebar_background = node.color_style.titlebar;
 
     if (g.node_selected == node_idx)
     {
-        color_style_node = ColorStyle_NodeBackgroundSelected;
-        color_style_title = ColorStyle_TitleBarSelected;
+        node_background = node.color_style.background_selected;
+        titlebar_background = node.color_style.titlebar_selected;
     }
     else if (g.node_hovered == node_idx)
     {
-        color_style_node = ColorStyle_NodeBackgroundHovered;
-        color_style_title = ColorStyle_TitleBarHovered;
+        node_background = node.color_style.background_hovered;
+        titlebar_background = node.color_style.titlebar_hovered;
     }
 
     {
@@ -559,7 +586,7 @@ void draw_node(const EditorContext& editor, int node_idx)
         editor.grid_draw_list->AddRectFilled(
             node_rect.Min,
             node_rect.Max,
-            node.color_styles[color_style_node],
+            node_background,
             NODE_CORNER_ROUNDNESS);
 
         // title bar:
@@ -575,7 +602,7 @@ void draw_node(const EditorContext& editor, int node_idx)
             editor.grid_draw_list->AddRectFilled(
                 title_rect.Min,
                 title_rect.Max,
-                node.color_styles[color_style_title],
+                titlebar_background,
                 NODE_CORNER_ROUNDNESS,
                 ImDrawCornerFlags_Top);
             ImGui::SetCursorPos(get_node_title_origin(node) + editor.panning);
@@ -587,7 +614,7 @@ void draw_node(const EditorContext& editor, int node_idx)
         editor.grid_draw_list->AddRect(
             node_rect.Min,
             node_rect.Max,
-            node.color_styles[ColorStyle_NodeOutline],
+            node.color_style.outline,
             NODE_CORNER_ROUNDNESS);
     }
 
@@ -929,7 +956,18 @@ void BeginNode(int node_id)
 
     NodeData& node = editor.nodes.find_or_create_new(node_id);
     node.id = node_id;
-    memcpy(node.color_styles, g.color_styles, sizeof(g.color_styles));
+    node.color_style.background = g.color_styles[ColorStyle_NodeBackground];
+    node.color_style.background_hovered =
+        g.color_styles[ColorStyle_NodeBackgroundHovered];
+    node.color_style.background_selected =
+        g.color_styles[ColorStyle_NodeBackgroundSelected];
+    node.color_style.outline = g.color_styles[ColorStyle_NodeOutline];
+    node.color_style.titlebar = g.color_styles[ColorStyle_TitleBar];
+    node.color_style.titlebar_hovered =
+        g.color_styles[ColorStyle_TitleBarHovered];
+    node.color_style.titlebar_selected =
+        g.color_styles[ColorStyle_TitleBarSelected];
+
     {
         const int idx = editor.nodes.id_map.GetInt(node_id, INVALID_INDEX);
         assert(idx != INVALID_INDEX);
@@ -987,6 +1025,9 @@ void BeginAttribute(int id, AttributeType type)
     pin.node_idx = g.node_current.index;
     pin.attribute_idx = g.node_current.attribute.index;
     pin.type = type;
+    pin.color_style.background = g.color_styles[ColorStyle_Pin];
+    pin.color_style.hovered = g.color_styles[ColorStyle_PinHovered];
+    pin.color_style.outline = g.color_styles[ColorStyle_PinOutline];
 }
 
 void EndAttribute()
@@ -1016,19 +1057,24 @@ void Link(int id, const int start_attr, const int end_attr)
     link.id = id;
     link.start_attr = start_attr;
     link.end_attr = end_attr;
+    link.color_style.base = g.color_styles[ColorStyle_Link];
+    link.color_style.hovered = g.color_styles[ColorStyle_LinkHovered];
+    link.color_style.selected = g.color_styles[ColorStyle_LinkSelected];
 }
 
 void PushColorStyle(ColorStyle item, ImU32 color)
 {
     assert(g.guard.initialized);
-    g.color_style_stack.push_back(g.color_styles[item]);
+    g.color_style_stack.push_back(
+        ColorStyleElement(g.color_styles[item], item));
     g.color_styles[item] = color;
 }
 
-void PopColorStyle(ColorStyle item)
+void PopColorStyle()
 {
     assert(g.color_style_stack.size() > 0);
-    g.color_styles[item] = g.color_style_stack.back();
+    const ColorStyleElement elem = g.color_style_stack.back();
+    g.color_styles[elem.item] = elem.color;
     g.color_style_stack.pop_back();
 }
 

@@ -57,7 +57,7 @@ void EndNode();
 // The attributes ids used here must match the ids used in BeginAttribute()
 void Link(int id, int start_attr, int end_attr);
 
-void PopColorStyle(ColorStyle item);
+void PopColorStyle();
 
 void EndNodeEditor();
 
