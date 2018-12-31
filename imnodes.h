@@ -33,6 +33,21 @@ enum ColorStyle
     ColorStyle_Count
 };
 
+enum Flags
+{
+    Flags_None = 0,
+    Flags_NodeOutline = 1 << 0,
+    Flags_PinOutline = 1 << 1
+};
+
+struct Style
+{
+    // by default, set to Flags_NodeOutline | Flags_PinOutline
+    Flags flags;
+    // set these mid-frame using Push/PopColorStyle
+    unsigned int colors[ColorStyle_Count];
+};
+
 struct EditorContext;
 
 EditorContext* EditorContextCreate();
@@ -41,6 +56,8 @@ void EditorContextSet(EditorContext*);
 
 void Initialize();
 void Shutdown();
+
+Style& GetStyle();
 
 void BeginNodeEditor();
 
@@ -62,7 +79,6 @@ void PopColorStyle();
 
 void EndNodeEditor();
 
-// TODO: condition is unused
 void SetNodePos(int node_id, const ImVec2& pos);
 
 // new replacements for events
