@@ -1,5 +1,5 @@
-#include "imgui.h"
 #include "imnodes.h"
+#include "imgui.h"
 #include "node_editor.h"
 
 #include <SDL_keycode.h>
@@ -197,6 +197,16 @@ public:
     {
         assert(nodes_.find(node_id) != nodes_.end());
         return nodes_.at(node_id);
+    }
+
+    inline const AdjacencyArray& edges_from_node(const size_t node_id)
+    {
+        return edges_from_node_[node_id];
+    }
+
+    inline const AdjacencyArray& edges_to_node(const size_t node_id)
+    {
+        return edges_to_node_[node_id];
     }
 
     inline Edge& edge(const size_t edge_id)
@@ -693,7 +703,7 @@ public:
                 graph_.add_edge(node.out, node.green);
                 graph_.add_edge(node.out, node.blue);
 
-                imnodes::SetNodePos(node.out, click_pos, ImGuiCond_Appearing);
+                imnodes::SetNodePos(node.out, click_pos);
             }
 
             if (ImGui::MenuItem("time"))
@@ -704,7 +714,7 @@ public:
                 const size_t node = graph_.add_node(op);
                 time_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node, click_pos, ImGuiCond_Appearing);
+                imnodes::SetNodePos(node, click_pos);
             }
 
             if (ImGui::MenuItem("sine"))
@@ -722,7 +732,7 @@ public:
 
                 sine_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node.op, click_pos, ImGuiCond_Appearing);
+                imnodes::SetNodePos(node.op, click_pos);
             }
 
             if (ImGui::MenuItem("multiply"))
@@ -742,7 +752,7 @@ public:
 
                 mul_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node.op, click_pos, ImGuiCond_Appearing);
+                imnodes::SetNodePos(node.op, click_pos);
             }
 
             if (ImGui::MenuItem("add"))
@@ -762,15 +772,13 @@ public:
 
                 add_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node.op, click_pos, ImGuiCond_Appearing);
+                imnodes::SetNodePos(node.op, click_pos);
             }
             ImGui::EndPopup();
         }
         ImGui::PopStyleVar();
 
         imnodes::EndNodeEditor();
-
-        ui_.reset();
 
         Id link_selected;
         if (imnodes::IsLinkSelected(&link_selected.id))
@@ -793,26 +801,41 @@ public:
             }
         }
 
-        if (imnodes::IsLinkCreated(&ui_.link_start.id, &ui_.link_end.id))
+        Id link_start, link_end;
+        if (imnodes::IsLinkCreated(&link_start.id, &link_end.id))
         {
-            // in the expression graph, we want the edge to always go from the
-            // number to the operation, since the graph is directed!
-            const size_t from_id =
-                graph_.node(ui_.link_start).type == Node_Number ? ui_.link_start
-                                                                : ui_.link_end;
-            const size_t to_id =
-                graph_.node(ui_.link_end).type == Node_Operation
-                    ? ui_.link_end
-                    : ui_.link_start;
-            Node& node_from = graph_.node(from_id);
-            Node& node_to = graph_.node(to_id);
-            node_from.type = node_from.type == Node_Number
-                                 ? Node_NumberExpression
-                                 : node_from.type;
-            assert(
-                node_to.type != Node_Number &&
-                node_to.type != Node_NumberExpression);
-            graph_.add_edge(from_id, to_id);
+            // in the expression graph, we want the edge to always go from
+            // the number to the operation, since the graph is directed!
+            const size_t from_id = graph_.node(link_start).type == Node_Number
+                                       ? link_start
+                                       : link_end;
+            const size_t to_id = graph_.node(link_end).type == Node_Operation
+                                     ? link_end
+                                     : link_start;
+
+            bool invalid_node = false;
+            for (size_t edge : graph_.edges_to_node(from_id))
+            {
+                if (graph_.edge(edge).from == to_id)
+                {
+                    invalid_node = true;
+                    break;
+                }
+            }
+
+            invalid_node = (graph_.node(from_id).type != Node_Number ||
+                            graph_.node(to_id).type != Node_Operation) ||
+                           invalid_node;
+
+            if (!invalid_node)
+            {
+                graph_.add_edge(from_id, to_id);
+                Node& node_from = graph_.node(from_id);
+                Node& node_to = graph_.node(to_id);
+                node_from.type = node_from.type == Node_Number
+                                     ? Node_NumberExpression
+                                     : node_from.type;
+            }
         }
 
         ImGui::End();
@@ -876,26 +899,6 @@ private:
 
     private:
         static const int invalid_index = -1;
-    };
-
-    struct Ui
-    {
-        Id pin_hovered;
-        bool is_link_created;
-        Id link_start, link_end;
-
-        Ui() : pin_hovered(), is_link_created(false), link_start(), link_end()
-        {
-        }
-
-        inline void reset()
-        {
-            // reset frame data
-            pin_hovered.invalidate();
-            is_link_created = false;
-            link_start.invalidate();
-            link_end.invalidate();
-        }
     };
 
     inline void find_and_remove_node(const int id)
@@ -999,8 +1002,6 @@ private:
     std::vector<SineNode> sine_nodes_;
     std::vector<MultiplyNode> mul_nodes_;
     std::vector<AddNode> add_nodes_;
-
-    Ui ui_;
 }; // namespace
 
 static ColorNodeEditor color_editor;
