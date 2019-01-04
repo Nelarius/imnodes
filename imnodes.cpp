@@ -397,16 +397,22 @@ inline float get_distance_to_cubic_bezier(
     return ImSqrt(ImLengthSqr(to_curve));
 }
 
-inline LinkBezierData get_link_renderable(ImVec2 start, ImVec2 end)
+inline LinkBezierData get_link_renderable(
+    ImVec2 start,
+    ImVec2 end,
+    AttributeType start_type)
 {
+    assert(
+        (start_type == AttributeType_Input) ||
+        (start_type == AttributeType_Output));
+    if (start_type == AttributeType_Input)
+    {
+        ImSwap(start, end);
+    }
     // function arguments assed by value, since we mutate them
     const ImVec2 delta = end - start;
     const float link_length = ImSqrt(ImLengthSqr(delta));
     const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
-    if (start.x > end.x)
-    {
-        ImSwap(start, end);
-    }
     LinkBezierData bezier;
     bezier.p0 = start;
     bezier.p1 = start + offset;
@@ -661,7 +667,8 @@ void draw_link(const EditorContext& editor, int link_idx)
             pin_end.type);
     }
 
-    const LinkBezierData link_renderable = get_link_renderable(start, end);
+    const LinkBezierData link_renderable =
+        get_link_renderable(start, end, pin_start.type);
 
     const bool is_hovered = is_mouse_hovering_near_link(
         link_renderable.p0,
@@ -883,7 +890,7 @@ void EndNodeEditor()
             const ImVec2 end_pos = ImGui::GetIO().MousePos;
 
             const LinkBezierData link_renderable =
-                get_link_renderable(start_pos, end_pos);
+                get_link_renderable(start_pos, end_pos, pin.type);
             editor.grid_draw_list->AddBezierCurve(
                 link_renderable.p0,
                 link_renderable.p1,
