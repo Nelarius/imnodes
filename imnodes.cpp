@@ -60,6 +60,15 @@ enum ImGuiChannels
     CHANNEL_COUNT
 };
 
+enum AttributeType
+{
+    AttributeType_None,
+    AttributeType_Input,
+    AttributeType_Output
+};
+
+// [SECTION] internal data structures
+
 // The object T must have the following interface:
 //
 // struct T
@@ -705,6 +714,35 @@ void draw_link(const EditorContext& editor, int link_idx)
         LINK_THICKNESS,
         link_renderable.num_segments);
 }
+
+void begin_attribute(int id, AttributeType type)
+{
+    // Make sure to call BeginNode() before calling
+    // BeginAttribute()
+    assert(g.current_scope == SCOPE_NODE);
+    g.current_scope = SCOPE_ATTRIBUTE;
+
+    ImGui::BeginGroup();
+    ImGui::PushID(id);
+
+    g.node_current.attribute.type = type;
+
+    EditorContext& editor = editor_context_get();
+
+    g.node_current.attribute.index =
+        editor.nodes.pool[g.node_current.index].attribute_rects.size();
+
+    const NodeData& parent_node = editor.nodes.pool[g.node_current.index];
+
+    PinData& pin = editor.pins.find_or_create_new(id);
+    pin.id = id;
+    pin.node_idx = g.node_current.index;
+    pin.attribute_idx = g.node_current.attribute.index;
+    pin.type = type;
+    pin.color_style.background = g.style.colors[ColorStyle_Pin];
+    pin.color_style.hovered = g.style.colors[ColorStyle_PinHovered];
+    pin.color_style.outline = g.style.colors[ColorStyle_PinOutline];
+}
 } // namespace
 
 void Initialize()
@@ -1019,34 +1057,9 @@ void EndNode()
     g.node_current.index = INVALID_INDEX;
 }
 
-void BeginAttribute(int id, AttributeType type)
-{
-    // Make sure to call BeginNode() before calling
-    // BeginAttribute()
-    assert(g.current_scope == SCOPE_NODE);
-    g.current_scope = SCOPE_ATTRIBUTE;
+void BeginInputAttribute(int id) { begin_attribute(id, AttributeType_Input); }
 
-    ImGui::BeginGroup();
-    ImGui::PushID(id);
-
-    g.node_current.attribute.type = type;
-
-    EditorContext& editor = editor_context_get();
-
-    g.node_current.attribute.index =
-        editor.nodes.pool[g.node_current.index].attribute_rects.size();
-
-    const NodeData& parent_node = editor.nodes.pool[g.node_current.index];
-
-    PinData& pin = editor.pins.find_or_create_new(id);
-    pin.id = id;
-    pin.node_idx = g.node_current.index;
-    pin.attribute_idx = g.node_current.attribute.index;
-    pin.type = type;
-    pin.color_style.background = g.style.colors[ColorStyle_Pin];
-    pin.color_style.hovered = g.style.colors[ColorStyle_PinHovered];
-    pin.color_style.outline = g.style.colors[ColorStyle_PinOutline];
-}
+void BeginOutputAttribute(int id) { begin_attribute(id, AttributeType_Output); }
 
 void EndAttribute()
 {

@@ -6,13 +6,6 @@ struct ImVec2;
 
 namespace imnodes
 {
-enum AttributeType
-{
-    AttributeType_None,
-    AttributeType_Input,
-    AttributeType_Output
-};
-
 enum ColorStyle
 {
     ColorStyle_NodeBackground = 0,
@@ -66,8 +59,10 @@ void PushColorStyle(ColorStyle item, unsigned int color);
 void BeginNode(int id);
 void Name(const char* name);
 
-// The attribute ids must be unique with regards to other attribute ids.
-void BeginAttribute(int id, AttributeType type);
+// The attribute ids must be unique with regards to other attribute ids, not
+// other nodes and links
+void BeginInputAttribute(int id);
+void BeginOutputAttribute(int id);
 void EndAttribute();
 
 void EndNode();
