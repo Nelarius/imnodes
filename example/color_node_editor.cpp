@@ -25,14 +25,14 @@ T clamp(T x, T a, T b)
 
 // The type T must be POD
 template<class T, size_t N>
-class StaticArray
+class StaticVector
 {
 public:
     using Iterator = T*;
     using ConstIterator = const T*;
 
-    StaticArray() : storage_(), size_(0) {}
-    ~StaticArray() { size_ = 0; }
+    StaticVector() : storage_(), size_(0) {}
+    ~StaticVector() { size_ = 0; }
 
     // Element access
 
@@ -41,7 +41,7 @@ public:
 
     inline T& back()
     {
-        return const_cast<T&>(static_cast<const StaticArray*>(this)->back());
+        return const_cast<T&>(static_cast<const StaticVector*>(this)->back());
     }
     inline const T& back() const
     {
@@ -53,7 +53,7 @@ public:
     inline T& operator[](const size_t i)
     {
         return const_cast<T&>(
-            static_cast<const StaticArray*>(this)->operator[](i));
+            static_cast<const StaticVector*>(this)->operator[](i));
     }
     inline const T& operator[](const size_t i) const
     {
@@ -64,7 +64,7 @@ public:
     inline Iterator find(const T& t)
     {
         return const_cast<Iterator>(
-            static_cast<const StaticArray*>(this)->find(t));
+            static_cast<const StaticVector*>(this)->find(t));
     }
     inline ConstIterator find(const T& t) const
     {
@@ -175,7 +175,7 @@ class Graph
 {
 public:
     // the graph has a limited number of adjacencies, simplifies memory usage
-    using AdjacencyArray = StaticArray<size_t, 3u>;
+    using AdjacencyArray = StaticVector<size_t, 3u>;
 
     using EdgeIterator = std::unordered_map<size_t, Edge>::iterator;
     using ConstEdgeIterator = std::unordered_map<size_t, Edge>::const_iterator;
@@ -241,7 +241,7 @@ public:
     {
         // first, collect all the edges from the adjacency lists
         // since erasing an edge invalidates the adjacency list iterators
-        StaticArray<size_t, 6> edges_to_erase;
+        StaticVector<size_t, 6> edges_to_erase;
         for (size_t edge : edges_from_node_[node_id])
         {
             edges_to_erase.push_back(edge);
@@ -421,18 +421,27 @@ public:
         ImGui::Begin("Color node editor");
         ImGui::Text("A -- add node");
         ImGui::Text("X -- delete selected node or link");
+
         imnodes::BeginNodeEditor();
 
         for (const auto& node : output_nodes_)
         {
             const float node_width = 100.0f;
+            imnodes::PushColorStyle(
+                imnodes::ColorStyle_TitleBar, IM_COL32(11, 109, 191, 255));
+            imnodes::PushColorStyle(
+                imnodes::ColorStyle_TitleBarHovered,
+                IM_COL32(45, 126, 194, 255));
+            imnodes::PushColorStyle(
+                imnodes::ColorStyle_TitleBarSelected,
+                IM_COL32(81, 148, 204, 255));
             imnodes::BeginNode(node.out);
             imnodes::Name("output");
 
             ImGui::Dummy(ImVec2(node_width, 0.f));
             {
-                imnodes::BeginAttribute(
-                    int(node.red), imnodes::AttributeType_Input);
+                // TODO: the color style of the pin needs to be pushed here
+                imnodes::BeginInputAttribute(int(node.red));
                 const float label_width = ImGui::CalcTextSize("r").x;
                 ImGui::Text("r");
                 if (graph_.node(node.red).type == Node_Number)
@@ -453,8 +462,7 @@ public:
             ImGui::Spacing();
 
             {
-                imnodes::BeginAttribute(
-                    int(node.green), imnodes::AttributeType_Input);
+                imnodes::BeginInputAttribute(int(node.green));
                 const float label_width = ImGui::CalcTextSize("g").x;
                 ImGui::Text("g");
                 if (graph_.node(node.green).type == Node_Number)
@@ -475,8 +483,7 @@ public:
             ImGui::Spacing();
 
             {
-                imnodes::BeginAttribute(
-                    int(node.blue), imnodes::AttributeType_Input);
+                imnodes::BeginInputAttribute(int(node.blue));
                 const float label_width = ImGui::CalcTextSize("b").x;
                 ImGui::Text("b");
                 if (graph_.node(node.blue).type == Node_Number)
@@ -494,6 +501,9 @@ public:
                 imnodes::EndAttribute();
             }
             imnodes::EndNode();
+            imnodes::PopColorStyle();
+            imnodes::PopColorStyle();
+            imnodes::PopColorStyle();
         }
 
         for (const auto& node : sine_nodes_)
@@ -503,8 +513,7 @@ public:
             imnodes::Name("sine");
 
             {
-                imnodes::BeginAttribute(
-                    int(node.input), imnodes::AttributeType_Input);
+                imnodes::BeginInputAttribute(int(node.input));
                 const float label_width = ImGui::CalcTextSize("number").x;
                 ImGui::Text("number");
                 if (graph_.node(node.input).type == Node_Number)
@@ -525,8 +534,7 @@ public:
             ImGui::Spacing();
 
             {
-                imnodes::BeginAttribute(
-                    int(node.op), imnodes::AttributeType_Output);
+                imnodes::BeginOutputAttribute(int(node.op));
                 const float label_width = ImGui::CalcTextSize("output").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("output");
@@ -541,7 +549,7 @@ public:
             imnodes::BeginNode(node);
             imnodes::Name("time");
 
-            imnodes::BeginAttribute(int(node), imnodes::AttributeType_Output);
+            imnodes::BeginOutputAttribute(int(node));
             ImGui::Text("output");
             imnodes::EndAttribute();
 
@@ -555,8 +563,7 @@ public:
             imnodes::Name("multiply");
 
             {
-                imnodes::BeginAttribute(
-                    int(node.lhs), imnodes::AttributeType_Input);
+                imnodes::BeginInputAttribute(int(node.lhs));
                 const float label_width = ImGui::CalcTextSize("left").x;
                 ImGui::Text("left");
                 if (graph_.node(node.lhs).type == Node_Number)
@@ -571,8 +578,7 @@ public:
             }
 
             {
-                imnodes::BeginAttribute(
-                    int(node.rhs), imnodes::AttributeType_Input);
+                imnodes::BeginInputAttribute(int(node.rhs));
                 const float label_width = ImGui::CalcTextSize("right").x;
                 ImGui::Text("right");
                 if (graph_.node(node.rhs).type == Node_Number)
@@ -589,8 +595,7 @@ public:
             ImGui::Spacing();
 
             {
-                imnodes::BeginAttribute(
-                    int(node.op), imnodes::AttributeType_Output);
+                imnodes::BeginOutputAttribute(int(node.op));
                 const float label_width = ImGui::CalcTextSize("result").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("result");
@@ -607,8 +612,7 @@ public:
             imnodes::Name("add");
 
             {
-                imnodes::BeginAttribute(
-                    int(node.lhs), imnodes::AttributeType_Input);
+                imnodes::BeginInputAttribute(int(node.lhs));
                 const float label_width = ImGui::CalcTextSize("left").x;
                 ImGui::Text("left");
                 if (graph_.node(node.lhs).type == Node_Number)
@@ -623,8 +627,7 @@ public:
             }
 
             {
-                imnodes::BeginAttribute(
-                    int(node.rhs), imnodes::AttributeType_Input);
+                imnodes::BeginInputAttribute(int(node.rhs));
                 const float label_width = ImGui::CalcTextSize("right").x;
                 ImGui::Text("right");
                 if (graph_.node(node.rhs).type == Node_Number)
@@ -641,8 +644,7 @@ public:
             ImGui::Spacing();
 
             {
-                imnodes::BeginAttribute(
-                    int(node.op), imnodes::AttributeType_Output);
+                imnodes::BeginOutputAttribute(int(node.op));
                 const float label_width = ImGui::CalcTextSize("result").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("result");
@@ -996,7 +998,7 @@ private:
     }
 
     Graph graph_;
-    StaticArray<OutputNode, 1> output_nodes_;
+    StaticVector<OutputNode, 1> output_nodes_;
     std::vector<size_t>
         time_nodes_; // just a single node representing the operation
     std::vector<SineNode> sine_nodes_;
@@ -1007,7 +1009,23 @@ private:
 static ColorNodeEditor color_editor;
 } // namespace
 
-void NodeEditorInitialize() {}
+void NodeEditorInitialize()
+{
+    auto& style = imnodes::GetStyle();
+    style.colors[imnodes::ColorStyle_TitleBar] = IM_COL32(232, 27, 86, 255);
+    style.colors[imnodes::ColorStyle_TitleBarHovered] =
+        IM_COL32(235, 67, 115, 255);
+    style.colors[imnodes::ColorStyle_TitleBarSelected] =
+        IM_COL32(241, 108, 146, 255);
+    style.colors[imnodes::ColorStyle_Link] = IM_COL32(255, 210, 0, 255);
+    style.colors[imnodes::ColorStyle_LinkHovered] =
+        IM_COL32(255, 229, 108, 255);
+    style.colors[imnodes::ColorStyle_LinkSelected] =
+        IM_COL32(255, 237, 154, 255);
+    style.colors[imnodes::ColorStyle_Pin] = IM_COL32(255, 210, 0, 255);
+    style.colors[imnodes::ColorStyle_PinHovered] = IM_COL32(255, 237, 154, 255);
+    style.flags = imnodes::Flags_None;
+}
 
 void NodeEditorShow() { color_editor.show(); }
 
