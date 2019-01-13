@@ -1,3 +1,12 @@
+// the structure of this file:
+//
+// [SECTION] internal data structures
+// [SECTION] global struct
+// [SECTION] editor context definition
+// [SECTION] render helpers
+// [SECTION] miscellaneous helpers
+// [SECTION] API implementation
+
 #include "imnodes.h"
 
 #include "imgui.h"
@@ -44,20 +53,22 @@ static const size_t NODE_NAME_STR_LEN = 32u;
 
 static const int INVALID_INDEX = -1;
 
+bool initialized = false;
+
 enum ScopeFlags
 {
-    SCOPE_NONE = 0,
-    SCOPE_EDITOR = 1 << 0,
-    SCOPE_NODE = 1 << 2,
-    SCOPE_ATTRIBUTE = 1 << 3
+    Scope_None = 0,
+    Scope_Editor = 1 << 0,
+    Scope_Node = 1 << 2,
+    Scope_Attribute = 1 << 3
 };
 
-enum ImGuiChannels
+enum Channels
 {
-    CHANNEL_BACKGROUND = 0,
-    CHANNEL_FOREGROUND,
-    CHANNEL_UI,
-    CHANNEL_COUNT
+    Channel_Background = 0,
+    Channel_Foreground,
+    Channel_Ui,
+    Channel_Count
 };
 
 enum AttributeType
@@ -204,14 +215,6 @@ struct LinkBezierData
     int num_segments;
 };
 
-// This is used to initialize the boolean flag in the static struct
-struct InitializeGuard
-{
-    bool initialized;
-
-    InitializeGuard() : initialized(false) {}
-};
-
 struct ColorStyleElement
 {
     ImU32 color;
@@ -220,10 +223,10 @@ struct ColorStyleElement
     ColorStyleElement(ImU32 c, ColorStyle s) : color(c), item(s) {}
 };
 
-// this struct should only store per-frame data
-static struct
+// [SECTION] global struct
+// this stores data which only lives for one frame
+struct
 {
-    InitializeGuard guard;
     EditorContext* default_editor_ctx;
     EditorContext* editor_ctx;
     ImVec2 grid_origin;
@@ -473,6 +476,8 @@ inline ImVec2 pin_position(
 }
 } // namespace
 
+// [SECTION] editor context definition
+
 struct EditorContext
 {
     ObjectPool<NodeData> nodes;
@@ -492,20 +497,7 @@ struct EditorContext
     }
 };
 
-EditorContext* EditorContextCreate()
-{
-    void* mem = ImGui::MemAlloc(sizeof(EditorContext));
-    new (mem) EditorContext();
-    return (EditorContext*)mem;
-}
-
-void EditorContextFree(EditorContext* ctx)
-{
-    ctx->~EditorContext();
-    ImGui::MemFree(ctx);
-}
-
-void EditorContextSet(EditorContext* ctx) { g.editor_ctx = ctx; }
+// [SECTION] render helpers
 
 namespace
 {
@@ -561,7 +553,7 @@ void draw_node(const EditorContext& editor, int node_idx)
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::PushID(node.id);
 
-    editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_FOREGROUND);
+    editor.grid_draw_list->ChannelsSetCurrent(Channel_Foreground);
 
     const ImRect node_rect = get_node_rect(node);
 
@@ -715,12 +707,14 @@ void draw_link(const EditorContext& editor, int link_idx)
         link_renderable.num_segments);
 }
 
+// SECTION miscellaneous helpers
+
 void begin_attribute(int id, AttributeType type)
 {
     // Make sure to call BeginNode() before calling
     // BeginAttribute()
-    assert(g.current_scope == SCOPE_NODE);
-    g.current_scope = SCOPE_ATTRIBUTE;
+    assert(g.current_scope == Scope_Node);
+    g.current_scope = Scope_Attribute;
 
     ImGui::BeginGroup();
     ImGui::PushID(id);
@@ -745,15 +739,32 @@ void begin_attribute(int id, AttributeType type)
 }
 } // namespace
 
+// [SECTION] API implementation
+
+EditorContext* EditorContextCreate()
+{
+    void* mem = ImGui::MemAlloc(sizeof(EditorContext));
+    new (mem) EditorContext();
+    return (EditorContext*)mem;
+}
+
+void EditorContextFree(EditorContext* ctx)
+{
+    ctx->~EditorContext();
+    ImGui::MemFree(ctx);
+}
+
+void EditorContextSet(EditorContext* ctx) { g.editor_ctx = ctx; }
+
 void Initialize()
 {
-    assert(g.guard.initialized == false);
-    g.guard.initialized = true;
+    assert(initialized == false);
+    initialized = true;
 
     g.default_editor_ctx = NULL;
     g.editor_ctx = NULL;
     g.grid_origin = ImVec2(0.0f, 0.0f);
-    g.current_scope = SCOPE_NONE;
+    g.current_scope = Scope_None;
 
     g.default_editor_ctx = EditorContextCreate();
     EditorContextSet(g.default_editor_ctx);
@@ -797,9 +808,9 @@ Style& GetStyle() { return g.style; }
 void BeginNodeEditor()
 {
     // Remember to call Initialize() before calling BeginNodeEditor()
-    assert(g.guard.initialized);
-    assert(g.current_scope == SCOPE_NONE);
-    g.current_scope = SCOPE_EDITOR;
+    assert(initialized);
+    assert(g.current_scope == Scope_None);
+    g.current_scope = Scope_Editor;
 
     // Reset state from previous pass
 
@@ -812,7 +823,8 @@ void BeginNodeEditor()
     g.link_hovered = INVALID_INDEX;
     g.pin_hovered = INVALID_INDEX;
     g.link_dropped = false;
-    // reset ui events for the current editor context
+
+    // reset ui content for the current editor
     EditorContext& editor = editor_context_get();
     editor.nodes.update();
     editor.pins.update();
@@ -836,8 +848,8 @@ void BeginNodeEditor()
         // NOTE: the draw list has to be captured here, because we want all the
         // content to clip the scrolling_region child window.
         editor.grid_draw_list = ImGui::GetWindowDrawList();
-        editor.grid_draw_list->ChannelsSplit(CHANNEL_COUNT);
-        editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_BACKGROUND);
+        editor.grid_draw_list->ChannelsSplit(Channel_Count);
+        editor.grid_draw_list->ChannelsSetCurrent(Channel_Background);
 
         // TODO: showing the grid should be a setting
         if (/*show_grid*/ true)
@@ -846,13 +858,13 @@ void BeginNodeEditor()
         }
     }
 
-    editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_UI);
+    editor.grid_draw_list->ChannelsSetCurrent(Channel_Ui);
 }
 
 void EndNodeEditor()
 {
-    assert(g.current_scope == SCOPE_EDITOR);
-    g.current_scope = SCOPE_NONE;
+    assert(g.current_scope == Scope_Editor);
+    g.current_scope = Scope_None;
 
     EditorContext& editor = editor_context_get();
 
@@ -885,7 +897,7 @@ void EndNodeEditor()
         }
     }
 
-    editor.grid_draw_list->ChannelsSetCurrent(CHANNEL_BACKGROUND);
+    editor.grid_draw_list->ChannelsSetCurrent(Channel_Background);
 
     for (int i = 0; i < editor.links.pool.size(); ++i)
     {
@@ -1002,8 +1014,8 @@ void EndNodeEditor()
 void BeginNode(int node_id)
 {
     // Remember to call BeginNodeEditor before calling BeginNode
-    assert(g.current_scope == SCOPE_EDITOR);
-    g.current_scope = SCOPE_NODE;
+    assert(g.current_scope == Scope_Editor);
+    g.current_scope = Scope_Node;
     assert(g.node_current.index == INVALID_INDEX);
 
     EditorContext& editor = editor_context_get();
@@ -1036,7 +1048,7 @@ void BeginNode(int node_id)
 
 void Name(const char* name)
 {
-    assert(g.current_scope == SCOPE_NODE);
+    assert(g.current_scope == Scope_Node);
 
     NodeData& node = editor_context_get().nodes.pool[g.node_current.index];
     assert(strlen(name) < NODE_NAME_STR_LEN);
@@ -1046,8 +1058,8 @@ void Name(const char* name)
 
 void EndNode()
 {
-    assert(g.current_scope == SCOPE_NODE);
-    g.current_scope = SCOPE_EDITOR;
+    assert(g.current_scope == Scope_Node);
+    g.current_scope = Scope_Editor;
 
     EditorContext& editor = editor_context_get();
 
@@ -1063,8 +1075,8 @@ void BeginOutputAttribute(int id) { begin_attribute(id, AttributeType_Output); }
 
 void EndAttribute()
 {
-    assert(g.current_scope == SCOPE_ATTRIBUTE);
-    g.current_scope = SCOPE_NODE;
+    assert(g.current_scope == Scope_Attribute);
+    g.current_scope = Scope_Node;
 
     ImGui::PopID();
     ImGui::EndGroup();
@@ -1095,7 +1107,8 @@ void Link(int id, const int start_attr, const int end_attr)
 
 void PushColorStyle(ColorStyle item, unsigned int color)
 {
-    assert(g.guard.initialized);
+    // Remember to call Initialize() before using any other functions!
+    assert(initialized);
     g.color_style_stack.push_back(
         ColorStyleElement(g.style.colors[item], item));
     g.style.colors[item] = color;
@@ -1111,7 +1124,8 @@ void PopColorStyle()
 
 void SetNodePos(int node_id, const ImVec2& screen_space_pos)
 {
-    assert(g.guard.initialized);
+    // Remember to call Initialize() before using any other functions!
+    assert(initialized);
     EditorContext& editor = editor_context_get();
     NodeData& node = editor.nodes.find_or_create_new(node_id);
     node.origin =
@@ -1120,7 +1134,7 @@ void SetNodePos(int node_id, const ImVec2& screen_space_pos)
 
 bool IsNodeHovered(int* const node_id)
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     assert(node_id != NULL);
 
     const bool is_hovered = g.node_hovered != INVALID_INDEX;
@@ -1134,7 +1148,7 @@ bool IsNodeHovered(int* const node_id)
 
 bool IsLinkHovered(int* const link_id)
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     assert(link_id != NULL);
 
     const bool is_hovered = g.link_hovered != INVALID_INDEX;
@@ -1148,7 +1162,7 @@ bool IsLinkHovered(int* const link_id)
 
 bool IsPinHovered(int* const attr)
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     assert(attr != NULL);
 
     const bool is_hovered = g.pin_hovered != INVALID_INDEX;
@@ -1162,7 +1176,7 @@ bool IsPinHovered(int* const attr)
 
 bool IsNodeSelected(int* const node_id)
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     assert(node_id != NULL);
 
     const bool is_selected = g.node_selected != INVALID_INDEX;
@@ -1177,7 +1191,7 @@ bool IsNodeSelected(int* const node_id)
 
 bool IsLinkSelected(int* const link_id)
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     assert(link_id != NULL);
 
     const bool is_selected = g.link_selected != INVALID_INDEX;
@@ -1191,7 +1205,7 @@ bool IsLinkSelected(int* const link_id)
 
 bool IsLinkStarted(int* const started_at)
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     assert(started_at != NULL);
 
     const EditorContext& editor = editor_context_get();
@@ -1205,13 +1219,13 @@ bool IsLinkStarted(int* const started_at)
 
 bool IsLinkDropped()
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     return g.link_dropped;
 }
 
 bool IsLinkCreated(int* const started_at, int* const ended_at)
 {
-    assert(g.current_scope == SCOPE_NONE);
+    assert(g.current_scope == Scope_None);
     assert(started_at != NULL);
     assert(ended_at != NULL);
 
