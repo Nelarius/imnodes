@@ -2,6 +2,7 @@
 #include "imnodes.h"
 #include "imgui.h"
 
+#include <SDL_keycode.h>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -22,7 +23,9 @@ inline int make_id(int node, int attribute) { return (node << 16) | attribute; }
 class SaveLoadEditor
 {
 public:
-    SaveLoadEditor() : float_nodes_(), color_nodes_() {}
+    SaveLoadEditor() : current_id_(0), float_nodes_(), color_nodes_(), links_()
+    {
+    }
 
     void show()
     {
@@ -42,26 +45,21 @@ public:
             imnodes::BeginNode(elem.first);
             imnodes::Name("drag float");
 
-            imnodes::BeginAttribute(
-                make_id(elem.first, 0), imnodes::AttributeType_Input);
+            imnodes::BeginInputAttribute(make_id(elem.first, 0));
             ImGui::Text("input");
             imnodes::EndAttribute();
             ImGui::Spacing();
             {
-                imnodes::BeginAttribute(
-                    make_id(elem.first, 1), imnodes::AttributeType_Internal);
                 const float label_width = ImGui::CalcTextSize("number").x;
                 ImGui::Text("number");
                 ImGui::PushItemWidth(node_width - label_width - 6.0f);
                 ImGui::SameLine();
                 ImGui::DragFloat("##hidelabel", &elem.second, 0.01f);
                 ImGui::PopItemWidth();
-                imnodes::EndAttribute();
             }
             ImGui::Spacing();
             {
-                imnodes::BeginAttribute(
-                    make_id(elem.first, 2), imnodes::AttributeType_Output);
+                imnodes::BeginOutputAttribute(make_id(elem.first, 1));
                 const float label_width = ImGui::CalcTextSize("output").x;
                 ImGui::Indent(node_width - label_width - 1.5f);
                 ImGui::Text("output");
@@ -70,9 +68,9 @@ public:
 
             imnodes::EndNode();
         }
-        imnodes::PopColorStyle(imnodes::ColorStyle_TitleBarSelected);
-        imnodes::PopColorStyle(imnodes::ColorStyle_TitleBarHovered);
-        imnodes::PopColorStyle(imnodes::ColorStyle_TitleBar);
+        imnodes::PopColorStyle();
+        imnodes::PopColorStyle();
+        imnodes::PopColorStyle();
 
         imnodes::PushColorStyle(
             imnodes::ColorStyle_TitleBar, IM_COL32(41, 81, 109, 255));
@@ -86,15 +84,13 @@ public:
             imnodes::BeginNode(elem.first);
             imnodes::Name("color");
 
-            imnodes::BeginAttribute(
-                make_id(elem.first, 0), imnodes::AttributeType_Input);
+            imnodes::BeginInputAttribute(make_id(elem.first, 0));
             ImGui::Text("input");
             imnodes::EndAttribute();
             ImGui::Spacing();
 
             {
-                imnodes::BeginAttribute(
-                    make_id(elem.first, 3), imnodes::AttributeType_Output);
+                imnodes::BeginOutputAttribute(make_id(elem.first, 1));
                 const float label_width = ImGui::CalcTextSize("color").x;
                 ImGui::PushItemWidth(node_width - label_width - 6.0f);
                 ImGui::ColorEdit3("color", elem.second.data);
@@ -103,8 +99,7 @@ public:
             }
             ImGui::Spacing();
             {
-                imnodes::BeginAttribute(
-                    make_id(elem.first, 2), imnodes::AttributeType_Output);
+                imnodes::BeginOutputAttribute(make_id(elem.first, 2));
                 const float label_width = ImGui::CalcTextSize("output").x;
                 ImGui::Indent(node_width - label_width - 1.5f);
                 ImGui::Text("output");
@@ -113,9 +108,15 @@ public:
 
             imnodes::EndNode();
         }
-        imnodes::PopColorStyle(imnodes::ColorStyle_TitleBarSelected);
-        imnodes::PopColorStyle(imnodes::ColorStyle_TitleBarHovered);
-        imnodes::PopColorStyle(imnodes::ColorStyle_TitleBar);
+        imnodes::PopColorStyle();
+        imnodes::PopColorStyle();
+        imnodes::PopColorStyle();
+
+        for (const auto linkpair : links_)
+        {
+            imnodes::Link(
+                linkpair.first, linkpair.second.start, linkpair.second.end);
+        }
 
         // Context menu for adding new nodes
 
@@ -148,39 +149,26 @@ public:
 
             if (new_node != -1)
             {
-                imnodes::SetNodePos(new_node, click_pos, ImGuiCond_Appearing);
+                imnodes::SetNodePos(new_node, click_pos);
             }
         }
 
         ImGui::PopStyleVar();
         imnodes::EndNodeEditor();
 
-        // imnodes event handling
+        int link_start, link_end;
+        if (imnodes::IsLinkCreated(&link_start, &link_end))
         {
-            imnodes::Event event;
-            while (imnodes::PollEvent(event))
-            {
-                switch (event.type)
-                {
-                    case imnodes::EventType_NodeDeleted:
-                    {
-                        if (float_nodes_.find(event.node_deleted.node_idx) !=
-                            float_nodes_.end())
-                        {
-                            float_nodes_.erase(event.node_deleted.node_idx);
-                        }
-                        else if (
-                            color_nodes_.find(event.node_deleted.node_idx) !=
-                            color_nodes_.end())
-                        {
-                            color_nodes_.erase(event.node_deleted.node_idx);
-                        }
-                        break;
-                    }
+            links_.insert(
+                std::make_pair(current_id_++, Link{link_start, link_end}));
+        }
 
-                    default:
-                        break;
-                }
+        int link_id;
+        if (imnodes::IsLinkSelected(&link_id))
+        {
+            if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
+            {
+                links_.erase(link_id);
             }
         }
 
@@ -209,6 +197,14 @@ public:
                      << "\n\n";
             }
 
+            for (const auto& link : links_)
+            {
+                fout << "[link]\n";
+                fout << "id=" << link.first << "\n";
+                fout << "data=" << link.second.start << "," << link.second.end
+                     << "\n\n";
+            }
+
             fout.close();
         }
 
@@ -234,7 +230,6 @@ public:
                         std::getline(fin, line);
                         std::sscanf(line.c_str(), "data=%f", &value);
                         float_nodes_.insert(std::make_pair(id, value));
-
                         if (id > current_id_)
                         {
                             current_id_ = id;
@@ -254,7 +249,21 @@ public:
                             color.data + 1,
                             color.data + 2);
                         color_nodes_.insert(std::make_pair(id, color));
-
+                        if (id > current_id_)
+                        {
+                            current_id_ = id;
+                        }
+                    }
+                    else if (line == "[link]")
+                    {
+                        int id;
+                        Link link;
+                        std::getline(fin, line);
+                        std::sscanf(line.c_str(), "id=%i", &id);
+                        std::getline(fin, line);
+                        std::sscanf(
+                            line.c_str(), "data=%i,%i", &link.start, &link.end);
+                        links_.insert(std::make_pair(id, link));
                         if (id > current_id_)
                         {
                             current_id_ = id;
@@ -268,10 +277,15 @@ public:
     }
 
 private:
-    int current_id_;
+    struct Link
+    {
+        int start, end;
+    };
 
+    int current_id_;
     std::unordered_map<int, float> float_nodes_;
     std::unordered_map<int, Color3> color_nodes_;
+    std::unordered_map<int, Link> links_;
 };
 
 static SaveLoadEditor editor;
