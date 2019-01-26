@@ -299,13 +299,16 @@ inline ImVec2 get_node_content_origin(const NodeData& node)
 
 inline ImRect get_title_bar_rect(const NodeData& node)
 {
-    ImVec2 ss_node_origin = editor_space_to_screen_space(node.origin);
+    const ImVec2 ss_node_origin = editor_space_to_screen_space(node.origin);
     // TODO: lots of repetition of ImGui::CalcTextSize()
     // it should be calculated once and stored (in the node?)
-    ImVec2 text_size = ImGui::CalcTextSize(node.name);
-    ImVec2 min = ss_node_origin;
-    ImVec2 max = ImVec2(
-        node.content_rect.Max.x + NODE_CONTENT_PADDING.x,
+    // TODO: this calculation is also done in get_node_rect...
+    const ImVec2 text_size = ImGui::CalcTextSize(node.name);
+    const float max_width =
+        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
+    const ImVec2 min = ss_node_origin;
+    const ImVec2 max = ImVec2(
+        max_width + NODE_CONTENT_PADDING.x,
         ss_node_origin.y + text_size.y + 2.f * NODE_CONTENT_PADDING.y);
     // NOTE: the content rect already contains 1 x NODE_CONTENT_PADDING due to
     // setting the cursor!
@@ -314,10 +317,14 @@ inline ImRect get_title_bar_rect(const NodeData& node)
 
 inline ImRect get_node_rect(const NodeData& node)
 {
-    float text_height =
-        ImGui::CalcTextSize(node.name).y + 2.f * NODE_CONTENT_PADDING.y;
+    const ImVec2 text_size = ImGui::CalcTextSize(node.name);
+    const float max_width =
+        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
+    // apply the node padding on the top and bottom of the text
+    const float text_height = text_size.y + 2.f * NODE_CONTENT_PADDING.y;
 
     ImRect rect = node.content_rect;
+    rect.Max.x = max_width;
     rect.Expand(NODE_CONTENT_PADDING);
     rect.Min.y = rect.Min.y - text_height;
     return rect;
