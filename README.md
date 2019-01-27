@@ -13,22 +13,24 @@ Features:
 * Single header file, and single source file. Just copy-paste `imnodes.h` and `imnodes.cpp` into your project.
 * Written in the same style of C++ as `dear imgui` itself -- no modern C++ used.
 
+This is an initial release of the library -- more features and fixes will be added as required!
+
 ## A brief tour
 
-Here is a small overview of how the extension is used. For more information, see the bottom of the README!
+Here is a small overview of how the extension is used. For more information on example usage, scroll to the bottom of the README.
 
-Before anything can be done, the library must be initialized. This can be done in tandem with `dear imgui` initialization.
+Before anything can be done, the library must be initialized. This can be done at the same time as `dear imgui` initialization.
 
 ```cpp
 ImGui::Initialize();
 imnodes::Initialize();
 
-// elsewhere in your code...
+// elsewhere in the code...
 imnodes::Shutdown();
 ImGui::DestroyContext();
 ```
 
-The node editor must be instantiated within a window, like any other UI element.
+The node editor is a workspace which contains nodes. The node editor must be instantiated within a window, like any other UI element.
 
 ```cpp
 ImGui::Begin("node editor");
@@ -39,7 +41,7 @@ imnodes::EndNodeEditor();
 ImGui::End();
 ```
 
-Now you should have a workspace with a grid in your window. An empty node can now be instantiated:
+Now you should have a workspace with a grid visible in the window. An empty node can now be instantiated:
 
 ```cpp
 const int hardcoded_node_id = 1;
@@ -72,22 +74,68 @@ imnodes::EndNode();
 
 The extension doesn't really care what is in the attribute. It just renders the pin for the attribute, and allows the user to create links between pins.
 
-The user has to render their own links between nodes as well. A link is just a pair of attribute ids. And like nodes and attributes, links too have to be identified by integers:
+The user has to render their own links between nodes as well. A link is a curve which connects two attributes. A link is just a pair of attribute ids. And like nodes and attributes, links too have to be identified by unique integer values:
 
 ```cpp
+std::vector<std::pair<int, int>> links;
+// elsewhere in the code...
 for (int i = 0; i < links.size(); ++i)
 {
   const std::pair<int, int> p = links[i];
-  // Tell imnodes which pins to render a link between
+  // in this case, we just use the array index of the link
+  // as the unique identifier
   imnodes::Link(i, p.first, p.second);
 }
 ```
 
-After `EndNodeEditor` has been called, You can test if a link was created during the frame with the function call `IsLinkCreated`:
+After `EndNodeEditor` has been called, you can test if a link was created during the frame with the function call `IsLinkCreated`:
 
-TODO: mention other UI event features
+```
+int start_attr, end_attr;
+if (IsLinkCreated(&start_attr, &end_attr))
+{
+  links.push_back(std::make_pair(start_attr, end_attr));
+}
+```
 
-Like `dear imgui`, the style of the UI can be changed. You can set the color style of individual nodes, pins, and links midframe by calling `imnodes::PushColorStyle` and `imnodes::PopColorStyle`. If the style is not being set midframe, `imnodes::GetStyle` can be called instead, and the values can be set into the style array directly.
+In addition to testing for new links, you can also test for whether UI elements are being hovered over or selected (clicked).
+
+```cpp
+int node_id;
+if (IsNodeSelected(&node_id))
+{
+  node_selected = node_id;
+}
+```
+
+See `imnodes.h` for more UI event-related functions.
+
+Like `dear imgui`, the style of the UI can be changed. You can set the color style of individual nodes, pins, and links mid-frame by calling `imnodes::PushColorStyle` and `imnodes::PopColorStyle`.
+
+```cpp
+// set the titlebar color of an individual node
+imnodes::PushColorStyle(
+  imnodes::ColorStyle_TitleBar, IM_COL32(11, 109, 191, 255));
+imnodes::PushColorStyle(
+  imnodes::ColorStyle_TitleBarSelected, IM_COL32(81, 148, 204, 255));
+
+imnodes::BeginNode(hardcoded_node_id);
+imnodes::Name("colorful node");
+// node internals here...
+imnodes::EndNode();
+
+imnodes::PopColorStyle();
+imnodes::PopColorStyle();
+```
+
+If the style is not being set mid-frame, `imnodes::GetStyle` can be called instead, and the values can be set into the style array directly.
+
+```cpp
+// set the titlebar color for all nodes
+Style& style = imnodes::GetStyle();
+style.colors[imnodes::ColorStyle_TitleBar] = IM_COL32(232, 27, 86, 255);
+style.colors[imnodes::ColorStyle_TitleBarSelected] = IM_COL32(241, 108, 146, 255);
+```
 
 ## Further information
 
