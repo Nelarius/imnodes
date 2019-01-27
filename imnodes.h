@@ -26,6 +26,7 @@ enum ColorStyle
     ColorStyle_Count
 };
 
+// Flags for controlling how the nodes are rendered.
 enum Flags
 {
     Flags_None = 0,
@@ -37,50 +38,76 @@ struct Style
 {
     // by default, set to Flags_NodeOutline | Flags_PinOutline
     Flags flags;
-    // set these mid-frame using Push/PopColorStyle
+    // Set these mid-frame using Push/PopColorStyle. You can index this color
+    // array with with a ColorStyle enum value.
     unsigned int colors[ColorStyle_Count];
 };
 
+// An editor context corresponds to a set of nodes in a single workspace
+// (created with a single Begin/EndNodeEditor pair)
+//
+// By default, the library creates an editor context behind the scenes, so
+// using any of the imnodes functions doesn't require you to explicitly create a
+// context.
 struct EditorContext;
 
 EditorContext* EditorContextCreate();
 void EditorContextFree(EditorContext*);
 void EditorContextSet(EditorContext*);
 
+// Initialize the node editor system.
 void Initialize();
 void Shutdown();
 
+// Returns the global style struct. See the struct declaration for default
+// values.
 Style& GetStyle();
 
+// The top-level function call. Call this before calling BeginNode/EndNode.
+// Calling this function will result the node editor grid workspace being
+// rendered.
 void BeginNodeEditor();
+void EndNodeEditor();
 
+// Use PushColorStyle and PopColorStyle to modify Style::colors mid-frame.
 void PushColorStyle(ColorStyle item, unsigned int color);
+void PopColorStyle();
 
 void BeginNode(int id);
+void EndNode();
+// Set the node's title
 void Name(const char* name);
 
-// The attribute ids must be unique with regards to other attribute ids, not
-// other nodes and links
+// Attributes are ImGui UI elements embedded within the node. Attributes have
+// circular pins rendered next to them. Links are created between pins.
+//
+// Input and output attributes are otherwise the same, except that pins are
+// rendered on the left of the node for input attributes, and on the right side
+// for output attributes.
+//
+// The attribute ids must be unique.
 void BeginInputAttribute(int id);
 void BeginOutputAttribute(int id);
 void EndAttribute();
 
-void EndNode();
-
-// The attributes ids used here must match the ids used in BeginAttribute()
+// Render a link between attributes.
+// The attributes ids used here must match the ids used in
+// Begin(Input|Output)Attribute function calls. The order of start_attr and
+// end_attr doesn't make a difference for rendering the link.
 void Link(int id, int start_attr, int end_attr);
 
-void PopColorStyle();
-
-void EndNodeEditor();
-
+// Set's the node's position corresponding to the node id. You can even set the
+// position before the node has been created with BeginNode().
 void SetNodePos(int node_id, const ImVec2& pos);
 
-// new replacements for events
+// The following functions return true if a UI element is being hovered over by
+// the mouse cursor. Assigns the id of the UI element being hovered over to the
+// function argument.
 bool IsNodeHovered(int* node_id);
 bool IsLinkHovered(int* link_id);
 bool IsPinHovered(int* attribute_id);
 
+// The following two functions return true if the UI element has been clicked.
 bool IsNodeSelected(int* node_id);
 bool IsLinkSelected(int* link_id);
 
@@ -91,9 +118,10 @@ bool IsLinkDropped();
 // Did the user create a new link?
 bool IsLinkCreated(int* started_at_attr, int* ended_at_attr);
 
-// Save the editor state to a string. The data is written in the INI format.
-// If the editor is left out, then the function will save the currently set
-// editor's state.
+// Use the following functions to write the editor context's state to a string,
+// or directly to a file. The editor context is serialized in the INI file
+// format.
+
 const char* SaveCurrentEditorStateToMemory(size_t* data_size = NULL);
 const char* SaveEditorStateToMemory(
     const EditorContext* editor,
