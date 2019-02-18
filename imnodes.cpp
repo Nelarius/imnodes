@@ -733,8 +733,6 @@ void begin_attribute(int id, AttributeType type)
     g.node_current.attribute.index =
         editor.nodes.pool[g.node_current.index].attribute_rects.size();
 
-    const NodeData& parent_node = editor.nodes.pool[g.node_current.index];
-
     PinData& pin = editor.pins.find_or_create_new(id);
     pin.id = id;
     pin.node_idx = g.node_current.index;
