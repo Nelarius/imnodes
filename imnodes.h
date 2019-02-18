@@ -102,15 +102,25 @@ void SetNodePos(int node_id, const ImVec2& pos);
 
 // The following functions return true if a UI element is being hovered over by
 // the mouse cursor. Assigns the id of the UI element being hovered over to the
-// function argument.
+// function argument. Use these functions after EndNodeEditor() has been called.
 bool IsNodeHovered(int* node_id);
 bool IsLinkHovered(int* link_id);
 bool IsPinHovered(int* attribute_id);
 
 // The following two functions return true if the UI element has been clicked.
+// Use these functions after calling EndNodeEditor().
 bool IsNodeSelected(int* node_id);
 bool IsLinkSelected(int* link_id);
 
+// Was the previous attribute active? This will continuously return true while
+// the left mouse button is being pressed over the UI content of the attribute.
+bool IsAttributeActive();
+// Was any attribute active? If so, sets the active attribute id to the output
+// function argument.
+bool IsAnyAttributeActive(int* attribute_id = 0);
+
+// The following functions should be used after calling EndNodeEditor().
+//
 // Is the user dragging a new link?
 bool IsLinkStarted(int* started_at_attr);
 // Did the user drop the new link before connecting it to a second attribute?

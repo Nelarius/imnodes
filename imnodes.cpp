@@ -57,8 +57,8 @@ bool initialized = false;
 
 enum ScopeFlags
 {
-    Scope_None = 0,
-    Scope_Editor = 1 << 0,
+    Scope_None = 1,
+    Scope_Editor = 1 << 1,
     Scope_Node = 1 << 2,
     Scope_Attribute = 1 << 3
 };
@@ -726,10 +726,9 @@ void begin_attribute(int id, AttributeType type)
     ImGui::BeginGroup();
     ImGui::PushID(id);
 
-    g.node_current.attribute.type = type;
-
     EditorContext& editor = editor_context_get();
 
+    g.node_current.attribute.type = type;
     g.node_current.attribute.index =
         editor.nodes.pool[g.node_current.index].attribute_rects.size();
 
@@ -1095,12 +1094,13 @@ void EndAttribute()
 
     NodeData& node_current =
         editor_context_get().nodes.pool[g.node_current.index];
-
     node_current.attribute_rects.push_back(get_item_rect());
 }
 
 void Link(int id, const int start_attr, const int end_attr)
 {
+    assert(g.current_scope == Scope_Editor);
+
     EditorContext& editor = editor_context_get();
     LinkData& link = editor.links.find_or_create_new(id);
     link.id = id;
@@ -1207,6 +1207,25 @@ bool IsLinkSelected(int* const link_id)
         *link_id = editor.links.pool[g.link_selected].id;
     }
     return is_selected;
+}
+
+bool IsAttributeActive()
+{
+    return g.node_active.attribute == g.node_current.attribute.index;
+}
+
+bool IsAnyAttributeActive(int* const attribute_id)
+{
+    assert(g.current_scope & (Scope_None | Scope_Editor) != 0);
+    if (g.node_active.attribute != INVALID_INDEX)
+    {
+        if (attribute_id != NULL)
+        {
+            *attribute_id = g.node_active.attribute;
+        }
+        return true;
+    }
+    return false;
 }
 
 bool IsLinkStarted(int* const started_at)
