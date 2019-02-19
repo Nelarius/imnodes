@@ -1216,7 +1216,7 @@ bool IsAttributeActive()
 
 bool IsAnyAttributeActive(int* const attribute_id)
 {
-    assert(g.current_scope & (Scope_None | Scope_Editor) != 0);
+    assert((g.current_scope & (Scope_None | Scope_Editor)) != 0);
     if (g.node_active.attribute != INVALID_INDEX)
     {
         if (attribute_id != NULL)
