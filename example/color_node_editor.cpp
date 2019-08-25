@@ -673,8 +673,7 @@ public:
             ImGui::IsMouseClicked(1) || ImGui::IsKeyReleased(SDL_SCANCODE_A);
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
-        if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() &&
-            open_popup)
+        if (!ImGui::IsAnyItemHovered() && open_popup)
         {
             ImGui::OpenPopup("add node");
         }

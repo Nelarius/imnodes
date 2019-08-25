@@ -841,7 +841,7 @@ void BeginNodeEditor()
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
         ImGui::PushStyleColor(
-            ImGuiCol_ChildWindowBg, g.style.colors[ColorStyle_GridBackground]);
+            ImGuiCol_ChildBg, g.style.colors[ColorStyle_GridBackground]);
         ImGui::BeginChild(
             "scrolling_region",
             ImVec2(0.f, 0.f),

@@ -122,8 +122,7 @@ public:
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
 
-        if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseHoveringWindow() &&
-            ImGui::IsMouseClicked(1))
+        if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(1))
         {
             ImGui::OpenPopup("context menu");
         }
