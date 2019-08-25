@@ -8,6 +8,8 @@ workspace "imnodes"
 
     architecture "x86_64"
 
+    defines { "IMGUI_DISABLE_OBSOLETE_FUNCTIONS" }
+
     filter "configurations:Debug"
         symbols "On"
 
