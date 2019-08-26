@@ -75,8 +75,6 @@ void PopColorStyle();
 
 void BeginNode(int id);
 void EndNode();
-// Set the node's title
-void Name(const char* name);
 
 // Attributes are ImGui UI elements embedded within the node. Attributes have
 // circular pins rendered next to them. Links are created between pins.
@@ -99,6 +97,9 @@ void Link(int id, int start_attr, int end_attr);
 // Set's the node's position corresponding to the node id. You can even set the
 // position before the node has been created with BeginNode().
 void SetNodePos(int node_id, const ImVec2& pos);
+// Set the node name corresponding to the node id. The node name is displayed in
+// the node's title bar.
+void SetNodeName(int node_id, const char* name);
 
 // The following functions return true if a UI element is being hovered over by
 // the mouse cursor. Assigns the id of the UI element being hovered over to the

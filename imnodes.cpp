@@ -1051,16 +1051,6 @@ void BeginNode(int node_id)
     ImGui::BeginGroup();
 }
 
-void Name(const char* name)
-{
-    assert(g.current_scope == Scope_Node);
-
-    NodeData& node = editor_context_get().nodes.pool[g.node_current.index];
-    assert(strlen(name) < NODE_NAME_STR_LEN);
-    memset(node.name, 0, NODE_NAME_STR_LEN);
-    memcpy(node.name, name, strlen(name));
-}
-
 void EndNode()
 {
     assert(g.current_scope == Scope_Node);
@@ -1136,6 +1126,17 @@ void SetNodePos(int node_id, const ImVec2& screen_space_pos)
     NodeData& node = editor.nodes.find_or_create_new(node_id);
     node.origin =
         screen_space_pos - editor_context_get().panning - g.grid_origin;
+}
+
+void SetNodeName(int node_id, const char* name)
+{
+    // Remember to call Initialize() before using any other functions!
+    assert(initialized);
+    EditorContext& editor = editor_context_get();
+    NodeData& node = editor.nodes.find_or_create_new(node_id);
+    assert(strlen(name) < NODE_NAME_STR_LEN);
+    memset(node.name, 0, NODE_NAME_STR_LEN);
+    memcpy(node.name, name, strlen(name));
 }
 
 bool IsNodeHovered(int* const node_id)

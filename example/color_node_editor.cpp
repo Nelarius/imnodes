@@ -436,7 +436,6 @@ public:
                 imnodes::ColorStyle_TitleBarSelected,
                 IM_COL32(81, 148, 204, 255));
             imnodes::BeginNode(node.out);
-            imnodes::Name("output");
 
             ImGui::Dummy(ImVec2(node_width, 0.f));
             {
@@ -510,7 +509,6 @@ public:
         {
             const float node_width = 100.0f;
             imnodes::BeginNode(node.op);
-            imnodes::Name("sine");
 
             {
                 imnodes::BeginInputAttribute(int(node.input));
@@ -547,7 +545,6 @@ public:
         for (const auto& node : time_nodes_)
         {
             imnodes::BeginNode(node);
-            imnodes::Name("time");
 
             imnodes::BeginOutputAttribute(int(node));
             ImGui::Text("output");
@@ -560,7 +557,6 @@ public:
         {
             const float node_width = 100.0f;
             imnodes::BeginNode(node.op);
-            imnodes::Name("multiply");
 
             {
                 imnodes::BeginInputAttribute(int(node.lhs));
@@ -609,7 +605,6 @@ public:
         {
             const float node_width = 100.0f;
             imnodes::BeginNode(node.op);
-            imnodes::Name("add");
 
             {
                 imnodes::BeginInputAttribute(int(node.lhs));
@@ -705,6 +700,7 @@ public:
                 graph_.add_edge(node.out, node.blue);
 
                 imnodes::SetNodePos(node.out, click_pos);
+                imnodes::SetNodeName(node.out, "output");
             }
 
             if (ImGui::MenuItem("time"))
@@ -716,6 +712,7 @@ public:
                 time_nodes_.push_back(node);
 
                 imnodes::SetNodePos(node, click_pos);
+                imnodes::SetNodeName(node, "time");
             }
 
             if (ImGui::MenuItem("sine"))
@@ -734,6 +731,7 @@ public:
                 sine_nodes_.push_back(node);
 
                 imnodes::SetNodePos(node.op, click_pos);
+                imnodes::SetNodeName(node.op, "sine");
             }
 
             if (ImGui::MenuItem("multiply"))
@@ -754,6 +752,7 @@ public:
                 mul_nodes_.push_back(node);
 
                 imnodes::SetNodePos(node.op, click_pos);
+                imnodes::SetNodeName(node.op, "multiply");
             }
 
             if (ImGui::MenuItem("add"))
@@ -774,6 +773,7 @@ public:
                 add_nodes_.push_back(node);
 
                 imnodes::SetNodePos(node.op, click_pos);
+                imnodes::SetNodeName(node.op, "add");
             }
             ImGui::EndPopup();
         }

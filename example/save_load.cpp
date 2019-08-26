@@ -43,7 +43,6 @@ public:
         {
             const float node_width = 150.0f;
             imnodes::BeginNode(elem.first);
-            imnodes::Name("drag float");
 
             imnodes::BeginInputAttribute(make_id(elem.first, 0));
             ImGui::Text("input");
@@ -82,7 +81,6 @@ public:
         {
             const float node_width = 200.0f;
             imnodes::BeginNode(elem.first);
-            imnodes::Name("color");
 
             imnodes::BeginInputAttribute(make_id(elem.first, 0));
             ImGui::Text("input");
@@ -136,12 +134,14 @@ public:
             {
                 new_node = current_id_++;
                 float_nodes_.insert(std::make_pair(new_node, 0.f));
+                imnodes::SetNodeName(new_node, "drag float");
             }
 
             if (ImGui::MenuItem("color node"))
             {
                 new_node = current_id_++;
                 color_nodes_.insert(std::make_pair(new_node, Color3{}));
+                imnodes::SetNodeName(new_node, "color");
             }
 
             ImGui::EndPopup();
