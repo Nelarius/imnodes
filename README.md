@@ -45,10 +45,11 @@ Now you should have a workspace with a grid visible in the window. An empty node
 
 ```cpp
 const int hardcoded_node_id = 1;
+imnodes::SetNodeName(hardcoded_node_id, "empty node");
+
 imnodes::BeginNodeEditor();
 
 imnodes::BeginNode(hardcoded_node_id);
-imnodes::Name("empty node");
 imnodes::EndNode();
 
 imnode::EndNodeEditor();
@@ -59,8 +60,8 @@ Nodes, like windows in `dear imgui` must be uniquely identified. But we can't us
 Attributes are the UI content of the node. An attribute will have a pin (the little circle) on either side of the node. There are two types of attributes: input, and output attributes. Input attribute pins are on the left side of the node, and output attribute pins are on the right. Like nodes, pins must be uniquely identified.
 
 ```cpp
+imnodes::SetNodeName(hardcoded_node_id, "output node");
 imnodes::BeginNode(hardcoded_node_id);
-imnodes::Name("output node");
 
 const int output_attr_id = 2;
 imnodes::BeginOutputAttribute(output_attr_id);
@@ -119,8 +120,9 @@ imnodes::PushColorStyle(
 imnodes::PushColorStyle(
   imnodes::ColorStyle_TitleBarSelected, IM_COL32(81, 148, 204, 255));
 
+imnodes::SetNodeName(hardcoded_node_id, "colorful node");
+
 imnodes::BeginNode(hardcoded_node_id);
-imnodes::Name("colorful node");
 // node internals here...
 imnodes::EndNode();
 
