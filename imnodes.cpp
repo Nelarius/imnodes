@@ -141,6 +141,7 @@ struct NodeData
     int id;
     char name[NODE_NAME_STR_LEN];
     ImVec2 origin;
+    ImVec2 title_text_size;
     ImRect content_rect;
 
     struct
@@ -155,7 +156,7 @@ struct NodeData
         : id(0u),
           name(
               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
-          origin(100.0f, 100.0f),
+          origin(100.0f, 100.0f), title_text_size(0.f, 0.f),
           content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
           attribute_rects()
     {
@@ -292,18 +293,15 @@ inline ImVec2 get_node_title_origin(const NodeData& node)
 
 inline ImVec2 get_node_content_origin(const NodeData& node)
 {
-    ImVec2 title_rect_height = ImVec2(
-        0.f, ImGui::CalcTextSize(node.name).y + 2.f * NODE_CONTENT_PADDING.y);
+    ImVec2 title_rect_height =
+        ImVec2(0.f, node.title_text_size.y + 2.f * NODE_CONTENT_PADDING.y);
     return node.origin + NODE_CONTENT_PADDING + title_rect_height;
 }
 
 inline ImRect get_title_bar_rect(const NodeData& node)
 {
     const ImVec2 ss_node_origin = editor_space_to_screen_space(node.origin);
-    // TODO: lots of repetition of ImGui::CalcTextSize()
-    // it should be calculated once and stored (in the node?)
-    // TODO: this calculation is also done in get_node_rect...
-    const ImVec2 text_size = ImGui::CalcTextSize(node.name);
+    const ImVec2& text_size = node.title_text_size;
     const float max_width =
         ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
     const ImVec2 min = ss_node_origin;
@@ -317,7 +315,7 @@ inline ImRect get_title_bar_rect(const NodeData& node)
 
 inline ImRect get_node_rect(const NodeData& node)
 {
-    const ImVec2 text_size = ImGui::CalcTextSize(node.name);
+    const ImVec2& text_size = node.title_text_size;
     const float max_width =
         ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
     // apply the node padding on the top and bottom of the text
@@ -1137,6 +1135,7 @@ void SetNodeName(int node_id, const char* name)
     assert(strlen(name) < NODE_NAME_STR_LEN);
     memset(node.name, 0, NODE_NAME_STR_LEN);
     memcpy(node.name, name, strlen(name));
+    node.title_text_size = ImGui::CalcTextSize(node.name);
 }
 
 bool IsNodeHovered(int* const node_id)
