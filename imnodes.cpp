@@ -858,7 +858,7 @@ void StyleColorsLight()
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(255, 255, 255, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 40);
-    g.style.flags = Flags();
+    g.style.flags = Flags(Flags_None);
 }
 
 void BeginNodeEditor()
