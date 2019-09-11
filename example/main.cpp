@@ -67,12 +67,11 @@ int main(int, char**)
     imnodes::Initialize();
 
     // Setup style
-    ImGui::StyleColorsDark();
-
-    // Simple node editor
-    example::NodeEditorInitialize();
+    ImGui::StyleColorsClassic();
+    imnodes::StyleColorsClassic();
 
     bool done = false;
+    bool initialized = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     while (!done)
     {
@@ -93,7 +92,12 @@ int main(int, char**)
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
-        // node_example.show();
+        if (!initialized)
+        {
+            initialized = true;
+            example::NodeEditorInitialize();
+        }
+
         example::NodeEditorShow();
 
         // Rendering

@@ -62,6 +62,10 @@ void Shutdown();
 // Returns the global style struct. See the struct declaration for default
 // values.
 Style& GetStyle();
+// Style presets matching the dear imgui styles of the same name.
+void StyleColorsDark(); // on by default
+void StyleColorsClassic();
+void StyleColorsLight();
 
 // The top-level function call. Call this before calling BeginNode/EndNode.
 // Calling this function will result the node editor grid workspace being

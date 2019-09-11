@@ -782,30 +782,84 @@ void Initialize()
     g.link_hovered = INVALID_INDEX;
     g.link_selected = INVALID_INDEX;
 
-    g.style.colors[ColorStyle_NodeBackground] = IM_COL32(60, 60, 60, 255);
-    g.style.colors[ColorStyle_NodeBackgroundHovered] =
-        IM_COL32(75, 75, 75, 255);
-    g.style.colors[ColorStyle_NodeBackgroundSelected] =
-        IM_COL32(75, 75, 75, 255); // TODO: different default value for this?
-    g.style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
-    g.style.colors[ColorStyle_TitleBar] = IM_COL32(60, 0, 40, 255);
-    g.style.colors[ColorStyle_TitleBarHovered] = IM_COL32(85, 0, 55, 255);
-    g.style.colors[ColorStyle_TitleBarSelected] =
-        IM_COL32(85, 0, 55, 255); // TODO: different default value for this?
-    g.style.colors[ColorStyle_Link] = IM_COL32(200, 200, 100, 255);
-    g.style.colors[ColorStyle_LinkHovered] = IM_COL32(250, 250, 100, 255);
-    g.style.colors[ColorStyle_LinkSelected] = IM_COL32(255, 255, 255, 255);
-    g.style.colors[ColorStyle_Pin] = IM_COL32(150, 150, 150, 255);
-    g.style.colors[ColorStyle_PinHovered] = IM_COL32(200, 200, 100, 255);
-    g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
-    g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
-    g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
-    g.style.flags = Flags(Flags_NodeOutline | Flags_PinOutline);
+    StyleColorsDark();
 }
 
 void Shutdown() { EditorContextFree(g.default_editor_ctx); }
 
 Style& GetStyle() { return g.style; }
+
+void StyleColorsDark()
+{
+    g.style.colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
+    g.style.colors[ColorStyle_NodeBackgroundHovered] =
+        IM_COL32(75, 75, 75, 255);
+    g.style.colors[ColorStyle_NodeBackgroundSelected] =
+        IM_COL32(75, 75, 75, 255);
+    g.style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    // title bar colors match ImGui's titlebg colors
+    g.style.colors[ColorStyle_TitleBar] = IM_COL32(41, 74, 122, 255);
+    g.style.colors[ColorStyle_TitleBarHovered] = IM_COL32(66, 150, 250, 255);
+    g.style.colors[ColorStyle_TitleBarSelected] = IM_COL32(66, 150, 250, 255);
+    // link colors match ImGui's slider grab colors
+    g.style.colors[ColorStyle_Link] = IM_COL32(61, 133, 224, 255);
+    g.style.colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 255);
+    g.style.colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 255);
+    // pin colors match ImGui's button colors
+    g.style.colors[ColorStyle_Pin] = IM_COL32(53, 150, 250, 180);
+    g.style.colors[ColorStyle_PinHovered] = IM_COL32(53, 150, 250, 255);
+    g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
+    g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
+    g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g.style.flags = Flags(Flags_NodeOutline);
+}
+
+void StyleColorsClassic()
+{
+    g.style.colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
+    g.style.colors[ColorStyle_NodeBackgroundHovered] =
+        IM_COL32(75, 75, 75, 255);
+    g.style.colors[ColorStyle_NodeBackgroundSelected] =
+        IM_COL32(75, 75, 75, 255);
+    g.style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g.style.colors[ColorStyle_TitleBar] = IM_COL32(69, 69, 138, 255);
+    g.style.colors[ColorStyle_TitleBarHovered] = IM_COL32(82, 82, 161, 255);
+    g.style.colors[ColorStyle_TitleBarSelected] = IM_COL32(82, 82, 161, 255);
+    g.style.colors[ColorStyle_Link] = IM_COL32(255, 255, 255, 100);
+    g.style.colors[ColorStyle_LinkHovered] = IM_COL32(105, 99, 204, 153);
+    g.style.colors[ColorStyle_LinkSelected] = IM_COL32(105, 99, 204, 153);
+    g.style.colors[ColorStyle_Pin] = IM_COL32(89, 102, 156, 170);
+    g.style.colors[ColorStyle_PinHovered] = IM_COL32(102, 122, 179, 200);
+    g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
+    g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
+    g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g.style.flags = Flags(Flags_NodeOutline);
+}
+
+void StyleColorsLight()
+{
+    g.style.colors[ColorStyle_NodeBackground] = IM_COL32(240, 240, 240, 255);
+    g.style.colors[ColorStyle_NodeBackgroundHovered] =
+        IM_COL32(200, 200, 200, 255);
+    g.style.colors[ColorStyle_NodeBackgroundSelected] =
+        IM_COL32(200, 200, 200, 255);
+    g.style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g.style.colors[ColorStyle_TitleBar] = IM_COL32(244, 244, 244, 255);
+    g.style.colors[ColorStyle_TitleBarHovered] = IM_COL32(209, 209, 209, 255);
+    g.style.colors[ColorStyle_TitleBarSelected] = IM_COL32(209, 209, 209, 255);
+    // original imgui values: 66, 150, 250
+    g.style.colors[ColorStyle_Link] = IM_COL32(90, 170, 250, 255);
+    // original imgui values: 117, 138, 204
+    g.style.colors[ColorStyle_LinkHovered] = IM_COL32(130, 150, 210, 255);
+    g.style.colors[ColorStyle_LinkSelected] = IM_COL32(130, 150, 210, 255);
+    // original imgui values: 66, 150, 250
+    g.style.colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 180);
+    g.style.colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
+    g.style.colors[ColorStyle_PinOutline] = IM_COL32(66, 150, 250, 255);
+    g.style.colors[ColorStyle_GridBackground] = IM_COL32(255, 255, 255, 200);
+    g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 40);
+    g.style.flags = Flags();
+}
 
 void BeginNodeEditor()
 {
