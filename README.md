@@ -12,8 +12,7 @@ Features:
 * `dear imgui`-inspired immediate mode API.
 * Single header file, and single source file. Just copy-paste `imnodes.h` and `imnodes.cpp` into your project.
 * Written in the same style of C++ as `dear imgui` itself -- no modern C++ used.
-
-This is an initial release of the library -- more features and fixes will be added as required!
+* Use regular `dear imgui` widgets within the nodes
 
 ## A brief tour
 
