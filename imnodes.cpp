@@ -4,7 +4,6 @@
 // [SECTION] global struct
 // [SECTION] editor context definition
 // [SECTION] render helpers
-// [SECTION] miscellaneous helpers
 // [SECTION] API implementation
 
 #include "imnodes.h"
