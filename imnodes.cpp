@@ -37,6 +37,7 @@ inline ImVec2 operator*(const ImVec2& lhs, const float rhs)
 static const float GRID_SIZE = 32.f;
 
 // Node appearance
+// TODO: Add these into the style struct
 static const float NODE_CORNER_ROUNDNESS = 4.0f;
 static const ImVec2 NODE_CONTENT_PADDING = ImVec2(8.f, 8.f);
 static const ImVec2 NODE_DUMMY_SPACING = ImVec2(80.f, 20.f);
@@ -275,58 +276,6 @@ EditorContext& editor_context_get()
     return *g.editor_ctx;
 }
 
-inline ImVec2 editor_space_to_screen_space(const ImVec2& v)
-{
-    return g.grid_origin + v;
-}
-
-inline ImRect get_item_rect()
-{
-    return ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-}
-
-inline ImVec2 get_node_title_origin(const NodeData& node)
-{
-    return node.origin + NODE_CONTENT_PADDING;
-}
-
-inline ImVec2 get_node_content_origin(const NodeData& node)
-{
-    ImVec2 title_rect_height =
-        ImVec2(0.f, node.title_text_size.y + 2.f * NODE_CONTENT_PADDING.y);
-    return node.origin + NODE_CONTENT_PADDING + title_rect_height;
-}
-
-inline ImRect get_title_bar_rect(const NodeData& node)
-{
-    const ImVec2 ss_node_origin = editor_space_to_screen_space(node.origin);
-    const ImVec2& text_size = node.title_text_size;
-    const float max_width =
-        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
-    const ImVec2 min = ss_node_origin;
-    const ImVec2 max = ImVec2(
-        max_width + NODE_CONTENT_PADDING.x,
-        ss_node_origin.y + text_size.y + 2.f * NODE_CONTENT_PADDING.y);
-    // NOTE: the content rect already contains 1 x NODE_CONTENT_PADDING due to
-    // setting the cursor!
-    return ImRect(min, max);
-}
-
-inline ImRect get_node_rect(const NodeData& node)
-{
-    const ImVec2& text_size = node.title_text_size;
-    const float max_width =
-        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
-    // apply the node padding on the top and bottom of the text
-    const float text_height = text_size.y + 2.f * NODE_CONTENT_PADDING.y;
-
-    ImRect rect = node.content_rect;
-    rect.Max.x = max_width;
-    rect.Expand(NODE_CONTENT_PADDING);
-    rect.Min.y = rect.Min.y - text_height;
-    return rect;
-}
-
 inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
 {
     ImVec2 delta = ImGui::GetIO().MousePos - point;
@@ -505,6 +454,81 @@ struct EditorContext
 
 namespace
 {
+inline ImVec2 screen_space_to_grid_space(const ImVec2& v)
+{
+    const EditorContext& editor = editor_context_get();
+    return v - g.grid_origin - editor.panning;
+}
+
+inline ImVec2 grid_space_to_editor_space(const ImVec2& v)
+{
+    const EditorContext& editor = editor_context_get();
+    return v + editor.panning;
+}
+
+inline ImVec2 grid_space_to_screen_space(const ImVec2& v)
+{
+    const EditorContext& editor = editor_context_get();
+    return v + g.grid_origin + editor.panning;
+}
+
+inline ImVec2 editor_space_to_screen_space(const ImVec2& v)
+{
+    return g.grid_origin + v;
+}
+
+inline ImRect get_item_rect()
+{
+    return ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+}
+
+inline ImVec2 get_node_title_origin(const NodeData& node)
+{
+    return node.origin + NODE_CONTENT_PADDING;
+}
+
+inline ImVec2 get_node_content_origin(const NodeData& node)
+{
+    ImVec2 title_rect_height =
+        ImVec2(0.f, node.title_text_size.y + 2.f * NODE_CONTENT_PADDING.y);
+    return node.origin + NODE_CONTENT_PADDING + title_rect_height;
+}
+
+// The node width is either the content width, or title bar width, whichever
+// is larger.
+inline ImRect get_screen_space_title_bar_rect(const NodeData& node)
+{
+    const ImVec2 node_origin = grid_space_to_screen_space(node.origin);
+    const ImVec2& text_size = node.title_text_size;
+    const float max_width =
+        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
+    const ImVec2& min = node_origin;
+    // NOTE: the content rect is already offset from the node grid origin by 1 x
+    // NODE_CONTENT_PADDING due to setting the cursor taking node padding into
+    // account.
+    const ImVec2 max = ImVec2(
+        max_width + NODE_CONTENT_PADDING.x,
+        node_origin.y + text_size.y + 2.f * NODE_CONTENT_PADDING.y);
+    return ImRect(min, max);
+}
+
+// This currently computes the node rect width by taking either the
+// content width, or title bar width, whichever is larger.
+inline ImRect get_screen_space_node_rect(const NodeData& node)
+{
+    const ImVec2& text_size = node.title_text_size;
+    const float max_width =
+        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
+    // apply the node padding on the top and bottom of the text
+    const float text_height = text_size.y + 2.f * NODE_CONTENT_PADDING.y;
+
+    ImRect rect = node.content_rect;
+    rect.Max.x = max_width;
+    rect.Expand(NODE_CONTENT_PADDING);
+    rect.Min.y = rect.Min.y - text_height;
+    return rect;
+}
+
 void draw_grid(const EditorContext& editor)
 {
     const ImVec2 offset = editor.panning;
@@ -531,7 +555,7 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
 {
     const PinData& pin = editor.pins.pool[pin_idx];
     const NodeData& node = editor.nodes.pool[pin.node_idx];
-    const ImRect node_rect = get_node_rect(node);
+    const ImRect node_rect = get_screen_space_node_rect(node);
     const ImVec2 pin_pos = pin_position(
         node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
     if (is_mouse_hovering_near_point(pin_pos, NODE_PIN_HOVER_RADIUS))
@@ -559,7 +583,7 @@ void draw_node(const EditorContext& editor, int node_idx)
 
     editor.grid_draw_list->ChannelsSetCurrent(Channel_Foreground);
 
-    const ImRect node_rect = get_node_rect(node);
+    const ImRect node_rect = get_screen_space_node_rect(node);
 
     ImGui::SetCursorPos(node.origin + editor.panning);
     ImGui::InvisibleButton(node.name, node_rect.GetSize());
@@ -606,21 +630,15 @@ void draw_node(const EditorContext& editor, int node_idx)
 
         // title bar:
         {
-            ImRect title_rect = get_title_bar_rect(node);
-            // TODO: better consistency here?
-            // why subtract panning from Min, and then subtract it only from the
-            // y-component of Max? it's because Max.x is computed from the node
-            // rect, which already has the panning subtracted from it! the
-            // y-component is just looked up from the text height
-            title_rect.Min += editor.panning;
-            title_rect.Max.y += editor.panning.y;
+            ImRect title_rect = get_screen_space_title_bar_rect(node);
             editor.grid_draw_list->AddRectFilled(
                 title_rect.Min,
                 title_rect.Max,
                 titlebar_background,
                 NODE_CORNER_ROUNDNESS,
                 ImDrawCornerFlags_Top);
-            ImGui::SetCursorPos(get_node_title_origin(node) + editor.panning);
+            ImGui::SetCursorPos(
+                grid_space_to_editor_space(get_node_title_origin(node)));
             ImGui::PushItemWidth(title_rect.Max.x - title_rect.Min.x);
             ImGui::TextUnformatted(node.name);
             ImGui::PopItemWidth();
@@ -654,7 +672,7 @@ void draw_link(const EditorContext& editor, int link_idx)
         // TODO: maybe compute the current node_rect and store it instead of
         // recomputing it all the time
         const ImRect node_rect =
-            get_node_rect(editor.nodes.pool[pin_start.node_idx]);
+            get_screen_space_node_rect(editor.nodes.pool[pin_start.node_idx]);
         start = pin_position(
             node_rect,
             editor.nodes.pool[pin_start.node_idx]
@@ -664,7 +682,7 @@ void draw_link(const EditorContext& editor, int link_idx)
 
     {
         const ImRect node_rect =
-            get_node_rect(editor.nodes.pool[pin_end.node_idx]);
+            get_screen_space_node_rect(editor.nodes.pool[pin_end.node_idx]);
         end = pin_position(
             node_rect,
             editor.nodes.pool[pin_end.node_idx]
@@ -988,7 +1006,7 @@ void EndNodeEditor()
             const PinData& pin = editor.pins.pool[pin_idx];
             const NodeData& node =
                 editor_context_get().nodes.pool[pin.node_idx];
-            const ImRect node_rect = get_node_rect(node);
+            const ImRect node_rect = get_screen_space_node_rect(node);
 
             const ImVec2 start_pos = pin_position(
                 node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
@@ -1096,7 +1114,11 @@ void BeginNode(int node_id)
         g.node_current.index = idx;
     }
 
-    ImGui::SetCursorPos(get_node_content_origin(node) + editor.panning);
+    // ImGui::SetCursorPos sets the cursor position, local to the current widget
+    // (in this case, the child object started in BeginNodeEditor). Use
+    // ImGui::SetCursorScreenPos to set the screen space coordinates directly.
+    ImGui::SetCursorPos(
+        grid_space_to_editor_space(get_node_content_origin(node)));
 
     ImGui::PushID(node_id);
     ImGui::BeginGroup();
@@ -1175,8 +1197,7 @@ void SetNodePos(int node_id, const ImVec2& screen_space_pos)
     assert(initialized);
     EditorContext& editor = editor_context_get();
     NodeData& node = editor.nodes.find_or_create_new(node_id);
-    node.origin =
-        screen_space_pos - editor_context_get().panning - g.grid_origin;
+    node.origin = screen_space_to_grid_space(screen_space_pos);
 }
 
 void SetNodeName(int node_id, const char* name)
