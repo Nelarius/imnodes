@@ -112,10 +112,15 @@ bool IsNodeHovered(int* node_id);
 bool IsLinkHovered(int* link_id);
 bool IsPinHovered(int* attribute_id);
 
-// The following two functions return true if the UI element has been clicked.
-// Use these functions after calling EndNodeEditor().
-bool IsNodeSelected(int* node_id);
-bool IsLinkSelected(int* link_id);
+// Use The following two functions to query the number of selected nodes or
+// links in the current editor. Use after calling EndNodeEditor().
+int NumSelectedNodes();
+int NumSelectedLinks();
+// Get the selected node/link ids. The pointer argument should point to an
+// integer array with at least as many elements as the respective
+// NumSelectedNodes/NumSelectedLinks function call returned.
+void GetSelectedNodes(int* node_ids);
+void GetSelectedLinks(int* link_ids);
 
 // Was the previous attribute active? This will continuously return true while
 // the left mouse button is being pressed over the UI content of the attribute.

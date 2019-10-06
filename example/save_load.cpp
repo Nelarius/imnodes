@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace example
 {
@@ -162,12 +163,18 @@ public:
                 std::make_pair(current_id_++, Link{link_start, link_end}));
         }
 
-        int link_id;
-        if (imnodes::IsLinkSelected(&link_id))
         {
-            if (ImGui::IsKeyReleased(SDL_SCANCODE_X))
+            const int num_selected = imnodes::NumSelectedLinks();
+            if (num_selected > 0 && ImGui::IsKeyReleased(SDL_SCANCODE_X))
             {
-                links_.erase(link_id);
+                static std::vector<int> selected_links;
+                selected_links.resize(static_cast<size_t>(num_selected), -1);
+                imnodes::GetSelectedLinks(selected_links.data());
+                for (const int link_id : selected_links)
+                {
+                    links_.erase(link_id);
+                }
+                selected_links.clear();
             }
         }
 

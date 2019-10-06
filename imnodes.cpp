@@ -283,9 +283,7 @@ struct
     } node_moved;
 
     int node_hovered;
-    int node_selected;
     int link_hovered;
-    int link_selected;
     int pin_hovered;
     bool link_dropped;
 
@@ -462,6 +460,9 @@ struct EditorContext
     // ui related fields
     ImVec2 panning;
     ImDrawList* grid_draw_list;
+
+    ImVector<int> selected_nodes;
+    ImVector<int> selected_links;
 
     LinkData link_dragged;
     BoxSelector box_selector;
@@ -665,7 +666,7 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
     }
 }
 
-void draw_node(const EditorContext& editor, int node_idx)
+void draw_node(EditorContext& editor, int node_idx)
 {
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::PushID(node.id);
@@ -682,7 +683,7 @@ void draw_node(const EditorContext& editor, int node_idx)
         g.node_hovered = node_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            g.node_selected = g.node_hovered;
+            editor.selected_nodes.push_back(g.node_hovered);
         }
     }
 
@@ -698,7 +699,7 @@ void draw_node(const EditorContext& editor, int node_idx)
     ImU32 node_background = node.color_style.background;
     ImU32 titlebar_background = node.color_style.titlebar;
 
-    if (g.node_selected == node_idx)
+    if (editor.selected_nodes.contains(node_idx))
     {
         node_background = node.color_style.background_selected;
         titlebar_background = node.color_style.titlebar_selected;
@@ -745,7 +746,7 @@ void draw_node(const EditorContext& editor, int node_idx)
     ImGui::PopID();
 }
 
-void draw_link(const EditorContext& editor, int link_idx)
+void draw_link(EditorContext& editor, int link_idx)
 {
     const LinkData& link = editor.links.pool[link_idx];
 
@@ -792,12 +793,12 @@ void draw_link(const EditorContext& editor, int link_idx)
         g.link_hovered = link_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            g.link_selected = link_idx;
+            editor.selected_links.push_back(link_idx);
         }
     }
 
     ColorStyle style = ColorStyle_Link;
-    if (g.link_selected == link_idx)
+    if (editor.selected_links.contains(link_idx))
     {
         style = ColorStyle_LinkSelected;
     }
@@ -882,9 +883,7 @@ void Initialize()
     g.link_created = LinkData();
 
     g.node_hovered = INVALID_INDEX;
-    g.node_selected = INVALID_INDEX;
     g.link_hovered = INVALID_INDEX;
-    g.link_selected = INVALID_INDEX;
 
     StyleColorsDark();
 }
@@ -1054,7 +1053,7 @@ void EndNodeEditor()
     {
         if (is_mouse_clicked)
         {
-            g.node_selected = INVALID_INDEX;
+            editor.selected_nodes.clear();
         }
     }
 
@@ -1072,7 +1071,7 @@ void EndNodeEditor()
     {
         if (is_mouse_clicked)
         {
-            g.link_selected = INVALID_INDEX;
+            editor.selected_links.clear();
         }
     }
 
@@ -1360,33 +1359,40 @@ bool IsPinHovered(int* const attr)
     return is_hovered;
 }
 
-bool IsNodeSelected(int* const node_id)
+int NumSelectedNodes()
 {
     assert(g.current_scope == Scope_None);
-    assert(node_id != NULL);
-
-    const bool is_selected = g.node_selected != INVALID_INDEX;
-    if (is_selected)
-    {
-        const EditorContext& editor = editor_context_get();
-        *node_id = editor.nodes.pool[g.node_selected].id;
-        return true;
-    }
-    return false;
+    const EditorContext& editor = editor_context_get();
+    return editor.selected_nodes.size();
 }
 
-bool IsLinkSelected(int* const link_id)
+int NumSelectedLinks()
 {
     assert(g.current_scope == Scope_None);
-    assert(link_id != NULL);
+    const EditorContext& editor = editor_context_get();
+    return editor.selected_links.size();
+}
 
-    const bool is_selected = g.link_selected != INVALID_INDEX;
-    if (is_selected)
+void GetSelectedNodes(int* node_ids)
+{
+    assert(node_ids != NULL);
+
+    const EditorContext& editor = editor_context_get();
+    for (int i = 0; i < editor.selected_nodes.size(); ++i)
     {
-        const EditorContext& editor = editor_context_get();
-        *link_id = editor.links.pool[g.link_selected].id;
+        node_ids[i] = editor.nodes.pool[editor.selected_nodes[i]].id;
     }
-    return is_selected;
+}
+
+void GetSelectedLinks(int* link_ids)
+{
+    assert(link_ids != NULL);
+
+    const EditorContext& editor = editor_context_get();
+    for (int i = 0; i < editor.selected_links.size(); ++i)
+    {
+        link_ids[i] = editor.links.pool[editor.selected_links[i]].id;
+    }
 }
 
 bool IsAttributeActive()
