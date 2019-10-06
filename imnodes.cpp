@@ -3,6 +3,7 @@
 // [SECTION] internal data structures
 // [SECTION] global struct
 // [SECTION] editor context definition
+// [SECTION] ui state logic
 // [SECTION] render helpers
 // [SECTION] API implementation
 
@@ -14,6 +15,7 @@
 
 #include <assert.h>
 #include <new>
+#include <stdint.h>
 #include <string.h> // strlen, strncmp
 #include <stdio.h>  // for fwrite, ssprintf, sscanf
 #include <stdlib.h>
@@ -50,6 +52,10 @@ static const float NODE_PIN_RADIUS = 4.f;
 static const float NODE_PIN_HOVER_RADIUS = 10.f;
 
 static const size_t NODE_NAME_STR_LEN = 32u;
+
+// Box selector
+static const uint32_t BOX_SELECTOR_COLOR = IM_COL32(200, 200, 0, 30);
+static const uint32_t BOX_SELECTOR_OUTLINE_COLOR = IM_COL32(200, 200, 0, 150);
 
 static const int INVALID_INDEX = -1;
 
@@ -214,6 +220,22 @@ struct LinkBezierData
     // the bezier curve control points
     ImVec2 p0, p1, p2, p3;
     int num_segments;
+};
+
+enum BoxSelectorState
+{
+    BoxSelectorState_Started,
+    BoxSelectorState_Dragging,
+    BoxSelectorState_Completed,
+    BoxSelectorState_None
+};
+
+struct BoxSelector
+{
+    BoxSelectorState state;
+    ImRect box_rect;
+
+    BoxSelector() : state(BoxSelectorState_None), box_rect() {}
 };
 
 struct ColorStyleElement
@@ -442,18 +464,85 @@ struct EditorContext
     ImDrawList* grid_draw_list;
 
     LinkData link_dragged;
+    BoxSelector box_selector;
 
     EditorContext()
         : nodes(), pins(), links(), panning(0.f, 0.f), grid_draw_list(nullptr),
-          link_dragged()
+          link_dragged(), box_selector()
     {
     }
 };
 
-// [SECTION] render helpers
-
 namespace
 {
+// [SECTION] ui state logic
+
+// These functions are here, and not members of the BoxSelector struct, because
+// implementing a C API in C++ is frustrating. EditorContext has a BoxSelector
+// field, but the state changes depend on the editor. So, these are implemented
+// as C-style free functions so that the code is not too much of a mish-mash of
+// C functions and C++ method definitions.
+
+void box_selector_begin(BoxSelector& box_selector)
+{
+    box_selector.state = BoxSelectorState_Started;
+}
+
+bool box_selector_active(const BoxSelector& box_selector)
+{
+    return box_selector.state != BoxSelectorState_None;
+}
+
+void box_selector_on_complete(
+    BoxSelector& box_selector,
+    const EditorContext& editor)
+{
+    // TODO: this will go through all the nodes in the editor, and set the ones
+    // within the rect in g.
+}
+
+void box_selector_update(
+    BoxSelector& box_selector,
+    EditorContext& editor_ctx,
+    const ImGuiIO& io)
+{
+    switch (box_selector.state)
+    {
+        case BoxSelectorState_Started:
+            box_selector.box_rect.Min = io.MousePos;
+            box_selector.state = BoxSelectorState_Dragging;
+            // fallthrough to next case to get the rest of the state &
+            // render
+        case BoxSelectorState_Dragging:
+        {
+            box_selector.box_rect.Max = io.MousePos;
+            editor_ctx.grid_draw_list->AddRectFilled(
+                box_selector.box_rect.Min,
+                box_selector.box_rect.Max,
+                BOX_SELECTOR_COLOR);
+            editor_ctx.grid_draw_list->AddRect(
+                box_selector.box_rect.Min,
+                box_selector.box_rect.Max,
+                BOX_SELECTOR_OUTLINE_COLOR);
+
+            if (ImGui::IsMouseReleased(0))
+            {
+                box_selector.state = BoxSelectorState_Completed;
+            }
+        }
+        break;
+        case BoxSelectorState_Completed:
+            box_selector_on_complete(box_selector, editor_ctx);
+            box_selector.state = BoxSelectorState_None;
+            break;
+        default:
+            assert(!"Unreachable code!");
+            break;
+    }
+}
+
+// [SECTION] render helpers
+
 inline ImVec2 screen_space_to_grid_space(const ImVec2& v)
 {
     const EditorContext& editor = editor_context_get();
@@ -729,8 +818,6 @@ void draw_link(const EditorContext& editor, int link_idx)
         link_renderable.num_segments);
 }
 
-// SECTION miscellaneous helpers
-
 void begin_attribute(int id, AttributeType type)
 {
     // Make sure to call BeginNode() before calling
@@ -942,6 +1029,7 @@ void EndNodeEditor()
     EditorContext& editor = editor_context_get();
 
     const bool is_mouse_clicked = ImGui::IsMouseClicked(0);
+    const ImGuiIO& imgui_io = ImGui::GetIO();
 
     for (int i = 0; i < editor.nodes.pool.size(); i++)
     {
@@ -1010,7 +1098,7 @@ void EndNodeEditor()
 
             const ImVec2 start_pos = pin_position(
                 node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
-            const ImVec2 end_pos = ImGui::GetIO().MousePos;
+            const ImVec2 end_pos = imgui_io.MousePos;
 
             const LinkBezierData link_renderable =
                 get_link_renderable(start_pos, end_pos, pin.type);
@@ -1058,6 +1146,24 @@ void EndNodeEditor()
         editor.nodes.pool[g.node_moved.index].origin = g.node_moved.position;
     }
 
+    {
+        const bool any_ui_element_hovered = (g.node_hovered != INVALID_INDEX) ||
+                                            (g.link_hovered != INVALID_INDEX) ||
+                                            (g.pin_hovered != INVALID_INDEX);
+
+        // start the box selector
+        if (!any_ui_element_hovered && is_mouse_clicked)
+        {
+            box_selector_begin(editor.box_selector);
+        }
+
+        if (box_selector_active(editor.box_selector))
+        {
+            editor.grid_draw_list->ChannelsSetCurrent(Channel_Foreground);
+            box_selector_update(editor.box_selector, editor, imgui_io);
+        }
+    }
+
     // set channel 0 before merging, or else UI rendering is broken
     editor.grid_draw_list->ChannelsSetCurrent(0);
     editor.grid_draw_list->ChannelsMerge();
@@ -1067,7 +1173,7 @@ void EndNodeEditor()
     if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() &&
         ImGui::IsMouseDragging(2, 0))
     {
-        editor.panning = editor.panning + ImGui::GetIO().MouseDelta;
+        editor.panning = editor.panning + imgui_io.MouseDelta;
     }
 
     // pop style
