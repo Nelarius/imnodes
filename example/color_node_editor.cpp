@@ -664,6 +664,8 @@ public:
             imnodes::Link(iter->first, iter->second.from, iter->second.to);
         }
 
+        imnodes::EndNodeEditor();
+
         const bool open_popup =
             ImGui::IsMouseClicked(1) || ImGui::IsKeyReleased(SDL_SCANCODE_A);
 
@@ -777,9 +779,8 @@ public:
             }
             ImGui::EndPopup();
         }
-        ImGui::PopStyleVar();
 
-        imnodes::EndNodeEditor();
+        ImGui::PopStyleVar();
 
         {
             const int num_selected = imnodes::NumSelectedLinks();

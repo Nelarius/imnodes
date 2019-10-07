@@ -54,6 +54,7 @@ static const float NODE_PIN_HOVER_RADIUS = 10.f;
 static const size_t NODE_NAME_STR_LEN = 32u;
 
 // Box selector
+// TODO: these should be exposed in the style struct
 static const uint32_t BOX_SELECTOR_COLOR = IM_COL32(200, 200, 0, 30);
 static const uint32_t BOX_SELECTOR_OUTLINE_COLOR = IM_COL32(200, 200, 0, 150);
 
@@ -148,7 +149,7 @@ struct NodeData
     char name[NODE_NAME_STR_LEN];
     ImVec2 origin;
     ImVec2 title_text_size;
-    ImRect content_rect;
+    ImRect rect;
 
     struct
     {
@@ -163,7 +164,7 @@ struct NodeData
           name(
               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
           origin(100.0f, 100.0f), title_text_size(0.f, 0.f),
-          content_rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
+          rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
           attribute_rects()
     {
     }
@@ -586,33 +587,34 @@ inline ImVec2 get_node_content_origin(const NodeData& node)
 
 // The node width is either the content width, or title bar width, whichever
 // is larger.
-inline ImRect get_screen_space_title_bar_rect(const NodeData& node)
+inline ImRect get_screen_space_title_bar_rect(
+    const ImVec2& node_origin,
+    const ImVec2& text_size,
+    const ImRect& node_rect)
 {
-    const ImVec2 node_origin = grid_space_to_screen_space(node.origin);
-    const ImVec2& text_size = node.title_text_size;
-    const float max_width =
-        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
-    const ImVec2& min = node_origin;
+    const ImVec2 ss_origin = grid_space_to_screen_space(node_origin);
+    const ImVec2& min = ss_origin;
     // NOTE: the content rect is already offset from the node grid origin by 1 x
     // NODE_CONTENT_PADDING due to setting the cursor taking node padding into
     // account.
     const ImVec2 max = ImVec2(
-        max_width + NODE_CONTENT_PADDING.x,
-        node_origin.y + text_size.y + 2.f * NODE_CONTENT_PADDING.y);
+        node_rect.Max.x,
+        ss_origin.y + text_size.y + 2.f * NODE_CONTENT_PADDING.y);
     return ImRect(min, max);
 }
 
 // This currently computes the node rect width by taking either the
 // content width, or title bar width, whichever is larger.
-inline ImRect get_screen_space_node_rect(const NodeData& node)
+inline ImRect get_screen_space_node_rect(
+    const ImRect& item_rect,
+    const ImVec2& text_size)
 {
-    const ImVec2& text_size = node.title_text_size;
     const float max_width =
-        ImMax(node.content_rect.Min.x + text_size.x, node.content_rect.Max.x);
+        ImMax(item_rect.Min.x + text_size.x, item_rect.Max.x);
     // apply the node padding on the top and bottom of the text
     const float text_height = text_size.y + 2.f * NODE_CONTENT_PADDING.y;
 
-    ImRect rect = node.content_rect;
+    ImRect rect = item_rect;
     rect.Max.x = max_width;
     rect.Expand(NODE_CONTENT_PADDING);
     rect.Min.y = rect.Min.y - text_height;
@@ -645,9 +647,8 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
 {
     const PinData& pin = editor.pins.pool[pin_idx];
     const NodeData& node = editor.nodes.pool[pin.node_idx];
-    const ImRect node_rect = get_screen_space_node_rect(node);
     const ImVec2 pin_pos = pin_position(
-        node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
+        node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
     if (is_mouse_hovering_near_point(pin_pos, NODE_PIN_HOVER_RADIUS))
     {
         g.pin_hovered = pin_idx;
@@ -673,10 +674,8 @@ void draw_node(EditorContext& editor, int node_idx)
 
     editor.grid_draw_list->ChannelsSetCurrent(Channel_Foreground);
 
-    const ImRect node_rect = get_screen_space_node_rect(node);
-
     ImGui::SetCursorPos(node.origin + editor.panning);
-    ImGui::InvisibleButton(node.name, node_rect.GetSize());
+    ImGui::InvisibleButton(node.name, node.rect.GetSize());
 
     if (ImGui::IsItemHovered())
     {
@@ -713,14 +712,15 @@ void draw_node(EditorContext& editor, int node_idx)
     {
         // node base
         editor.grid_draw_list->AddRectFilled(
-            node_rect.Min,
-            node_rect.Max,
+            node.rect.Min,
+            node.rect.Max,
             node_background,
             NODE_CORNER_ROUNDNESS);
 
         // title bar:
         {
-            ImRect title_rect = get_screen_space_title_bar_rect(node);
+            ImRect title_rect = get_screen_space_title_bar_rect(
+                node.origin, node.title_text_size, node.rect);
             editor.grid_draw_list->AddRectFilled(
                 title_rect.Min,
                 title_rect.Max,
@@ -736,8 +736,8 @@ void draw_node(EditorContext& editor, int node_idx)
         if ((g.style.flags & Flags_NodeOutline) != 0)
         {
             editor.grid_draw_list->AddRect(
-                node_rect.Min,
-                node_rect.Max,
+                node.rect.Min,
+                node.rect.Max,
                 node.color_style.outline,
                 NODE_CORNER_ROUNDNESS);
         }
@@ -759,10 +759,7 @@ void draw_link(EditorContext& editor, int link_idx)
 
     ImVec2 start, end;
     {
-        // TODO: maybe compute the current node_rect and store it instead of
-        // recomputing it all the time
-        const ImRect node_rect =
-            get_screen_space_node_rect(editor.nodes.pool[pin_start.node_idx]);
+        const ImRect& node_rect = editor.nodes.pool[pin_start.node_idx].rect;
         start = pin_position(
             node_rect,
             editor.nodes.pool[pin_start.node_idx]
@@ -771,8 +768,7 @@ void draw_link(EditorContext& editor, int link_idx)
     }
 
     {
-        const ImRect node_rect =
-            get_screen_space_node_rect(editor.nodes.pool[pin_end.node_idx]);
+        const ImRect& node_rect = editor.nodes.pool[pin_end.node_idx].rect;
         end = pin_position(
             node_rect,
             editor.nodes.pool[pin_end.node_idx]
@@ -1093,10 +1089,9 @@ void EndNodeEditor()
             const PinData& pin = editor.pins.pool[pin_idx];
             const NodeData& node =
                 editor_context_get().nodes.pool[pin.node_idx];
-            const ImRect node_rect = get_screen_space_node_rect(node);
 
             const ImVec2 start_pos = pin_position(
-                node_rect, node.attribute_rects[pin.attribute_idx], pin.type);
+                node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
             const ImVec2 end_pos = imgui_io.MousePos;
 
             const LinkBezierData link_renderable =
@@ -1185,7 +1180,6 @@ void EndNodeEditor()
     for (int idx = 0; idx < editor.nodes.pool.size(); idx++)
     {
         NodeData& node = editor.nodes.pool[idx];
-
         node.attribute_rects.clear();
     }
 }
@@ -1238,7 +1232,11 @@ void EndNode()
 
     ImGui::EndGroup();
     ImGui::PopID();
-    editor.nodes.pool[g.node_current.index].content_rect = get_item_rect();
+    {
+        NodeData& node = editor.nodes.pool[g.node_current.index];
+        node.rect =
+            get_screen_space_node_rect(get_item_rect(), node.title_text_size);
+    }
     g.node_current.index = INVALID_INDEX;
 }
 
