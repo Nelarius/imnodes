@@ -227,7 +227,6 @@ enum BoxSelectorState
 {
     BoxSelectorState_Started,
     BoxSelectorState_Dragging,
-    BoxSelectorState_Completed,
     BoxSelectorState_None
 };
 
@@ -495,12 +494,31 @@ bool box_selector_active(const BoxSelector& box_selector)
     return box_selector.state != BoxSelectorState_None;
 }
 
-void box_selector_on_complete(
-    BoxSelector& box_selector,
-    const EditorContext& editor)
+void box_selector_on_complete(BoxSelector& box_selector, EditorContext& editor)
 {
-    // TODO: this will go through all the nodes in the editor, and set the ones
-    // within the rect in g.
+    ImRect box_rect = box_selector.box_rect;
+
+    if (box_rect.Min.x > box_rect.Max.x)
+    {
+        ImSwap(box_rect.Min.x, box_rect.Max.x);
+    }
+
+    if (box_rect.Min.y > box_rect.Max.y)
+    {
+        ImSwap(box_rect.Min.y, box_rect.Max.y);
+    }
+
+    for (int i = 0; i < editor.nodes.pool.size(); i++)
+    {
+        if (editor.nodes.in_use[i])
+        {
+            const ImRect& node_rect = editor.nodes.pool[i].rect;
+            if (box_rect.Overlaps(node_rect))
+            {
+                editor.selected_nodes.push_back(i);
+            }
+        }
+    }
 }
 
 void box_selector_update(
@@ -529,14 +547,11 @@ void box_selector_update(
 
             if (ImGui::IsMouseReleased(0))
             {
-                box_selector.state = BoxSelectorState_Completed;
+                box_selector.state = BoxSelectorState_None;
+                box_selector_on_complete(box_selector, editor_ctx);
             }
         }
         break;
-        case BoxSelectorState_Completed:
-            box_selector_on_complete(box_selector, editor_ctx);
-            box_selector.state = BoxSelectorState_None;
-            break;
         default:
             assert(!"Unreachable code!");
             break;
