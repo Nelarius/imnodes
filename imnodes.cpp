@@ -494,7 +494,9 @@ bool box_selector_active(const BoxSelector& box_selector)
     return box_selector.state != BoxSelectorState_None;
 }
 
-void box_selector_on_complete(BoxSelector& box_selector, EditorContext& editor)
+void box_selector_on_complete(
+    const BoxSelector& box_selector,
+    EditorContext& editor)
 {
     ImRect box_rect = box_selector.box_rect;
 
