@@ -88,23 +88,37 @@ for (int i = 0; i < links.size(); ++i)
 }
 ```
 
-After `EndNodeEditor` has been called, you can test if a link was created during the frame with the function call `IsLinkCreated`:
+After `EndNodeEditor` has been called, you can check if a link was created during the frame with the function call `IsLinkCreated`:
 
-```
+```cpp
 int start_attr, end_attr;
-if (IsLinkCreated(&start_attr, &end_attr))
+if (imnodes::IsLinkCreated(&start_attr, &end_attr))
 {
   links.push_back(std::make_pair(start_attr, end_attr));
 }
 ```
 
-In addition to testing for new links, you can also test for whether UI elements are being hovered over or selected (clicked).
+In addition to checking for new links, you can also check whether UI elements are being hovered over by the mouse cursor:
 
 ```cpp
 int node_id;
-if (IsNodeSelected(&node_id))
+if (imnodes::IsNodeHovered(&node_id))
 {
-  node_selected = node_id;
+  node_hovered = node_id;
+}
+```
+
+You can also check to see if any node has been selected. Nodes can be clicked on, or they can be selected by clicking and dragging the box selector over them.
+
+```cpp
+// Note that since many nodes can be selected at once, we first need to query the number of
+// selected nodes before getting them.
+const int num_selected_nodes = imnodes::NumSelectedNodes();
+if (num_selected_nodes > 0)
+{
+  std::vector<int> selected_nodes;
+  selected_nodes.resize(num_selected_nodes);
+  imnodes::GetSelectedNodes(num_selected_nodes.data());
 }
 ```
 
@@ -133,7 +147,7 @@ If the style is not being set mid-frame, `imnodes::GetStyle` can be called inste
 
 ```cpp
 // set the titlebar color for all nodes
-Style& style = imnodes::GetStyle();
+imnodes::Style& style = imnodes::GetStyle();
 style.colors[imnodes::ColorStyle_TitleBar] = IM_COL32(232, 27, 86, 255);
 style.colors[imnodes::ColorStyle_TitleBarSelected] = IM_COL32(241, 108, 146, 255);
 ```
