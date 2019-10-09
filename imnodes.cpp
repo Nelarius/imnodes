@@ -535,7 +535,6 @@ inline bool rectangle_overlaps_bezier(
 }
 
 inline bool rectangle_overlaps_link(
-    ImDrawList* draw_list,
     const ImRect& rectangle,
     const ImVec2& start,
     const ImVec2& end,
@@ -698,12 +697,7 @@ void box_selector_on_complete(
             }
 
             // Test
-            if (rectangle_overlaps_link(
-                    editor.grid_draw_list,
-                    box_rect,
-                    start,
-                    end,
-                    pin_start.type))
+            if (rectangle_overlaps_link(box_rect, start, end, pin_start.type))
             {
                 editor.selected_links.push_back(i);
             }
