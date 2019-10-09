@@ -216,6 +216,9 @@ struct LinkData
     }
 };
 
+// TODO: this could be refactored: p0,p1,p2,p3 could be replaced by a struct
+// which could be reused in the bezier functions...
+
 struct LinkBezierData
 {
     // the bezier curve control points
@@ -335,15 +338,18 @@ inline float get_closest_point_on_cubic_bezier(
     float tbest = 0.5f;
     float best_distance = FLT_MAX;
 
-    for (int i = 0; i < num_iterations; i++)
+    for (int i = 0; i < num_iterations; ++i)
     {
         // split the current t-range to segments
         const float dt = (tend - tstart) / num_segments;
-        for (int s = 0; s < num_segments; s++)
+        for (int s = 0; s < num_segments; ++s)
         {
+            // TODO: this shouldn't evaluate the distance to the mid point, but
+            // rather the distance to the line segment! This might explain the
+            // occasional inaccuracies in selecting links.
             const float tmid = tstart + dt * (float(s) + 0.5f);
-            ImVec2 bt = eval_bezier(tmid, p0, p1, p2, p3);
-            ImVec2 dv = bt - pos;
+            const ImVec2 bt = eval_bezier(tmid, p0, p1, p2, p3);
+            const ImVec2 dv = bt - pos;
             float cur_distance = ImLengthSqr(dv);
             if (cur_distance < best_distance)
             {
@@ -437,6 +443,134 @@ inline bool is_mouse_hovering_near_link(
     return near;
 }
 
+inline float eval_implicit_line_eq(
+    const ImVec2& p1,
+    const ImVec2& p2,
+    const ImVec2& p)
+{
+    // TODO: double check this equation. Is there a sign error?
+    return (p2.y - p1.y) * p.x + (p1.x - p2.x) * p.y +
+           (p2.x * p1.y - p1.x * p2.y);
+}
+
+inline int sign(float val) { return int(val > 0.0f) - int(val < 0.0f); }
+
+inline bool rectangle_overlaps_line_segment(
+    const ImRect& rect,
+    const ImVec2& p1,
+    const ImVec2& p2)
+{
+    const ImVec2 corners[4] = {rect.Min,
+                               ImVec2(rect.Max.x, rect.Min.y),
+                               ImVec2(rect.Min.x, rect.Max.y),
+                               rect.Max};
+
+    if (rect.Contains(p1) && rect.Contains(p2))
+    {
+        return true;
+    }
+
+    // First, test to see if the four corners are on different sides of the line
+    // going through p1 and p2.
+
+    // TODO: this probably doesn't handle all cases I would like. What if
+    // the sign is zero?
+    int previous_sign = sign(eval_implicit_line_eq(p1, p2, corners[0]));
+    bool line_intersects_square = false;
+    for (int i = 1; i < 4; ++i)
+    {
+        const int s = sign(eval_implicit_line_eq(p1, p2, corners[i]));
+        if (s != previous_sign)
+        {
+            line_intersects_square = true;
+            break;
+        }
+    }
+
+    // See if the projections of the line segment and square overlap.
+    if (line_intersects_square)
+    {
+        ImRect proj_rect = rect;
+        if (proj_rect.Min.x > proj_rect.Max.x)
+            ImSwap(proj_rect.Min.x, proj_rect.Max.x);
+
+        if (proj_rect.Min.y > proj_rect.Max.y)
+            ImSwap(proj_rect.Min.y, proj_rect.Max.y);
+
+        if ((p1.x > proj_rect.Min.x && p1.x < proj_rect.Max.x) ||
+            (p2.x > proj_rect.Min.x && p2.x < proj_rect.Max.x))
+            return true;
+
+        if ((p1.y > proj_rect.Min.y && p1.y < proj_rect.Max.y) ||
+            (p2.y > proj_rect.Min.y && p2.y < proj_rect.Max.y))
+            return true;
+    }
+
+    return false;
+}
+
+inline bool rectangle_overlaps_bezier(
+    const ImRect& rectangle,
+    const LinkBezierData& bezier)
+{
+    bool found_overlap = false;
+    ImVec2 current =
+        eval_bezier(0.f, bezier.p0, bezier.p1, bezier.p2, bezier.p3);
+    const float dt = 1.0f / bezier.num_segments;
+    for (int s = 0; s < bezier.num_segments; ++s)
+    {
+        ImVec2 next = eval_bezier(
+            static_cast<float>((s + 1) * dt),
+            bezier.p0,
+            bezier.p1,
+            bezier.p2,
+            bezier.p3);
+        if (rectangle_overlaps_line_segment(rectangle, current, next))
+        {
+            return true;
+        }
+        current = next;
+    }
+    return false;
+}
+
+inline bool rectangle_overlaps_link(
+    ImDrawList* draw_list,
+    const ImRect& rectangle,
+    const ImVec2& start,
+    const ImVec2& end,
+    AttributeType start_type)
+{
+    // First level: simple rejection test via rectangle overlap:
+
+    ImRect lrect = ImRect(start, end);
+    if (lrect.Min.x > lrect.Max.x)
+        ImSwap(lrect.Min.x, lrect.Max.x);
+
+    if (lrect.Min.y > lrect.Max.y)
+        ImSwap(lrect.Min.y, lrect.Max.y);
+
+    if (rectangle.Overlaps(lrect))
+    {
+        // First, check if both endpoints of the curve are trivially contained
+        // in the rectangle
+
+        if (rectangle.Contains(start) && rectangle.Contains(end))
+        {
+            return true;
+        }
+
+        // Second level of refinement: do a more expensive test against the
+        // link
+
+        const LinkBezierData bezier =
+            get_link_renderable(start, end, start_type);
+        return rectangle_overlaps_bezier(rectangle, bezier);
+    }
+
+    return false;
+}
+
 inline ImVec2 pin_position(
     const ImRect& node_rect,
     const ImRect& attr_rect,
@@ -500,6 +634,8 @@ void box_selector_on_complete(
 {
     ImRect box_rect = box_selector.box_rect;
 
+    // Invert box selector coordinates as needed
+
     if (box_rect.Min.x > box_rect.Max.x)
     {
         ImSwap(box_rect.Min.x, box_rect.Max.x);
@@ -510,6 +646,8 @@ void box_selector_on_complete(
         ImSwap(box_rect.Min.y, box_rect.Max.y);
     }
 
+    // Test for overlap against node rectangles
+
     for (int i = 0; i < editor.nodes.pool.size(); i++)
     {
         if (editor.nodes.in_use[i])
@@ -518,6 +656,56 @@ void box_selector_on_complete(
             if (box_rect.Overlaps(node_rect))
             {
                 editor.selected_nodes.push_back(i);
+            }
+        }
+    }
+
+    // Test for overlap against links
+
+    for (int i = 0; i < editor.links.pool.size(); ++i)
+    {
+        if (editor.links.in_use[i])
+        {
+            // Get pin start, end
+            // TODO: this could probably be a function 😳
+            // this is just copy-pasted from draw_link
+            const LinkData& link = editor.links.pool[i];
+            const int start_idx = editor.pins.id_map.GetInt(link.start_attr);
+            const int end_idx = editor.pins.id_map.GetInt(link.end_attr);
+            assert(start_idx != INVALID_INDEX);
+            assert(end_idx != INVALID_INDEX);
+            const PinData& pin_start = editor.pins.pool[start_idx];
+            const PinData& pin_end = editor.pins.pool[end_idx];
+
+            ImVec2 start, end;
+            {
+                const ImRect& node_rect =
+                    editor.nodes.pool[pin_start.node_idx].rect;
+                start = pin_position(
+                    node_rect,
+                    editor.nodes.pool[pin_start.node_idx]
+                        .attribute_rects[pin_start.attribute_idx],
+                    pin_start.type);
+            }
+            {
+                const ImRect& node_rect =
+                    editor.nodes.pool[pin_end.node_idx].rect;
+                end = pin_position(
+                    node_rect,
+                    editor.nodes.pool[pin_end.node_idx]
+                        .attribute_rects[pin_end.attribute_idx],
+                    pin_end.type);
+            }
+
+            // Test
+            if (rectangle_overlaps_link(
+                    editor.grid_draw_list,
+                    box_rect,
+                    start,
+                    end,
+                    pin_start.type))
+            {
+                editor.selected_links.push_back(i);
             }
         }
     }
