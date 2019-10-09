@@ -605,6 +605,16 @@ namespace
 {
 // [SECTION] ui state logic
 
+ImVec2 get_screen_space_pin_coordinates(const EditorContext& editor, int pin_id)
+{
+    const int pin_idx = editor.pins.id_map.GetInt(pin_id);
+    assert(pin_idx != INVALID_INDEX);
+    const PinData& pin = editor.pins.pool[pin_idx];
+    const NodeData& node = editor.nodes.pool[pin.node_idx];
+    return pin_position(
+        node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
+}
+
 // These functions are here, and not members of the BoxSelector struct, because
 // implementing a C API in C++ is frustrating. EditorContext has a BoxSelector
 // field, but the state changes depend on the editor. So, these are implemented
@@ -659,36 +669,13 @@ void box_selector_on_complete(
     {
         if (editor.links.in_use[i])
         {
-            // Get pin start, end
-            // TODO: this could probably be a function 😳
-            // this is just copy-pasted from draw_link
             const LinkData& link = editor.links.pool[i];
-            const int start_idx = editor.pins.id_map.GetInt(link.start_attr);
-            const int end_idx = editor.pins.id_map.GetInt(link.end_attr);
-            assert(start_idx != INVALID_INDEX);
-            assert(end_idx != INVALID_INDEX);
-            const PinData& pin_start = editor.pins.pool[start_idx];
-            const PinData& pin_end = editor.pins.pool[end_idx];
-
-            ImVec2 start, end;
-            {
-                const ImRect& node_rect =
-                    editor.nodes.pool[pin_start.node_idx].rect;
-                start = pin_position(
-                    node_rect,
-                    editor.nodes.pool[pin_start.node_idx]
-                        .attribute_rects[pin_start.attribute_idx],
-                    pin_start.type);
-            }
-            {
-                const ImRect& node_rect =
-                    editor.nodes.pool[pin_end.node_idx].rect;
-                end = pin_position(
-                    node_rect,
-                    editor.nodes.pool[pin_end.node_idx]
-                        .attribute_rects[pin_end.attribute_idx],
-                    pin_end.type);
-            }
+            const ImVec2 start =
+                get_screen_space_pin_coordinates(editor, link.start_attr);
+            const ImVec2 end =
+                get_screen_space_pin_coordinates(editor, link.end_attr);
+            const PinData& pin_start =
+                editor.pins.find_or_create_new(link.start_attr);
 
             // Test
             if (rectangle_overlaps_link(box_rect, start, end, pin_start.type))
@@ -942,32 +929,10 @@ void draw_node(EditorContext& editor, int node_idx)
 void draw_link(EditorContext& editor, int link_idx)
 {
     const LinkData& link = editor.links.pool[link_idx];
-
-    const int start_idx = editor.pins.id_map.GetInt(link.start_attr);
-    const int end_idx = editor.pins.id_map.GetInt(link.end_attr);
-    assert(start_idx != INVALID_INDEX);
-    assert(end_idx != INVALID_INDEX);
-    const PinData& pin_start = editor.pins.pool[start_idx];
-    const PinData& pin_end = editor.pins.pool[end_idx];
-
-    ImVec2 start, end;
-    {
-        const ImRect& node_rect = editor.nodes.pool[pin_start.node_idx].rect;
-        start = pin_position(
-            node_rect,
-            editor.nodes.pool[pin_start.node_idx]
-                .attribute_rects[pin_start.attribute_idx],
-            pin_start.type);
-    }
-
-    {
-        const ImRect& node_rect = editor.nodes.pool[pin_end.node_idx].rect;
-        end = pin_position(
-            node_rect,
-            editor.nodes.pool[pin_end.node_idx]
-                .attribute_rects[pin_end.attribute_idx],
-            pin_end.type);
-    }
+    const ImVec2 start =
+        get_screen_space_pin_coordinates(editor, link.start_attr);
+    const ImVec2 end = get_screen_space_pin_coordinates(editor, link.end_attr);
+    const PinData& pin_start = editor.pins.find_or_create_new(link.start_attr);
 
     const LinkBezierData link_data =
         get_link_renderable(start, end, pin_start.type);
