@@ -219,10 +219,15 @@ struct LinkData
 // TODO: this could be refactored: p0,p1,p2,p3 could be replaced by a struct
 // which could be reused in the bezier functions...
 
+struct BezierCurve
+{
+    // the curve control points
+    ImVec2 p0, p1, p2, p3;
+};
+
 struct LinkBezierData
 {
-    // the bezier curve control points
-    ImVec2 p0, p1, p2, p3;
+    BezierCurve bezier;
     int num_segments;
 };
 
@@ -305,19 +310,16 @@ inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
     return (delta.x * delta.x + delta.y * delta.y) < (radius * radius);
 }
 
-inline ImVec2 eval_bezier(
-    float t,
-    const ImVec2 p0,
-    const ImVec2 p1,
-    const ImVec2 p2,
-    const ImVec2 p3)
+inline ImVec2 eval_bezier(float t, const BezierCurve& bezier)
 {
     // B(t) = (1-t)**3 p0 + 3(1 - t)**2 t P1 + 3(1-t)t**2 P2 + t**3 P3
     return ImVec2(
-        (1 - t) * (1 - t) * (1 - t) * p0.x + 3 * (1 - t) * (1 - t) * t * p1.x +
-            3 * (1 - t) * t * t * p2.x + t * t * t * p3.x,
-        (1 - t) * (1 - t) * (1 - t) * p0.y + 3 * (1 - t) * (1 - t) * t * p1.y +
-            3 * (1 - t) * t * t * p2.y + t * t * t * p3.y);
+        (1 - t) * (1 - t) * (1 - t) * bezier.p0.x +
+            3 * (1 - t) * (1 - t) * t * bezier.p1.x +
+            3 * (1 - t) * t * t * bezier.p2.x + t * t * t * bezier.p3.x,
+        (1 - t) * (1 - t) * (1 - t) * bezier.p0.y +
+            3 * (1 - t) * (1 - t) * t * bezier.p1.y +
+            3 * (1 - t) * t * t * bezier.p2.y + t * t * t * bezier.p3.y);
 }
 
 // Divides the bezier curve into n segments. Evaluates the distance to each
@@ -326,11 +328,8 @@ inline ImVec2 eval_bezier(
 inline float get_closest_point_on_cubic_bezier(
     const int num_iterations,
     const int num_segments,
-    const ImVec2 pos,
-    const ImVec2 p0,
-    const ImVec2 p1,
-    const ImVec2 p2,
-    const ImVec2 p3)
+    const ImVec2& pos,
+    const BezierCurve& bezier)
 {
     assert(num_iterations > 0 && num_segments > 0);
     float tstart = 0.0f;
@@ -348,7 +347,7 @@ inline float get_closest_point_on_cubic_bezier(
             // rather the distance to the line segment! This might explain the
             // occasional inaccuracies in selecting links.
             const float tmid = tstart + dt * (float(s) + 0.5f);
-            const ImVec2 bt = eval_bezier(tmid, p0, p1, p2, p3);
+            const ImVec2 bt = eval_bezier(tmid, bezier);
             const ImVec2 dv = bt - pos;
             float cur_distance = ImLengthSqr(dv);
             if (cur_distance < best_distance)
@@ -367,22 +366,19 @@ inline float get_closest_point_on_cubic_bezier(
 
 inline float get_distance_to_cubic_bezier(
     const ImVec2& pos,
-    const ImVec2& p0,
-    const ImVec2& p1,
-    const ImVec2& p2,
-    const ImVec2& p3)
+    const BezierCurve& bezier)
 {
     const int segments = 5;
-    const float length = ImSqrt(ImLengthSqr(p3 - p2)) +
-                         ImSqrt(ImLengthSqr(p2 - p1)) +
-                         ImSqrt(ImLengthSqr(p1 - p0));
+    const float length = ImSqrt(ImLengthSqr(bezier.p3 - bezier.p2)) +
+                         ImSqrt(ImLengthSqr(bezier.p2 - bezier.p1)) +
+                         ImSqrt(ImLengthSqr(bezier.p1 - bezier.p0));
     const float iterations_per_length = 0.01f;
     const int iterations =
         int(ImClamp(length * iterations_per_length, 2.0f, 8.f));
 
-    const float t = get_closest_point_on_cubic_bezier(
-        iterations, segments, pos, p0, p1, p2, p3);
-    ImVec2 point_on_curve = eval_bezier(t, p0, p1, p2, p3);
+    const float t =
+        get_closest_point_on_cubic_bezier(iterations, segments, pos, bezier);
+    ImVec2 point_on_curve = eval_bezier(t, bezier);
 
     const ImVec2 to_curve = point_on_curve - pos;
     return ImSqrt(ImLengthSqr(to_curve));
@@ -404,36 +400,32 @@ inline LinkBezierData get_link_renderable(
     const ImVec2 delta = end - start;
     const float link_length = ImSqrt(ImLengthSqr(delta));
     const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
-    LinkBezierData bezier;
-    bezier.p0 = start;
-    bezier.p1 = start + offset;
-    bezier.p2 = end - offset;
-    bezier.p3 = end;
-    bezier.num_segments = ImMax(int(link_length * LINK_SEGMENTS_PER_LENGTH), 1);
-    return bezier;
+    LinkBezierData link_data;
+    link_data.bezier.p0 = start;
+    link_data.bezier.p1 = start + offset;
+    link_data.bezier.p2 = end - offset;
+    link_data.bezier.p3 = end;
+    link_data.num_segments =
+        ImMax(int(link_length * LINK_SEGMENTS_PER_LENGTH), 1);
+    return link_data;
 }
 
-inline bool is_mouse_hovering_near_link(
-    const ImVec2& p0,
-    const ImVec2& p1,
-    const ImVec2& p2,
-    const ImVec2& p3)
+inline bool is_mouse_hovering_near_link(const BezierCurve& bezier)
 {
     bool near = false;
     const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
 
     // First, do an AABB test to see whether it the distance
     // to the line is worth checking in greater detail
-    float xmin = ImMin(p0.x, p3.x);
-    float xmax = ImMax(p0.x, p3.x);
-    float ymin = ImMin(p0.y, p3.y);
-    float ymax = ImMax(p0.y, p3.y);
+    float xmin = ImMin(bezier.p0.x, bezier.p3.x);
+    float xmax = ImMax(bezier.p0.x, bezier.p3.x);
+    float ymin = ImMin(bezier.p0.y, bezier.p3.y);
+    float ymax = ImMax(bezier.p0.y, bezier.p3.y);
 
     if ((mouse_pos.x > xmin && mouse_pos.x < xmax) &&
         (mouse_pos.y > ymin && mouse_pos.y < ymax))
     {
-        const float distance =
-            get_distance_to_cubic_bezier(mouse_pos, p0, p1, p2, p3);
+        const float distance = get_distance_to_cubic_bezier(mouse_pos, bezier);
         if (distance < LINK_HOVER_DISTANCE)
         {
             near = true;
@@ -448,7 +440,6 @@ inline float eval_implicit_line_eq(
     const ImVec2& p2,
     const ImVec2& p)
 {
-    // TODO: double check this equation. Is there a sign error?
     return (p2.y - p1.y) * p.x + (p1.x - p2.x) * p.y +
            (p2.x * p1.y - p1.x * p2.y);
 }
@@ -492,18 +483,26 @@ inline bool rectangle_overlaps_line_segment(
     {
         ImRect proj_rect = rect;
         if (proj_rect.Min.x > proj_rect.Max.x)
+        {
             ImSwap(proj_rect.Min.x, proj_rect.Max.x);
+        }
 
         if (proj_rect.Min.y > proj_rect.Max.y)
+        {
             ImSwap(proj_rect.Min.y, proj_rect.Max.y);
+        }
 
         if ((p1.x > proj_rect.Min.x && p1.x < proj_rect.Max.x) ||
             (p2.x > proj_rect.Min.x && p2.x < proj_rect.Max.x))
+        {
             return true;
+        }
 
         if ((p1.y > proj_rect.Min.y && p1.y < proj_rect.Max.y) ||
             (p2.y > proj_rect.Min.y && p2.y < proj_rect.Max.y))
+        {
             return true;
+        }
     }
 
     return false;
@@ -511,20 +510,15 @@ inline bool rectangle_overlaps_line_segment(
 
 inline bool rectangle_overlaps_bezier(
     const ImRect& rectangle,
-    const LinkBezierData& bezier)
+    const LinkBezierData& link_data)
 {
     bool found_overlap = false;
-    ImVec2 current =
-        eval_bezier(0.f, bezier.p0, bezier.p1, bezier.p2, bezier.p3);
-    const float dt = 1.0f / bezier.num_segments;
-    for (int s = 0; s < bezier.num_segments; ++s)
+    ImVec2 current = eval_bezier(0.f, link_data.bezier);
+    const float dt = 1.0f / link_data.num_segments;
+    for (int s = 0; s < link_data.num_segments; ++s)
     {
-        ImVec2 next = eval_bezier(
-            static_cast<float>((s + 1) * dt),
-            bezier.p0,
-            bezier.p1,
-            bezier.p2,
-            bezier.p3);
+        ImVec2 next =
+            eval_bezier(static_cast<float>((s + 1) * dt), link_data.bezier);
         if (rectangle_overlaps_line_segment(rectangle, current, next))
         {
             return true;
@@ -562,9 +556,9 @@ inline bool rectangle_overlaps_link(
         // Second level of refinement: do a more expensive test against the
         // link
 
-        const LinkBezierData bezier =
+        const LinkBezierData link_data =
             get_link_renderable(start, end, start_type);
-        return rectangle_overlaps_bezier(rectangle, bezier);
+        return rectangle_overlaps_bezier(rectangle, link_data);
     }
 
     return false;
@@ -975,14 +969,10 @@ void draw_link(EditorContext& editor, int link_idx)
             pin_end.type);
     }
 
-    const LinkBezierData link_renderable =
+    const LinkBezierData link_data =
         get_link_renderable(start, end, pin_start.type);
 
-    const bool is_hovered = is_mouse_hovering_near_link(
-        link_renderable.p0,
-        link_renderable.p1,
-        link_renderable.p2,
-        link_renderable.p3);
+    const bool is_hovered = is_mouse_hovering_near_link(link_data.bezier);
     if (is_hovered)
     {
         g.link_hovered = link_idx;
@@ -1005,13 +995,13 @@ void draw_link(EditorContext& editor, int link_idx)
     const ImU32 link_color = g.style.colors[style];
 
     editor.grid_draw_list->AddBezierCurve(
-        link_renderable.p0,
-        link_renderable.p1,
-        link_renderable.p2,
-        link_renderable.p3,
+        link_data.bezier.p0,
+        link_data.bezier.p1,
+        link_data.bezier.p2,
+        link_data.bezier.p3,
         link_color,
         LINK_THICKNESS,
-        link_renderable.num_segments);
+        link_data.num_segments);
 }
 
 void begin_attribute(int id, AttributeType type)
@@ -1293,16 +1283,16 @@ void EndNodeEditor()
                 node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
             const ImVec2 end_pos = imgui_io.MousePos;
 
-            const LinkBezierData link_renderable =
+            const LinkBezierData link_data =
                 get_link_renderable(start_pos, end_pos, pin.type);
             editor.grid_draw_list->AddBezierCurve(
-                link_renderable.p0,
-                link_renderable.p1,
-                link_renderable.p2,
-                link_renderable.p3,
+                link_data.bezier.p0,
+                link_data.bezier.p1,
+                link_data.bezier.p2,
+                link_data.bezier.p3,
                 g.style.colors[ColorStyle_Link],
                 LINK_THICKNESS,
-                link_renderable.num_segments);
+                link_data.num_segments);
         }
 
         // Finish the new link
