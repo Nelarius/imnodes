@@ -451,30 +451,37 @@ inline bool rectangle_overlaps_line_segment(
     const ImVec2& p1,
     const ImVec2& p2)
 {
-    const ImVec2 corners[4] = {rect.Min,
-                               ImVec2(rect.Max.x, rect.Min.y),
-                               ImVec2(rect.Min.x, rect.Max.y),
-                               rect.Max};
-
     if (rect.Contains(p1) && rect.Contains(p2))
     {
         return true;
     }
 
+    bool line_intersects_square = false;
+
     // First, test to see if the four corners are on different sides of the line
     // going through p1 and p2.
 
-    // TODO: this probably doesn't handle all cases I would like. What if
-    // the sign is zero?
-    int previous_sign = sign(eval_implicit_line_eq(p1, p2, corners[0]));
-    bool line_intersects_square = false;
-    for (int i = 1; i < 4; ++i)
     {
-        const int s = sign(eval_implicit_line_eq(p1, p2, corners[i]));
-        if (s != previous_sign)
+        const int corner_signs[4] = {
+            sign(eval_implicit_line_eq(p1, p2, rect.Min)),
+            sign(eval_implicit_line_eq(p1, p2, ImVec2(rect.Max.x, rect.Min.y))),
+            sign(eval_implicit_line_eq(p1, p2, ImVec2(rect.Min.x, rect.Max.y))),
+            sign(eval_implicit_line_eq(p1, p2, rect.Max))};
+
+        int previous_sign = corner_signs[3];
+        for (int i = 0; i < 4; ++i)
         {
-            line_intersects_square = true;
-            break;
+            const int s = corner_signs[i];
+            if (s == 0)
+            {
+                break;
+            }
+
+            if (s != previous_sign)
+            {
+                line_intersects_square = true;
+                break;
+            }
         }
     }
 
