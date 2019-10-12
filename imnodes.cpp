@@ -216,9 +216,6 @@ struct LinkData
     }
 };
 
-// TODO: this could be refactored: p0,p1,p2,p3 could be replaced by a struct
-// which could be reused in the bezier functions...
-
 struct BezierCurve
 {
     // the curve control points
