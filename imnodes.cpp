@@ -570,17 +570,6 @@ inline bool rectangle_overlaps_link(
 
     return false;
 }
-
-inline ImVec2 pin_position(
-    const ImRect& node_rect,
-    const ImRect& attr_rect,
-    AttributeType type)
-{
-    assert(type == AttributeType_Input || type == AttributeType_Output);
-    const float x =
-        type == AttributeType_Input ? node_rect.Min.x : node_rect.Max.x;
-    return ImVec2(x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
-}
 } // namespace
 
 // [SECTION] editor context definition
@@ -612,13 +601,24 @@ namespace
 {
 // [SECTION] ui state logic
 
+ImVec2 get_screen_space_pin_coordinates(
+    const ImRect& node_rect,
+    const ImRect& attr_rect,
+    AttributeType type)
+{
+    assert(type == AttributeType_Input || type == AttributeType_Output);
+    const float x =
+        type == AttributeType_Input ? node_rect.Min.x : node_rect.Max.x;
+    return ImVec2(x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
+}
+
 ImVec2 get_screen_space_pin_coordinates(const EditorContext& editor, int pin_id)
 {
     const int pin_idx = editor.pins.id_map.GetInt(pin_id);
     assert(pin_idx != INVALID_INDEX);
     const PinData& pin = editor.pins.pool[pin_idx];
     const NodeData& node = editor.nodes.pool[pin.node_idx];
-    return pin_position(
+    return get_screen_space_pin_coordinates(
         node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
 }
 
@@ -834,7 +834,7 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
 {
     const PinData& pin = editor.pins.pool[pin_idx];
     const NodeData& node = editor.nodes.pool[pin.node_idx];
-    const ImVec2 pin_pos = pin_position(
+    const ImVec2 pin_pos = get_screen_space_pin_coordinates(
         node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
     if (is_mouse_hovering_near_point(pin_pos, NODE_PIN_HOVER_RADIUS))
     {
@@ -1251,7 +1251,7 @@ void EndNodeEditor()
             const NodeData& node =
                 editor_context_get().nodes.pool[pin.node_idx];
 
-            const ImVec2 start_pos = pin_position(
+            const ImVec2 start_pos = get_screen_space_pin_coordinates(
                 node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
             const ImVec2 end_pos = imgui_io.MousePos;
 
