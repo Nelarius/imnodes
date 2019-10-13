@@ -496,13 +496,13 @@ inline bool rectangle_overlaps_line_segment(
             ImSwap(proj_rect.Min.y, proj_rect.Max.y);
         }
 
-        if ((p1.x > proj_rect.Min.x && p1.x < proj_rect.Max.x) ||
-            (p2.x > proj_rect.Min.x && p2.x < proj_rect.Max.x))
+        if ((p1.x > proj_rect.Min.x && p1.x < proj_rect.Max.x) &&
+            (p1.y > proj_rect.Min.y && p1.y < proj_rect.Max.y))
         {
             return true;
         }
 
-        if ((p1.y > proj_rect.Min.y && p1.y < proj_rect.Max.y) ||
+        if ((p2.x > proj_rect.Min.x && p2.x < proj_rect.Max.x) &&
             (p2.y > proj_rect.Min.y && p2.y < proj_rect.Max.y))
         {
             return true;
