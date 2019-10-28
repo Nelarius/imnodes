@@ -1301,7 +1301,8 @@ void EndNodeEditor()
     {
         const bool any_ui_element_hovered = (g.node_hovered != INVALID_INDEX) ||
                                             (g.link_hovered != INVALID_INDEX) ||
-                                            (g.pin_hovered != INVALID_INDEX);
+                                            (g.pin_hovered != INVALID_INDEX) ||
+                                            ImGui::IsAnyItemHovered();
 
         // start the box selector
         if (!any_ui_element_hovered && is_mouse_clicked)
