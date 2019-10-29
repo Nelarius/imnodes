@@ -1057,7 +1057,7 @@ void StyleColorsDark()
     g.style.colors[ColorStyle_TitleBarHovered] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_TitleBarSelected] = IM_COL32(66, 150, 250, 255);
     // link colors match ImGui's slider grab colors
-    g.style.colors[ColorStyle_Link] = IM_COL32(61, 133, 224, 255);
+    g.style.colors[ColorStyle_Link] = IM_COL32(61, 133, 224, 200);
     g.style.colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 255);
     // pin colors match ImGui's button colors
