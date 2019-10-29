@@ -1065,9 +1065,8 @@ void StyleColorsDark()
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(53, 150, 250, 255);
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
 
-    // TODO: the box selector could match the theme better
-    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(200, 200, 0, 30);
-    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(200, 200, 0, 150);
+    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(61, 133, 224, 30);
+    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(61, 133, 224, 150);
 
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
@@ -1091,9 +1090,8 @@ void StyleColorsClassic()
     g.style.colors[ColorStyle_Pin] = IM_COL32(89, 102, 156, 170);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(102, 122, 179, 200);
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
-    // TODO: box selector colors could match the theme better
-    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(200, 200, 0, 30);
-    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(200, 200, 0, 150);
+    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(82, 82, 161, 100);
+    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
     g.style.flags = Flags(Flags_NodeOutline);
@@ -1119,9 +1117,8 @@ void StyleColorsLight()
     g.style.colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 180);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(66, 150, 250, 255);
-    // TODO: box selector colors could match the theme better
-    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(200, 200, 0, 30);
-    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(200, 200, 0, 150);
+    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(90, 170, 250, 30);
+    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(255, 255, 255, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 40);
     g.style.flags = Flags(Flags_None);
