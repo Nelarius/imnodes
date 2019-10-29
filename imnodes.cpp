@@ -53,11 +53,6 @@ static const float NODE_PIN_HOVER_RADIUS = 10.f;
 
 static const size_t NODE_NAME_STR_LEN = 32u;
 
-// Box selector
-// TODO: these should be exposed in the style struct
-static const uint32_t BOX_SELECTOR_COLOR = IM_COL32(200, 200, 0, 30);
-static const uint32_t BOX_SELECTOR_OUTLINE_COLOR = IM_COL32(200, 200, 0, 150);
-
 static const int INVALID_INDEX = -1;
 
 bool initialized = false;
@@ -695,6 +690,9 @@ void box_selector_update(
     EditorContext& editor_ctx,
     const ImGuiIO& io)
 {
+    const ImU32 box_selector_color = g.style.colors[ColorStyle_BoxSelector];
+    const ImU32 box_selector_outline =
+        g.style.colors[ColorStyle_BoxSelectorOutline];
     switch (box_selector.state)
     {
         case BoxSelectorState_Started:
@@ -708,11 +706,11 @@ void box_selector_update(
             editor_ctx.grid_draw_list->AddRectFilled(
                 box_selector.box_rect.Min,
                 box_selector.box_rect.Max,
-                BOX_SELECTOR_COLOR);
+                box_selector_color);
             editor_ctx.grid_draw_list->AddRect(
                 box_selector.box_rect.Min,
                 box_selector.box_rect.Max,
-                BOX_SELECTOR_OUTLINE_COLOR);
+                box_selector_outline);
 
             if (ImGui::IsMouseReleased(0))
             {
@@ -1066,6 +1064,11 @@ void StyleColorsDark()
     g.style.colors[ColorStyle_Pin] = IM_COL32(53, 150, 250, 180);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(53, 150, 250, 255);
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
+
+    // TODO: the box selector could match the theme better
+    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(200, 200, 0, 30);
+    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(200, 200, 0, 150);
+
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
     g.style.flags = Flags(Flags_NodeOutline);
@@ -1088,6 +1091,9 @@ void StyleColorsClassic()
     g.style.colors[ColorStyle_Pin] = IM_COL32(89, 102, 156, 170);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(102, 122, 179, 200);
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
+    // TODO: box selector colors could match the theme better
+    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(200, 200, 0, 30);
+    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(200, 200, 0, 150);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
     g.style.flags = Flags(Flags_NodeOutline);
@@ -1113,6 +1119,9 @@ void StyleColorsLight()
     g.style.colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 180);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(66, 150, 250, 255);
+    // TODO: box selector colors could match the theme better
+    g.style.colors[ColorStyle_BoxSelector] = IM_COL32(200, 200, 0, 30);
+    g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(200, 200, 0, 150);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(255, 255, 255, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 40);
     g.style.flags = Flags(Flags_None);

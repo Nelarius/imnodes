@@ -21,6 +21,8 @@ enum ColorStyle
     ColorStyle_Pin,
     ColorStyle_PinHovered,
     ColorStyle_PinOutline,
+    ColorStyle_BoxSelector,
+    ColorStyle_BoxSelectorOutline,
     ColorStyle_GridBackground,
     ColorStyle_GridLine,
     ColorStyle_Count
