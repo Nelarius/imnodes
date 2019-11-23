@@ -530,7 +530,7 @@ inline bool rectangle_overlaps_link(
     const ImRect& rectangle,
     const ImVec2& start,
     const ImVec2& end,
-    AttributeType start_type)
+    const AttributeType start_type)
 {
     // First level: simple rejection test via rectangle overlap:
 
@@ -595,7 +595,7 @@ namespace
 ImVec2 get_screen_space_pin_coordinates(
     const ImRect& node_rect,
     const ImRect& attr_rect,
-    AttributeType type)
+    const AttributeType type)
 {
     assert(type == AttributeType_Input || type == AttributeType_Output);
     const float x =
@@ -603,7 +603,9 @@ ImVec2 get_screen_space_pin_coordinates(
     return ImVec2(x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
 }
 
-ImVec2 get_screen_space_pin_coordinates(const EditorContext& editor, int pin_id)
+ImVec2 get_screen_space_pin_coordinates(
+    const EditorContext& editor,
+    const int pin_id)
 {
     const int pin_idx = editor.pins.id_map.GetInt(pin_id);
     assert(pin_idx != INVALID_INDEX);
