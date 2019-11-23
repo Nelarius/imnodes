@@ -276,16 +276,11 @@ struct
         int attribute;
     } node_active;
 
-    struct
-    {
-        int index;
-        ImVec2 position;
-    } node_moved;
-
     int node_hovered;
     int link_hovered;
     int pin_hovered;
     bool link_dropped;
+    bool node_moved;
 
     ImGuiTextBuffer text_buffer;
 } g;
@@ -870,17 +865,26 @@ void draw_node(EditorContext& editor, int node_idx)
         g.node_hovered = node_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            editor.selected_nodes.push_back(g.node_hovered);
+            // The node may be contained in the vector already due to a box
+            // select
+            if (!editor.selected_nodes.contains(g.node_hovered))
+            {
+                editor.selected_nodes.push_back(g.node_hovered);
+            }
         }
     }
 
-    // Check to see whether the node moved during the frame. The node's position
-    // is updated after the node has been drawn (because the user has already
-    // rendered the UI!).
+    // Check to see whether we should move a node during the frame. The node's
+    // position is updated after hte node has been drawn, because the user has
+    // already rendered the UI at this point!
+    //
+    // Note that if multiple nodes are selected, then they will also be moved by
+    // the same mouse delta.
     if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0))
     {
-        g.node_moved.index = node_idx;
-        g.node_moved.position = node.origin + ImGui::GetIO().MouseDelta;
+        // g.node_moved.index = node_idx;
+        // g.node_moved.position = node.origin + ImGui::GetIO().MouseDelta;
+        g.node_moved = true;
     }
 
     ImU32 node_background = node.color_style.background;
@@ -1142,12 +1146,11 @@ void BeginNodeEditor()
     g.link_created = LinkData();
     g.node_active.index = INVALID_INDEX;
     g.node_active.attribute = INVALID_INDEX;
-    g.node_moved.index = INVALID_INDEX;
-    g.node_moved.position = ImVec2(0.0f, 0.0f);
     g.node_hovered = INVALID_INDEX;
     g.link_hovered = INVALID_INDEX;
     g.pin_hovered = INVALID_INDEX;
     g.link_dropped = false;
+    g.node_moved = false;
 
     // reset ui content for the current editor
     EditorContext& editor = editor_context_get();
@@ -1303,13 +1306,6 @@ void EndNodeEditor()
         }
     }
 
-    if (g.node_moved.index != INVALID_INDEX &&
-        editor.link_dragged.start_attr == INVALID_INDEX)
-    {
-        // Don't move the node if we're dragging a link
-        editor.nodes.pool[g.node_moved.index].origin = g.node_moved.position;
-    }
-
     {
         const bool any_ui_element_hovered = (g.node_hovered != INVALID_INDEX) ||
                                             (g.link_hovered != INVALID_INDEX) ||
@@ -1326,6 +1322,18 @@ void EndNodeEditor()
         {
             editor.grid_draw_list->ChannelsSetCurrent(Channel_Foreground);
             box_selector_update(editor.box_selector, editor, imgui_io);
+        }
+    }
+
+    // Move the nodes for the next frame if the user clicked and dragged a
+    // single node.
+
+    if (g.node_moved && editor.link_dragged.start_attr == INVALID_INDEX)
+    {
+        for (int i = 0; i < editor.selected_nodes.size(); ++i)
+        {
+            NodeData& node = editor.nodes.pool[editor.selected_nodes[i]];
+            node.origin += ImGui::GetIO().MouseDelta;
         }
     }
 
