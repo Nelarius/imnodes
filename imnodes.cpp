@@ -460,16 +460,21 @@ inline bool rectangle_overlaps_line_segment(
             sign(eval_implicit_line_eq(p1, p2, ImVec2(rect.Min.x, rect.Max.y))),
             sign(eval_implicit_line_eq(p1, p2, rect.Max))};
 
-        int previous_sign = corner_signs[3];
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0, iprev = 3; i < 4; ++i, iprev = (iprev + 1) % 4)
         {
             const int s = corner_signs[i];
+            const int s_prev = corner_signs[iprev];
+
             if (s == 0)
             {
                 break;
             }
 
-            if (s != previous_sign)
+            // If the sign changes at any point, then the point is on another
+            // side of the line than the previous point, and we know that there
+            // is a possible intersection.
+
+            if (s != s_prev)
             {
                 line_intersects_square = true;
                 break;
