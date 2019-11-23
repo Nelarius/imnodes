@@ -543,10 +543,10 @@ inline bool rectangle_overlaps_link(
 
     if (rectangle.Overlaps(lrect))
     {
-        // First, check if both endpoints of the curve are trivially contained
+        // First, check if either one or both endpoinds are trivially contained
         // in the rectangle
 
-        if (rectangle.Contains(start) && rectangle.Contains(end))
+        if (rectangle.Contains(start) || rectangle.Contains(end))
         {
             return true;
         }
