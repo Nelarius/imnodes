@@ -511,7 +511,6 @@ inline bool rectangle_overlaps_bezier(
     const ImRect& rectangle,
     const LinkBezierData& link_data)
 {
-    bool found_overlap = false;
     ImVec2 current = eval_bezier(0.f, link_data.bezier);
     const float dt = 1.0f / link_data.num_segments;
     for (int s = 0; s < link_data.num_segments; ++s)
