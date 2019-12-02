@@ -238,6 +238,23 @@ struct BoxSelector
     BoxSelector() : state(BoxSelectorState_None), box_rect() {}
 };
 
+enum NodeInteractionState
+{
+    NodeInteractionState_MouseDown,
+    NodeInteractionState_None
+};
+
+struct NodeInteraction
+{
+    NodeInteractionState state;
+    int node_idx;
+
+    NodeInteraction()
+        : state(NodeInteractionState_None), node_idx(INVALID_INDEX)
+    {
+    }
+};
+
 struct ColorStyleElement
 {
     ImU32 color;
@@ -280,7 +297,6 @@ struct
     int link_hovered;
     int pin_hovered;
     bool link_dropped;
-    bool node_moved;
 
     ImGuiTextBuffer text_buffer;
 } g;
@@ -580,6 +596,7 @@ struct EditorContext
 
     LinkData link_dragged;
     BoxSelector box_selector;
+    NodeInteraction node_interaction;
 
     EditorContext()
         : nodes(), pins(), links(), panning(0.f, 0.f), grid_draw_list(nullptr),
@@ -726,6 +743,56 @@ void box_selector_update(
     }
 }
 
+void node_interaction_begin(EditorContext& editor, const int node_idx)
+{
+    NodeInteraction& node_interaction = editor.node_interaction;
+    node_interaction.state = NodeInteractionState_MouseDown;
+    node_interaction.node_idx = node_idx;
+    // If the node is not already contained in the selection, then we want only
+    // the interaction node to be selected, effective immediately.
+    //
+    // Otherwise, we want to allow for the possibility of multiple nodes to be
+    // moved at once.
+    if (!editor.selected_nodes.contains(node_idx))
+    {
+        editor.selected_nodes.clear();
+        editor.selected_nodes.push_back(node_idx);
+    }
+}
+
+void node_interaction_update(EditorContext& editor)
+{
+    NodeInteraction& node_interaction = editor.node_interaction;
+    switch (node_interaction.state)
+    {
+        case NodeInteractionState_MouseDown:
+        {
+            assert(node_interaction.node_idx != INVALID_INDEX);
+            if (ImGui::IsMouseDragging(0) &&
+                editor.link_dragged.start_attr == INVALID_INDEX)
+            {
+                for (int i = 0; i < editor.selected_nodes.size(); ++i)
+                {
+                    const int idx = editor.selected_nodes[i];
+                    NodeData& node = editor.nodes.pool[idx];
+                    node.origin += ImGui::GetIO().MouseDelta;
+                }
+            }
+
+            if (ImGui::IsMouseReleased(0))
+            {
+                node_interaction.state = NodeInteractionState_None;
+            }
+        }
+        break;
+        case NodeInteractionState_None:
+            break;
+        default:
+            assert(!"Unreachable code!");
+            break;
+    }
+}
+
 // [SECTION] render helpers
 
 inline ImVec2 screen_space_to_grid_space(const ImVec2& v)
@@ -865,26 +932,8 @@ void draw_node(EditorContext& editor, int node_idx)
         g.node_hovered = node_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            // The node may be contained in the vector already due to a box
-            // select
-            if (!editor.selected_nodes.contains(g.node_hovered))
-            {
-                editor.selected_nodes.push_back(g.node_hovered);
-            }
+            node_interaction_begin(editor, node_idx);
         }
-    }
-
-    // Check to see whether we should move a node during the frame. The node's
-    // position is updated after hte node has been drawn, because the user has
-    // already rendered the UI at this point!
-    //
-    // Note that if multiple nodes are selected, then they will also be moved by
-    // the same mouse delta.
-    if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0))
-    {
-        // g.node_moved.index = node_idx;
-        // g.node_moved.position = node.origin + ImGui::GetIO().MouseDelta;
-        g.node_moved = true;
     }
 
     ImU32 node_background = node.color_style.background;
@@ -1156,7 +1205,6 @@ void BeginNodeEditor()
     g.link_hovered = INVALID_INDEX;
     g.pin_hovered = INVALID_INDEX;
     g.link_dropped = false;
-    g.node_moved = false;
 
     // reset ui content for the current editor
     EditorContext& editor = editor_context_get();
@@ -1331,17 +1379,7 @@ void EndNodeEditor()
         }
     }
 
-    // Move the nodes for the next frame if the user clicked and dragged a
-    // single node.
-
-    if (g.node_moved && editor.link_dragged.start_attr == INVALID_INDEX)
-    {
-        for (int i = 0; i < editor.selected_nodes.size(); ++i)
-        {
-            NodeData& node = editor.nodes.pool[editor.selected_nodes[i]];
-            node.origin += ImGui::GetIO().MouseDelta;
-        }
-    }
+    node_interaction_update(editor);
 
     // set channel 0 before merging, or else UI rendering is broken
     editor.grid_draw_list->ChannelsSetCurrent(0);
