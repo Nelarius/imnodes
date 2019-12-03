@@ -269,8 +269,8 @@ struct
 {
     EditorContext* default_editor_ctx;
     EditorContext* editor_ctx;
-    ImVec2 grid_origin_screen_space;
-    ImRect grid_rect_screen_space;
+    ImVec2 canvas_origin_screen_space;
+    ImRect canvas_rect_screen_space;
     ScopeFlags current_scope;
 
     Style style;
@@ -799,7 +799,7 @@ void node_interaction_update(EditorContext& editor)
 inline ImVec2 screen_space_to_grid_space(const ImVec2& v)
 {
     const EditorContext& editor = editor_context_get();
-    return v - g.grid_origin_screen_space - editor.panning;
+    return v - g.canvas_origin_screen_space - editor.panning;
 }
 
 inline ImVec2 grid_space_to_editor_space(const ImVec2& v)
@@ -811,12 +811,12 @@ inline ImVec2 grid_space_to_editor_space(const ImVec2& v)
 inline ImVec2 grid_space_to_screen_space(const ImVec2& v)
 {
     const EditorContext& editor = editor_context_get();
-    return v + g.grid_origin_screen_space + editor.panning;
+    return v + g.canvas_origin_screen_space + editor.panning;
 }
 
 inline ImVec2 editor_space_to_screen_space(const ImVec2& v)
 {
-    return g.grid_origin_screen_space + v;
+    return g.canvas_origin_screen_space + v;
 }
 
 inline ImRect get_item_rect()
@@ -1089,8 +1089,8 @@ void Initialize()
 
     g.default_editor_ctx = NULL;
     g.editor_ctx = NULL;
-    g.grid_origin_screen_space = ImVec2(0.0f, 0.0f);
-    g.grid_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
+    g.canvas_origin_screen_space = ImVec2(0.0f, 0.0f);
+    g.canvas_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
     g.current_scope = Scope_None;
 
     g.default_editor_ctx = EditorContextCreate();
@@ -1228,7 +1228,7 @@ void BeginNodeEditor()
             ImVec2(0.f, 0.f),
             true,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
-        g.grid_origin_screen_space = ImGui::GetCursorScreenPos();
+        g.canvas_origin_screen_space = ImGui::GetCursorScreenPos();
         // prepare for layering the node content on top of the nodes
         // NOTE: the draw list has to be captured here, because we want all the
         // content to clip the scrolling_region child window.
@@ -1238,7 +1238,7 @@ void BeginNodeEditor()
 
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
-            g.grid_rect_screen_space = ImRect(
+            g.canvas_rect_screen_space = ImRect(
                 editor_space_to_screen_space(ImVec2(0.f, 0.f)),
                 editor_space_to_screen_space(canvas_size));
             // TODO: showing the grid should be a setting
@@ -1376,7 +1376,7 @@ void EndNodeEditor()
                                             ImGui::IsAnyItemHovered();
         const bool is_mouse_clicked_in_canvas =
             is_mouse_clicked &&
-            g.grid_rect_screen_space.Contains(ImGui::GetMousePos());
+            g.canvas_rect_screen_space.Contains(ImGui::GetMousePos());
 
         // start the box selector
         if (!any_ui_element_hovered && is_mouse_clicked_in_canvas)
