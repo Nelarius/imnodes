@@ -38,12 +38,6 @@ inline ImVec2 operator*(const ImVec2& lhs, const float rhs)
 // Grid appearance
 static const float GRID_SIZE = 32.f;
 
-// Node appearance
-// TODO: Add these into the style struct
-static const float NODE_CORNER_ROUNDNESS = 4.0f;
-static const ImVec2 NODE_CONTENT_PADDING = ImVec2(8.f, 8.f);
-static const ImVec2 NODE_DUMMY_SPACING = ImVec2(80.f, 20.f);
-
 static const float LINK_THICKNESS = 3.f;
 static const float LINK_SEGMENTS_PER_LENGTH = 0.1f;
 static const float LINK_HOVER_DISTANCE = 7.0f;
@@ -152,6 +146,12 @@ struct NodeData
             titlebar, titlebar_hovered, titlebar_selected;
     } color_style;
 
+    struct
+    {
+        float corner_rounding;
+        ImVec2 padding;
+    } layout_style;
+
     ImVector<ImRect> attribute_rects;
 
     NodeData()
@@ -160,7 +160,7 @@ struct NodeData
               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
           origin(100.0f, 100.0f), title_text_size(0.f, 0.f),
           rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
-          attribute_rects()
+          layout_style(), attribute_rects()
     {
     }
 };
@@ -260,7 +260,18 @@ struct ColorStyleElement
     ImU32 color;
     ColorStyle item;
 
-    ColorStyleElement(ImU32 c, ColorStyle s) : color(c), item(s) {}
+    ColorStyleElement(const ImU32 c, const ColorStyle s) : color(c), item(s) {}
+};
+
+struct StyleElement
+{
+    StyleVar item;
+    float value;
+
+    StyleElement(const float value, const StyleVar variable)
+        : item(variable), value(value)
+    {
+    }
 };
 
 // [SECTION] global struct
@@ -274,7 +285,8 @@ struct
     ScopeFlags current_scope;
 
     Style style;
-    ImVector<ColorStyleElement> color_style_stack;
+    ImVector<ColorStyleElement> color_modifier_stack;
+    ImVector<StyleElement> style_modifier_stack;
 
     LinkData link_created; // per-frame data, so can be stored in g
 
@@ -826,48 +838,47 @@ inline ImRect get_item_rect()
 
 inline ImVec2 get_node_title_origin(const NodeData& node)
 {
-    return node.origin + NODE_CONTENT_PADDING;
+    return node.origin + node.layout_style.padding;
 }
 
 inline ImVec2 get_node_content_origin(const NodeData& node)
 {
     ImVec2 title_rect_height =
-        ImVec2(0.f, node.title_text_size.y + 2.f * NODE_CONTENT_PADDING.y);
-    return node.origin + NODE_CONTENT_PADDING + title_rect_height;
+        ImVec2(0.f, node.title_text_size.y + 2.f * node.layout_style.padding.y);
+    return node.origin + node.layout_style.padding + title_rect_height;
 }
 
 // The node width is either the content width, or title bar width, whichever
 // is larger.
-inline ImRect get_screen_space_title_bar_rect(
-    const ImVec2& node_origin,
-    const ImVec2& text_size,
-    const ImRect& node_rect)
+inline ImRect get_screen_space_title_bar_rect(const NodeData& node)
 {
-    const ImVec2 ss_origin = grid_space_to_screen_space(node_origin);
+    const ImVec2 ss_origin = grid_space_to_screen_space(node.origin);
     const ImVec2& min = ss_origin;
     // NOTE: the content rect is already offset from the node grid origin by 1 x
-    // NODE_CONTENT_PADDING due to setting the cursor taking node padding into
+    // node.padding due to setting the cursor taking node padding into
     // account.
     const ImVec2 max = ImVec2(
-        node_rect.Max.x,
-        ss_origin.y + text_size.y + 2.f * NODE_CONTENT_PADDING.y);
+        node.rect.Max.x,
+        ss_origin.y + node.title_text_size.y +
+            2.f * node.layout_style.padding.y);
     return ImRect(min, max);
 }
 
 // This currently computes the node rect width by taking either the
 // content width, or title bar width, whichever is larger.
 inline ImRect get_screen_space_node_rect(
-    const ImRect& item_rect,
-    const ImVec2& text_size)
+    const NodeData& node,
+    const ImRect& node_body_rect)
 {
+    const ImVec2 text_size = node.title_text_size;
     const float max_width =
-        ImMax(item_rect.Min.x + text_size.x, item_rect.Max.x);
+        ImMax(node_body_rect.Min.x + text_size.x, node_body_rect.Max.x);
     // apply the node padding on the top and bottom of the text
-    const float text_height = text_size.y + 2.f * NODE_CONTENT_PADDING.y;
+    const float text_height = text_size.y + 2.f * node.layout_style.padding.y;
 
-    ImRect rect = item_rect;
+    ImRect rect = node_body_rect;
     rect.Max.x = max_width;
-    rect.Expand(NODE_CONTENT_PADDING);
+    rect.Expand(node.layout_style.padding);
     rect.Min.y = rect.Min.y - text_height;
     return rect;
 }
@@ -958,17 +969,16 @@ void draw_node(EditorContext& editor, int node_idx)
             node.rect.Min,
             node.rect.Max,
             node_background,
-            NODE_CORNER_ROUNDNESS);
+            node.layout_style.corner_rounding);
 
         // title bar:
         {
-            ImRect title_rect = get_screen_space_title_bar_rect(
-                node.origin, node.title_text_size, node.rect);
+            ImRect title_rect = get_screen_space_title_bar_rect(node);
             editor.grid_draw_list->AddRectFilled(
                 title_rect.Min,
                 title_rect.Max,
                 titlebar_background,
-                NODE_CORNER_ROUNDNESS,
+                node.layout_style.corner_rounding,
                 ImDrawCornerFlags_Top);
             ImGui::SetCursorPos(
                 grid_space_to_editor_space(get_node_title_origin(node)));
@@ -982,7 +992,7 @@ void draw_node(EditorContext& editor, int node_idx)
                 node.rect.Min,
                 node.rect.Max,
                 node.color_style.outline,
-                NODE_CORNER_ROUNDNESS);
+                node.layout_style.corner_rounding);
         }
     }
 
@@ -1441,6 +1451,9 @@ void BeginNode(int node_id)
         g.style.colors[ColorStyle_TitleBarHovered];
     node.color_style.titlebar_selected =
         g.style.colors[ColorStyle_TitleBarSelected];
+    node.layout_style.corner_rounding = g.style.node_corner_rounding;
+    node.layout_style.padding =
+        ImVec2(g.style.node_padding_horizontal, g.style.node_padding_vertical);
 
     {
         const int idx = editor.nodes.id_map.GetInt(node_id, INVALID_INDEX);
@@ -1469,8 +1482,7 @@ void EndNode()
     ImGui::PopID();
     {
         NodeData& node = editor.nodes.pool[g.node_current.index];
-        node.rect =
-            get_screen_space_node_rect(get_item_rect(), node.title_text_size);
+        node.rect = get_screen_space_node_rect(node, get_item_rect());
     }
     g.node_current.index = INVALID_INDEX;
 }
@@ -1516,17 +1528,57 @@ void PushColorStyle(ColorStyle item, unsigned int color)
 {
     // Remember to call Initialize() before using any other functions!
     assert(initialized);
-    g.color_style_stack.push_back(
+    g.color_modifier_stack.push_back(
         ColorStyleElement(g.style.colors[item], item));
     g.style.colors[item] = color;
 }
 
 void PopColorStyle()
 {
-    assert(g.color_style_stack.size() > 0);
-    const ColorStyleElement elem = g.color_style_stack.back();
+    assert(g.color_modifier_stack.size() > 0);
+    const ColorStyleElement elem = g.color_modifier_stack.back();
     g.style.colors[elem.item] = elem.color;
-    g.color_style_stack.pop_back();
+    g.color_modifier_stack.pop_back();
+}
+
+float& lookup_style_var(const StyleVar item)
+{
+    // TODO: once the switch gets too big and unwieldy to work with, we could do
+    // a byte-offset lookup into the Style struct, using the StyleVar as an
+    // index. This is how ImGui does it.
+    float* style_var = 0;
+    switch (item)
+    {
+        case StyleVar_NodeCornerRounding:
+            style_var = &g.style.node_corner_rounding;
+            break;
+        case StyleVar_NodePaddingHorizontal:
+            style_var = &g.style.node_padding_horizontal;
+            break;
+        case StyleVar_NodePaddingVertical:
+            style_var = &g.style.node_padding_vertical;
+            break;
+        default:
+            assert(!"Invalid StyleVar value!");
+    }
+
+    return *style_var;
+}
+
+void PushStyleVar(const StyleVar item, const float value)
+{
+    float& style_var = lookup_style_var(item);
+    g.style_modifier_stack.push_back(StyleElement(style_var, item));
+    style_var = value;
+}
+
+void PopStyleVar(const StyleVar item)
+{
+    const StyleElement style_elem = g.style_modifier_stack.back();
+    g.style_modifier_stack.pop_back();
+    assert(item == style_elem.item);
+    float& style_var = lookup_style_var(item);
+    style_var = style_elem.value;
 }
 
 void SetNodePos(int node_id, const ImVec2& screen_space_pos)

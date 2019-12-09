@@ -28,6 +28,13 @@ enum ColorStyle
     ColorStyle_Count
 };
 
+enum StyleVar
+{
+    StyleVar_NodeCornerRounding = 0,
+    StyleVar_NodePaddingHorizontal,
+    StyleVar_NodePaddingVertical
+};
+
 // Flags for controlling how the nodes are rendered.
 enum Flags
 {
@@ -38,6 +45,10 @@ enum Flags
 
 struct Style
 {
+    float node_corner_rounding = 4.0f;
+    float node_padding_horizontal = 8.0f;
+    float node_padding_vertical = 8.0f;
+
     // by default, set to Flags_NodeOutline | Flags_PinOutline
     Flags flags;
     // Set these mid-frame using Push/PopColorStyle. You can index this color
@@ -79,6 +90,8 @@ void EndNodeEditor();
 // Use PushColorStyle and PopColorStyle to modify Style::colors mid-frame.
 void PushColorStyle(ColorStyle item, unsigned int color);
 void PopColorStyle();
+void PushStyleVar(StyleVar style_item, float value);
+void PopStyleVar(StyleVar style_item);
 
 void BeginNode(int id);
 void EndNode();
