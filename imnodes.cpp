@@ -565,10 +565,14 @@ inline bool rectangle_overlaps_link(
 
     ImRect lrect = ImRect(start, end);
     if (lrect.Min.x > lrect.Max.x)
+    {
         ImSwap(lrect.Min.x, lrect.Max.x);
+    }
 
     if (lrect.Min.y > lrect.Max.y)
+    {
         ImSwap(lrect.Min.y, lrect.Max.y);
+    }
 
     if (rectangle.Overlaps(lrect))
     {
