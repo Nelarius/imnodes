@@ -49,8 +49,7 @@ struct Style
     float node_padding_horizontal = 8.0f;
     float node_padding_vertical = 8.0f;
 
-    // by default, set to Flags_NodeOutline | Flags_PinOutline
-    Flags flags;
+    Flags flags = Flags(Flags_NodeOutline);
     // Set these mid-frame using Push/PopColorStyle. You can index this color
     // array with with a ColorStyle enum value.
     unsigned int colors[ColorStyle_Count];

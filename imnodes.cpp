@@ -1148,7 +1148,6 @@ void StyleColorsDark()
 
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
-    g.style.flags = Flags(Flags_NodeOutline);
 }
 
 void StyleColorsClassic()
@@ -1172,7 +1171,6 @@ void StyleColorsClassic()
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
-    g.style.flags = Flags(Flags_NodeOutline);
 }
 
 void StyleColorsLight()
