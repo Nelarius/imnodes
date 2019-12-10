@@ -35,9 +35,6 @@ inline ImVec2 operator*(const ImVec2& lhs, const float rhs)
     return ImVec2(lhs.x * rhs, lhs.y * rhs);
 }
 
-// Grid appearance
-static const float GRID_SIZE = 32.f;
-
 static const float LINK_THICKNESS = 3.f;
 static const float LINK_SEGMENTS_PER_LENGTH = 0.1f;
 static const float LINK_HOVER_DISTANCE = 7.0f;
@@ -891,8 +888,8 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
 {
     const ImVec2 offset = editor.panning;
 
-    for (float x = fmodf(offset.x, GRID_SIZE); x < canvas_size.x;
-         x += GRID_SIZE)
+    for (float x = fmodf(offset.x, g.style.grid_spacing); x < canvas_size.x;
+         x += g.style.grid_spacing)
     {
         editor.grid_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(x, 0.0f)),
@@ -900,8 +897,8 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
             g.style.colors[ColorStyle_GridLine]);
     }
 
-    for (float y = fmodf(offset.y, GRID_SIZE); y < canvas_size.y;
-         y += GRID_SIZE)
+    for (float y = fmodf(offset.y, g.style.grid_spacing); y < canvas_size.y;
+         y += g.style.grid_spacing)
     {
         editor.grid_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(0.0f, y)),
@@ -1551,6 +1548,9 @@ float& lookup_style_var(const StyleVar item)
     float* style_var = 0;
     switch (item)
     {
+        case StyleVar_GridSpacing:
+            style_var = &g.style.grid_spacing;
+            break;
         case StyleVar_NodeCornerRounding:
             style_var = &g.style.node_corner_rounding;
             break;

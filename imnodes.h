@@ -30,7 +30,8 @@ enum ColorStyle
 
 enum StyleVar
 {
-    StyleVar_NodeCornerRounding = 0,
+    StyleVar_GridSpacing = 0,
+    StyleVar_NodeCornerRounding,
     StyleVar_NodePaddingHorizontal,
     StyleVar_NodePaddingVertical
 };
@@ -45,6 +46,7 @@ enum Flags
 
 struct Style
 {
+    float grid_spacing = 32.f;
     float node_corner_rounding = 4.0f;
     float node_padding_horizontal = 8.0f;
     float node_padding_vertical = 8.0f;
