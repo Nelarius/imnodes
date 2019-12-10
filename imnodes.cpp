@@ -127,6 +127,27 @@ struct ObjectPool
         in_use[index] = true;
         return pool[index];
     }
+
+    // Predicate must define operator()(const T& lhs, const T& operator) ->
+    // bool.
+    template<typename Predicate>
+    inline bool contains(const T& v, Predicate predicate) const
+    {
+        for (int i = 0; i < pool.size(); ++i)
+        {
+            if (!in_use[i])
+            {
+                continue;
+            }
+
+            if (predicate(v, pool[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 };
 
 struct NodeData
@@ -1355,18 +1376,56 @@ void EndNodeEditor()
 
         if (ImGui::IsMouseReleased(0))
         {
-            // The link was created if the mouse is released near a pin
+            // TODO: this should also be a state machine
+
+            // The link was created if the mouse is released near a pin.
             // Check that the pin isn't the same on that the link was started
             // on!
+            const int pin_id_hovered = editor.pins.pool[g.pin_hovered].id;
             if (g.pin_hovered != INVALID_INDEX &&
-                editor.pins.pool[g.pin_hovered].id !=
-                    editor.link_dragged.start_attr)
+                pin_id_hovered != editor.link_dragged.start_attr)
             {
-                editor.link_dragged.end_attr =
-                    editor.pins.pool[g.pin_hovered].id;
+                struct LinkPredicate
+                {
+                    bool operator()(const LinkData& lhs, const LinkData& rhs)
+                        const
+                    {
+                        // Do a unique compare by sorting the attribute ids.
+                        // This catches duplicate links, whether they are in the
+                        // same direction or not.
 
-                g.link_created.start_attr = editor.link_dragged.start_attr;
-                g.link_created.end_attr = editor.link_dragged.end_attr;
+                        int lhs_start = lhs.start_attr;
+                        int lhs_end = lhs.end_attr;
+                        int rhs_start = rhs.start_attr;
+                        int rhs_end = rhs.end_attr;
+
+                        if (lhs_start > lhs_end)
+                        {
+                            ImSwap(lhs_start, lhs_end);
+                        }
+
+                        if (rhs_start > rhs_end)
+                        {
+                            ImSwap(rhs_start, rhs_end);
+                        }
+
+                        return lhs_start == rhs_start && lhs_end == rhs_end;
+                    }
+                };
+
+                LinkData test_link;
+                test_link.start_attr = editor.link_dragged.start_attr;
+                test_link.end_attr = pin_id_hovered;
+                // Test for duplicate link!
+                if (!editor.links.contains(test_link, LinkPredicate()))
+                {
+
+                    editor.link_dragged.end_attr =
+                        editor.pins.pool[g.pin_hovered].id;
+
+                    g.link_created.start_attr = editor.link_dragged.start_attr;
+                    g.link_created.end_attr = editor.link_dragged.end_attr;
+                }
             }
             // else the link is dropped
             else
