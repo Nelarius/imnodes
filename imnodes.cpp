@@ -1250,8 +1250,8 @@ void BeginNodeEditor()
             g.canvas_rect_screen_space = ImRect(
                 editor_space_to_screen_space(ImVec2(0.f, 0.f)),
                 editor_space_to_screen_space(canvas_size));
-            // TODO: showing the grid should be a setting
-            if (/*show_grid*/ true)
+
+            if (g.style.flags & Flags_GridLines)
             {
                 draw_grid(editor, canvas_size);
             }

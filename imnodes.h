@@ -41,7 +41,8 @@ enum Flags
 {
     Flags_None = 0,
     Flags_NodeOutline = 1 << 0,
-    Flags_PinOutline = 1 << 1
+    Flags_PinOutline = 1 << 1,
+    Flags_GridLines = 1 << 2
 };
 
 struct Style
@@ -51,7 +52,7 @@ struct Style
     float node_padding_horizontal = 8.0f;
     float node_padding_vertical = 8.0f;
 
-    Flags flags = Flags(Flags_NodeOutline);
+    Flags flags = Flags(Flags_NodeOutline | Flags_GridLines);
     // Set these mid-frame using Push/PopColorStyle. You can index this color
     // array with with a ColorStyle enum value.
     unsigned int colors[ColorStyle_Count];
