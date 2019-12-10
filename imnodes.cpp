@@ -1574,12 +1574,12 @@ void PushStyleVar(const StyleVar item, const float value)
     style_var = value;
 }
 
-void PopStyleVar(const StyleVar item)
+void PopStyleVar()
 {
+    assert(g.style_modifier_stack.size() > 0);
     const StyleElement style_elem = g.style_modifier_stack.back();
     g.style_modifier_stack.pop_back();
-    assert(item == style_elem.item);
-    float& style_var = lookup_style_var(item);
+    float& style_var = lookup_style_var(style_elem.item);
     style_var = style_elem.value;
 }
 

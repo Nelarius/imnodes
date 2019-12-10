@@ -93,7 +93,7 @@ void EndNodeEditor();
 void PushColorStyle(ColorStyle item, unsigned int color);
 void PopColorStyle();
 void PushStyleVar(StyleVar style_item, float value);
-void PopStyleVar(StyleVar style_item);
+void PopStyleVar();
 
 void BeginNode(int id);
 void EndNode();
