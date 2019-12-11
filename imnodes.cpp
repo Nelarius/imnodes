@@ -1042,17 +1042,15 @@ void draw_link(EditorContext& editor, int link_idx)
         }
     }
 
-    ColorStyle style = ColorStyle_Link;
+    ImU32 link_color = link.color_style.base;
     if (editor.selected_links.contains(link_idx))
     {
-        style = ColorStyle_LinkSelected;
+        link_color = link.color_style.selected;
     }
     else if (is_hovered)
     {
-        style = ColorStyle_LinkHovered;
+        link_color = link.color_style.hovered;
     }
-
-    const ImU32 link_color = g.style.colors[style];
 
     editor.grid_draw_list->AddBezierCurve(
         link_data.bezier.p0,
