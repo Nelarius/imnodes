@@ -48,9 +48,14 @@ enum Flags
 struct Style
 {
     float grid_spacing = 32.f;
+
     float node_corner_rounding = 4.0f;
     float node_padding_horizontal = 8.0f;
     float node_padding_vertical = 8.0f;
+
+    float link_thickness = 3.0f;
+    float link_line_segments_per_length = 0.1f;
+    float link_hover_distance = 7.0f;
 
     Flags flags = Flags(Flags_NodeOutline | Flags_GridLines);
     // Set these mid-frame using Push/PopColorStyle. You can index this color

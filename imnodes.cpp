@@ -35,10 +35,6 @@ inline ImVec2 operator*(const ImVec2& lhs, const float rhs)
     return ImVec2(lhs.x * rhs, lhs.y * rhs);
 }
 
-static const float LINK_THICKNESS = 3.f;
-static const float LINK_SEGMENTS_PER_LENGTH = 0.1f;
-static const float LINK_HOVER_DISTANCE = 7.0f;
-
 static const float NODE_PIN_RADIUS = 4.f;
 static const float NODE_PIN_HOVER_RADIUS = 10.f;
 
@@ -421,7 +417,8 @@ inline float get_distance_to_cubic_bezier(
 inline LinkBezierData get_link_renderable(
     ImVec2 start,
     ImVec2 end,
-    AttributeType start_type)
+    const AttributeType start_type,
+    const float line_segments_per_length)
 {
     assert(
         (start_type == AttributeType_Input) ||
@@ -440,7 +437,7 @@ inline LinkBezierData get_link_renderable(
     link_data.bezier.p2 = end - offset;
     link_data.bezier.p3 = end;
     link_data.num_segments =
-        ImMax(int(link_length * LINK_SEGMENTS_PER_LENGTH), 1);
+        ImMax(int(link_length * line_segments_per_length), 1);
     return link_data;
 }
 
@@ -460,7 +457,7 @@ inline bool is_mouse_hovering_near_link(const BezierCurve& bezier)
         (mouse_pos.y > ymin && mouse_pos.y < ymax))
     {
         const float distance = get_distance_to_cubic_bezier(mouse_pos, bezier);
-        if (distance < LINK_HOVER_DISTANCE)
+        if (distance < g.style.link_hover_distance)
         {
             near = true;
         }
@@ -605,8 +602,8 @@ inline bool rectangle_overlaps_link(
         // Second level of refinement: do a more expensive test against the
         // link
 
-        const LinkBezierData link_data =
-            get_link_renderable(start, end, start_type);
+        const LinkBezierData link_data = get_link_renderable(
+            start, end, start_type, g.style.link_line_segments_per_length);
         return rectangle_overlaps_bezier(rectangle, link_data);
     }
 
@@ -1029,8 +1026,8 @@ void draw_link(EditorContext& editor, int link_idx)
     const ImVec2 end = get_screen_space_pin_coordinates(editor, link.end_attr);
     const PinData& pin_start = editor.pins.find_or_create_new(link.start_attr);
 
-    const LinkBezierData link_data =
-        get_link_renderable(start, end, pin_start.type);
+    const LinkBezierData link_data = get_link_renderable(
+        start, end, pin_start.type, g.style.link_line_segments_per_length);
 
     const bool is_hovered = is_mouse_hovering_near_link(link_data.bezier);
     if (is_hovered)
@@ -1058,7 +1055,7 @@ void draw_link(EditorContext& editor, int link_idx)
         link_data.bezier.p2,
         link_data.bezier.p3,
         link_color,
-        LINK_THICKNESS,
+        g.style.link_thickness,
         link_data.num_segments);
 }
 
@@ -1358,15 +1355,18 @@ void EndNodeEditor()
                 node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
             const ImVec2 end_pos = imgui_io.MousePos;
 
-            const LinkBezierData link_data =
-                get_link_renderable(start_pos, end_pos, pin.type);
+            const LinkBezierData link_data = get_link_renderable(
+                start_pos,
+                end_pos,
+                pin.type,
+                g.style.link_line_segments_per_length);
             editor.grid_draw_list->AddBezierCurve(
                 link_data.bezier.p0,
                 link_data.bezier.p1,
                 link_data.bezier.p2,
                 link_data.bezier.p3,
                 g.style.colors[ColorStyle_Link],
-                LINK_THICKNESS,
+                g.style.link_thickness,
                 link_data.num_segments);
         }
 
