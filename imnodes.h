@@ -57,6 +57,9 @@ struct Style
     float link_line_segments_per_length = 0.1f;
     float link_hover_distance = 7.0f;
 
+    float pin_radius = 4.0f;
+    float pin_hover_radius = 10.0f;
+
     Flags flags = Flags(Flags_NodeOutline | Flags_GridLines);
     // Set these mid-frame using Push/PopColorStyle. You can index this color
     // array with with a ColorStyle enum value.

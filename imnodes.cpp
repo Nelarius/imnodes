@@ -35,9 +35,6 @@ inline ImVec2 operator*(const ImVec2& lhs, const float rhs)
     return ImVec2(lhs.x * rhs, lhs.y * rhs);
 }
 
-static const float NODE_PIN_RADIUS = 4.f;
-static const float NODE_PIN_HOVER_RADIUS = 10.f;
-
 static const size_t NODE_NAME_STR_LEN = 32u;
 
 static const int INVALID_INDEX = -1;
@@ -931,21 +928,21 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
     const NodeData& node = editor.nodes.pool[pin.node_idx];
     const ImVec2 pin_pos = get_screen_space_pin_coordinates(
         node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
-    if (is_mouse_hovering_near_point(pin_pos, NODE_PIN_HOVER_RADIUS))
+    if (is_mouse_hovering_near_point(pin_pos, g.style.pin_hover_radius))
     {
         g.pin_hovered = pin_idx;
         editor.grid_draw_list->AddCircleFilled(
-            pin_pos, NODE_PIN_RADIUS, pin.color_style.hovered);
+            pin_pos, g.style.pin_radius, pin.color_style.hovered);
     }
     else
     {
         editor.grid_draw_list->AddCircleFilled(
-            pin_pos, NODE_PIN_RADIUS, pin.color_style.background);
+            pin_pos, g.style.pin_radius, pin.color_style.background);
     }
     if ((g.style.flags & Flags_PinOutline) != 0)
     {
         editor.grid_draw_list->AddCircle(
-            pin_pos, NODE_PIN_RADIUS, pin.color_style.outline);
+            pin_pos, g.style.pin_radius, pin.color_style.outline);
     }
 }
 
