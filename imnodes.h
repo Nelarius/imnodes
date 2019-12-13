@@ -36,13 +36,12 @@ enum StyleVar
     StyleVar_NodePaddingVertical
 };
 
-// Flags for controlling how the nodes are rendered.
-enum Flags
+enum StyleFlags
 {
-    Flags_None = 0,
-    Flags_NodeOutline = 1 << 0,
-    Flags_PinOutline = 1 << 1,
-    Flags_GridLines = 1 << 2
+    StyleFlags_None = 0,
+    StyleFlags_NodeOutline = 1 << 0,
+    StyleFlags_PinOutline = 1 << 1,
+    StyleFlags_GridLines = 1 << 2
 };
 
 struct Style
@@ -60,7 +59,8 @@ struct Style
     float pin_radius = 4.0f;
     float pin_hover_radius = 10.0f;
 
-    Flags flags = Flags(Flags_NodeOutline | Flags_GridLines);
+    StyleFlags flags =
+        StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines);
     // Set these mid-frame using Push/PopColorStyle. You can index this color
     // array with with a ColorStyle enum value.
     unsigned int colors[ColorStyle_Count];

@@ -939,7 +939,7 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
         editor.grid_draw_list->AddCircleFilled(
             pin_pos, g.style.pin_radius, pin.color_style.background);
     }
-    if ((g.style.flags & Flags_PinOutline) != 0)
+    if ((g.style.flags & StyleFlags_PinOutline) != 0)
     {
         editor.grid_draw_list->AddCircle(
             pin_pos, g.style.pin_radius, pin.color_style.outline);
@@ -1002,7 +1002,7 @@ void draw_node(EditorContext& editor, int node_idx)
             ImGui::TextUnformatted(node.name);
             ImGui::PopItemWidth();
         }
-        if ((g.style.flags & Flags_NodeOutline) != 0)
+        if ((g.style.flags & StyleFlags_NodeOutline) != 0)
         {
             editor.grid_draw_list->AddRect(
                 node.rect.Min,
@@ -1211,7 +1211,7 @@ void StyleColorsLight()
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(255, 255, 255, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 40);
-    g.style.flags = Flags(Flags_None);
+    g.style.flags = StyleFlags(StyleFlags_None);
 }
 
 void BeginNodeEditor()
@@ -1264,7 +1264,7 @@ void BeginNodeEditor()
                 editor_space_to_screen_space(ImVec2(0.f, 0.f)),
                 editor_space_to_screen_space(canvas_size));
 
-            if (g.style.flags & Flags_GridLines)
+            if (g.style.flags & StyleFlags_GridLines)
             {
                 draw_grid(editor, canvas_size);
             }

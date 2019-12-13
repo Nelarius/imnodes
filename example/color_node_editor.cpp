@@ -1039,7 +1039,7 @@ void NodeEditorInitialize()
         IM_COL32(255, 237, 154, 255);
     style.colors[imnodes::ColorStyle_Pin] = IM_COL32(255, 210, 0, 255);
     style.colors[imnodes::ColorStyle_PinHovered] = IM_COL32(255, 237, 154, 255);
-    style.flags = imnodes::Flags_GridLines;
+    style.flags = imnodes::StyleFlags_GridLines;
 }
 
 void NodeEditorShow() { color_editor.show(); }
