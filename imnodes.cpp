@@ -407,6 +407,9 @@ inline float get_distance_to_cubic_bezier(
         get_closest_point_on_cubic_bezier(iterations, segments, pos, bezier);
     ImVec2 point_on_curve = eval_bezier(t, bezier);
 
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddCircle(point_on_curve, 6.0f, IM_COL32(255, 0, 0, 255));
+
     const ImVec2 to_curve = point_on_curve - pos;
     return ImSqrt(ImLengthSqr(to_curve));
 }
@@ -449,6 +452,10 @@ inline bool is_mouse_hovering_near_link(const BezierCurve& bezier)
     float xmax = ImMax(bezier.p0.x, bezier.p3.x);
     float ymin = ImMin(bezier.p0.y, bezier.p3.y);
     float ymax = ImMax(bezier.p0.y, bezier.p3.y);
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddRect(
+        ImVec2(xmin, ymin), ImVec2(xmax, ymax), IM_COL32(255, 0, 0, 255));
 
     if ((mouse_pos.x > xmin && mouse_pos.x < xmax) &&
         (mouse_pos.y > ymin && mouse_pos.y < ymax))
