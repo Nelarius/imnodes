@@ -405,10 +405,24 @@ inline float get_distance_to_cubic_bezier(
 
     const float t =
         get_closest_point_on_cubic_bezier(iterations, segments, pos, bezier);
-    ImVec2 point_on_curve = eval_bezier(t, bezier);
+    const ImVec2 point_on_curve = eval_bezier(t, bezier);
 
     const ImVec2 to_curve = point_on_curve - pos;
     return ImSqrt(ImLengthSqr(to_curve));
+}
+
+inline ImRect get_containing_rect_for_bezier_curve(const BezierCurve& bezier)
+{
+    const ImVec2 min = ImVec2(
+        ImMin(bezier.p0.x, bezier.p3.x), ImMin(bezier.p0.y, bezier.p3.y));
+    const ImVec2 max = ImVec2(
+        ImMax(bezier.p0.x, bezier.p3.x), ImMax(bezier.p0.y, bezier.p3.y));
+
+    ImRect rect(min, max);
+    rect.Add(bezier.p1);
+    rect.Add(bezier.p2);
+
+    return rect;
 }
 
 inline LinkBezierData get_link_renderable(
@@ -440,27 +454,22 @@ inline LinkBezierData get_link_renderable(
 
 inline bool is_mouse_hovering_near_link(const BezierCurve& bezier)
 {
-    bool near = false;
     const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
 
-    // First, do an AABB test to see whether it the distance
-    // to the line is worth checking in greater detail
-    float xmin = ImMin(bezier.p0.x, bezier.p3.x);
-    float xmax = ImMax(bezier.p0.x, bezier.p3.x);
-    float ymin = ImMin(bezier.p0.y, bezier.p3.y);
-    float ymax = ImMax(bezier.p0.y, bezier.p3.y);
+    // First, do a simple bounding box test against the box containing the link
+    // to see whether calculating the distance to the link is worth doing.
+    const ImRect link_rect = get_containing_rect_for_bezier_curve(bezier);
 
-    if ((mouse_pos.x > xmin && mouse_pos.x < xmax) &&
-        (mouse_pos.y > ymin && mouse_pos.y < ymax))
+    if (link_rect.Contains(mouse_pos))
     {
         const float distance = get_distance_to_cubic_bezier(mouse_pos, bezier);
         if (distance < g.style.link_hover_distance)
         {
-            near = true;
+            return true;
         }
     }
 
-    return near;
+    return false;
 }
 
 inline float eval_implicit_line_eq(
