@@ -1675,7 +1675,8 @@ bool IsNodeHovered(int* const node_id)
     const bool is_hovered = g.node_hovered != INVALID_INDEX;
     if (is_hovered)
     {
-        *node_id = g.node_hovered;
+        const EditorContext& editor = editor_context_get();
+        *node_id = editor.nodes.pool[g.node_hovered].id;
         return true;
     }
     return false;
