@@ -370,9 +370,6 @@ inline float get_closest_point_on_cubic_bezier(
         const float dt = (tend - tstart) / num_segments;
         for (int s = 0; s < num_segments; ++s)
         {
-            // TODO: this shouldn't evaluate the distance to the mid point, but
-            // rather the distance to the line segment! This might explain the
-            // occasional inaccuracies in selecting links.
             const float tmid = tstart + dt * (float(s) + 0.5f);
             const ImVec2 bt = eval_bezier(tmid, bezier);
             const ImVec2 dv = bt - pos;
@@ -1675,7 +1672,8 @@ bool IsNodeHovered(int* const node_id)
     const bool is_hovered = g.node_hovered != INVALID_INDEX;
     if (is_hovered)
     {
-        *node_id = g.node_hovered;
+        const EditorContext& editor = editor_context_get();
+        *node_id = editor.nodes.pool[g.node_hovered].id;
         return true;
     }
     return false;
