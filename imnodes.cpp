@@ -683,7 +683,7 @@ bool box_selector_active(const BoxSelector& box_selector)
     return box_selector.state != BoxSelectorState_None;
 }
 
-void box_selector_on_complete(
+void box_selector_process(
     const BoxSelector& box_selector,
     EditorContext& editor)
 {
@@ -701,6 +701,9 @@ void box_selector_on_complete(
         ImSwap(box_rect.Min.y, box_rect.Max.y);
     }
 
+    // Clearing selected nodes list
+    editor.selected_nodes.clear();
+
     // Test for overlap against node rectangles
 
     for (int i = 0; i < editor.nodes.pool.size(); i++)
@@ -714,6 +717,9 @@ void box_selector_on_complete(
             }
         }
     }
+
+    // Clearing selected links list
+    editor.selected_links.clear();
 
     // Test for overlap against links
 
@@ -765,10 +771,11 @@ void box_selector_update(
                 box_selector.box_rect.Max,
                 box_selector_outline);
 
+            box_selector_process(box_selector, editor_ctx);
+
             if (ImGui::IsMouseReleased(0))
             {
                 box_selector.state = BoxSelectorState_None;
-                box_selector_on_complete(box_selector, editor_ctx);
             }
         }
         break;
