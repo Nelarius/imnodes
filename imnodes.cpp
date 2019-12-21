@@ -1204,26 +1204,26 @@ void StyleColorsLight()
 {
     g.style.colors[ColorStyle_NodeBackground] = IM_COL32(240, 240, 240, 255);
     g.style.colors[ColorStyle_NodeBackgroundHovered] =
-        IM_COL32(200, 200, 200, 255);
+        IM_COL32(240, 240, 240, 255);
     g.style.colors[ColorStyle_NodeBackgroundSelected] =
-        IM_COL32(200, 200, 200, 255);
+        IM_COL32(240, 240, 240, 255);
     g.style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
-    g.style.colors[ColorStyle_TitleBar] = IM_COL32(244, 244, 244, 255);
+    g.style.colors[ColorStyle_TitleBar] = IM_COL32(248, 248, 248, 255);
     g.style.colors[ColorStyle_TitleBarHovered] = IM_COL32(209, 209, 209, 255);
     g.style.colors[ColorStyle_TitleBarSelected] = IM_COL32(209, 209, 209, 255);
     // original imgui values: 66, 150, 250
-    g.style.colors[ColorStyle_Link] = IM_COL32(90, 170, 250, 255);
+    g.style.colors[ColorStyle_Link] = IM_COL32(66, 150, 250, 100);
     // original imgui values: 117, 138, 204
-    g.style.colors[ColorStyle_LinkHovered] = IM_COL32(130, 150, 210, 255);
-    g.style.colors[ColorStyle_LinkSelected] = IM_COL32(130, 150, 210, 255);
+    g.style.colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 242);
+    g.style.colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 242);
     // original imgui values: 66, 150, 250
-    g.style.colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 180);
+    g.style.colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 160);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_PinOutline] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_BoxSelector] = IM_COL32(90, 170, 250, 30);
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
-    g.style.colors[ColorStyle_GridBackground] = IM_COL32(255, 255, 255, 200);
-    g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 40);
+    g.style.colors[ColorStyle_GridBackground] = IM_COL32(225, 225, 225, 255);
+    g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 100);
     g.style.flags = StyleFlags(StyleFlags_None);
 }
 
