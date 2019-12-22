@@ -1833,14 +1833,14 @@ void editor_line_handler(EditorContext& editor, const char* line)
 }
 } // namespace
 
-const char* SaveCurrentEditorStateToMemory(size_t* data_size)
+const char* SaveCurrentEditorStateToIniString(size_t* const data_size)
 {
-    return SaveEditorStateToMemory(&editor_context_get());
+    return SaveEditorStateToIniString(&editor_context_get());
 }
 
-const char* SaveEditorStateToMemory(
-    const EditorContext* editor_ptr,
-    size_t* data_size)
+const char* SaveEditorStateToIniString(
+    const EditorContext* const editor_ptr,
+    size_t* const data_size)
 {
     assert(editor_ptr != NULL);
     const EditorContext& editor = *editor_ptr;
@@ -1873,15 +1873,17 @@ const char* SaveEditorStateToMemory(
     return g.text_buffer.c_str();
 }
 
-void LoadCurrentEditorStateFromMemory(const char* data, size_t data_size)
+void LoadCurrentEditorStateFromIniString(
+    const char* const data,
+    const size_t data_size)
 {
-    LoadEditorStateFromMemory(&editor_context_get(), data, data_size);
+    LoadEditorStateFromIniString(&editor_context_get(), data, data_size);
 }
 
-void LoadEditorStateFromMemory(
-    EditorContext* editor_ptr,
-    const char* data,
-    size_t data_size)
+void LoadEditorStateFromIniString(
+    EditorContext* const editor_ptr,
+    const char* const data,
+    const size_t data_size)
 {
     if (data_size == 0u)
     {
@@ -1938,15 +1940,17 @@ void LoadEditorStateFromMemory(
     ImGui::MemFree(buf);
 }
 
-void SaveCurrentEditorStateToDisk(const char* file_name)
+void SaveCurrentEditorStateToIniFile(const char* const file_name)
 {
-    SaveEditorStateToDisk(&editor_context_get(), file_name);
+    SaveEditorStateToIniFile(&editor_context_get(), file_name);
 }
 
-void SaveEditorStateToDisk(const EditorContext* editor, const char* file_name)
+void SaveEditorStateToIniFile(
+    const EditorContext* const editor,
+    const char* const file_name)
 {
     size_t data_size = 0u;
-    const char* data = SaveEditorStateToMemory(editor, &data_size);
+    const char* data = SaveEditorStateToIniString(editor, &data_size);
     FILE* file = ImFileOpen(file_name, "wt");
     if (!file)
     {
@@ -1957,12 +1961,14 @@ void SaveEditorStateToDisk(const EditorContext* editor, const char* file_name)
     fclose(file);
 }
 
-void LoadCurrentEditorStateFromDisk(const char* file_name)
+void LoadCurrentEditorStateFromIniFile(const char* const file_name)
 {
-    LoadEditorStateFromDisk(&editor_context_get(), file_name);
+    LoadEditorStateFromIniFile(&editor_context_get(), file_name);
 }
 
-void LoadEditorStateFromDisk(EditorContext* editor, const char* file_name)
+void LoadEditorStateFromIniFile(
+    EditorContext* const editor,
+    const char* const file_name)
 {
     size_t data_size = 0u;
     char* file_data = (char*)ImFileLoadToMemory(file_name, "rb", &data_size);
@@ -1972,7 +1978,7 @@ void LoadEditorStateFromDisk(EditorContext* editor, const char* file_name)
         return;
     }
 
-    LoadEditorStateFromMemory(editor, file_data, data_size);
+    LoadEditorStateFromIniString(editor, file_data, data_size);
     ImGui::MemFree(file_data);
 }
 } // namespace imnodes

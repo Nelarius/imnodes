@@ -168,21 +168,22 @@ bool IsLinkCreated(int* started_at_attr, int* ended_at_attr);
 // or directly to a file. The editor context is serialized in the INI file
 // format.
 
-const char* SaveCurrentEditorStateToMemory(size_t* data_size = NULL);
-const char* SaveEditorStateToMemory(
+const char* SaveCurrentEditorStateToIniString(size_t* data_size = NULL);
+const char* SaveEditorStateToIniString(
     const EditorContext* editor,
     size_t* data_size = NULL);
 
-void LoadCurrentEditorStateFromMemory(const char* data, size_t data_size);
-void LoadEditorStateFromMemory(
+void LoadCurrentEditorStateFromIniString(const char* data, size_t data_size);
+void LoadEditorStateFromIniString(
     EditorContext* editor,
     const char* data,
     size_t data_size);
 
-void SaveCurrentEditorStateToDisk(const char* file_name);
-void SaveEditorStateToDisk(const EditorContext* editor, const char* file_name);
+void SaveCurrentEditorStateToIniFile(const char* file_name);
+void SaveEditorStateToIniFile(
+    const EditorContext* editor,
+    const char* file_name);
 
-void LoadCurrentEditorStateFromDisk(const char* file_name);
-void LoadEditorStateFromDisk(EditorContext* editor, const char* file_name);
-
+void LoadCurrentEditorStateFromIniFile(const char* file_name);
+void LoadEditorStateFromIniFile(EditorContext* editor, const char* file_name);
 } // namespace imnodes
