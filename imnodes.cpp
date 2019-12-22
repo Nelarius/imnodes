@@ -1835,7 +1835,7 @@ void editor_line_handler(EditorContext& editor, const char* line)
 
 const char* SaveCurrentEditorStateToIniString(size_t* const data_size)
 {
-    return SaveEditorStateToIniString(&editor_context_get());
+    return SaveEditorStateToIniString(&editor_context_get(), data_size);
 }
 
 const char* SaveEditorStateToIniString(
