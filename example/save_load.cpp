@@ -214,7 +214,7 @@ public:
             fout.close();
         }
 
-        imnodes::SaveCurrentEditorStateToDisk("imnodes.ini");
+        imnodes::SaveCurrentEditorStateToIniFile("imnodes.ini");
     }
 
     void load()
@@ -279,7 +279,7 @@ public:
             }
         }
 
-        imnodes::LoadCurrentEditorStateFromDisk("imnodes.ini");
+        imnodes::LoadCurrentEditorStateFromIniFile("imnodes.ini");
     }
 
 private:
