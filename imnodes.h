@@ -12,7 +12,7 @@ enum ColorStyle
     ColorStyle_NodeBackgroundHovered,
     ColorStyle_NodeBackgroundSelected,
     ColorStyle_NodeOutline,
-    ColorStyle_TitleBar,f
+    ColorStyle_TitleBar,
     ColorStyle_TitleBarHovered,
     ColorStyle_TitleBarSelected,
     ColorStyle_Link,
