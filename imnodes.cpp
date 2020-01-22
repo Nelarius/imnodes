@@ -157,7 +157,6 @@ struct NodeData
     ImVec2 origin;
     ImVec2 title_text_size;
     ImRect rect;
-    bool draggable;
 
     struct
     {
@@ -172,6 +171,7 @@ struct NodeData
     } layout_style;
 
     ImVector<ImRect> attribute_rects;
+    bool draggable;
 
     NodeData()
         : id(0u),
@@ -179,9 +179,7 @@ struct NodeData
               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
           origin(100.0f, 100.0f), title_text_size(0.f, 0.f),
           rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
-          attribute_rects(),
-          draggable(true),
-          layout_style()
+          layout_style(), attribute_rects(), draggable(true)
     {
     }
 };
