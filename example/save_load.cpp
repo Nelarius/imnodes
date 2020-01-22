@@ -149,7 +149,7 @@ public:
 
             if (new_node != -1)
             {
-                imnodes::SetNodePos(new_node, click_pos);
+                imnodes::SetNodeScreenSpacePos(new_node, click_pos);
             }
         }
 
