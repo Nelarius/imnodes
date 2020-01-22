@@ -46,7 +46,7 @@ void NodeEditorInitialize()
     // retained between calls to BeginNode/EndNode, so there is no need to call
     // these every frame.
     imnodes::SetNodeName(1, "simple node");
-    imnodes::SetNodePos(1, ImVec2(300.0f, 300.0f));
+    imnodes::SetNodeGridSpacePos(1, ImVec2(200.0f, 200.0f));
 }
 
 void NodeEditorShow() { editor.show(); }

@@ -701,7 +701,7 @@ public:
                 graph_.add_edge(node.out, node.green);
                 graph_.add_edge(node.out, node.blue);
 
-                imnodes::SetNodePos(node.out, click_pos);
+                imnodes::SetNodeScreenSpacePos(node.out, click_pos);
                 imnodes::SetNodeName(node.out, "output");
             }
 
@@ -713,7 +713,7 @@ public:
                 const size_t node = graph_.add_node(op);
                 time_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node, click_pos);
+                imnodes::SetNodeScreenSpacePos(node, click_pos);
                 imnodes::SetNodeName(node, "time");
             }
 
@@ -732,7 +732,7 @@ public:
 
                 sine_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node.op, click_pos);
+                imnodes::SetNodeScreenSpacePos(node.op, click_pos);
                 imnodes::SetNodeName(node.op, "sine");
             }
 
@@ -753,7 +753,7 @@ public:
 
                 mul_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node.op, click_pos);
+                imnodes::SetNodeScreenSpacePos(node.op, click_pos);
                 imnodes::SetNodeName(node.op, "multiply");
             }
 
@@ -774,7 +774,7 @@ public:
 
                 add_nodes_.push_back(node);
 
-                imnodes::SetNodePos(node.op, click_pos);
+                imnodes::SetNodeScreenSpacePos(node.op, click_pos);
                 imnodes::SetNodeName(node.op, "add");
             }
             ImGui::EndPopup();
