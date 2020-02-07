@@ -659,8 +659,9 @@ ImVec2 get_screen_space_pin_coordinates(
     const AttributeType type)
 {
     assert(type == AttributeType_Input || type == AttributeType_Output);
-    const float x =
-        type == AttributeType_Input ? (node_rect.Min.x - g.style.pin_offset) : (node_rect.Max.x + g.style.pin_offset);
+    const float x = type == AttributeType_Input
+                        ? (node_rect.Min.x - g.style.pin_offset)
+                        : (node_rect.Max.x + g.style.pin_offset);
     return ImVec2(x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
 }
 
@@ -763,34 +764,34 @@ void box_selector_update(
         g.style.colors[ColorStyle_BoxSelectorOutline];
     switch (box_selector.state)
     {
-        case BoxSelectorState_Started:
-            box_selector.box_rect.Min = io.MousePos;
-            box_selector.state = BoxSelectorState_Dragging;
-            // fallthrough to next case to get the rest of the state &
-            // render
-        case BoxSelectorState_Dragging:
+    case BoxSelectorState_Started:
+        box_selector.box_rect.Min = io.MousePos;
+        box_selector.state = BoxSelectorState_Dragging;
+        // fallthrough to next case to get the rest of the state &
+        // render
+    case BoxSelectorState_Dragging:
+    {
+        box_selector.box_rect.Max = io.MousePos;
+        editor_ctx.grid_draw_list->AddRectFilled(
+            box_selector.box_rect.Min,
+            box_selector.box_rect.Max,
+            box_selector_color);
+        editor_ctx.grid_draw_list->AddRect(
+            box_selector.box_rect.Min,
+            box_selector.box_rect.Max,
+            box_selector_outline);
+
+        box_selector_process(box_selector, editor_ctx);
+
+        if (ImGui::IsMouseReleased(0))
         {
-            box_selector.box_rect.Max = io.MousePos;
-            editor_ctx.grid_draw_list->AddRectFilled(
-                box_selector.box_rect.Min,
-                box_selector.box_rect.Max,
-                box_selector_color);
-            editor_ctx.grid_draw_list->AddRect(
-                box_selector.box_rect.Min,
-                box_selector.box_rect.Max,
-                box_selector_outline);
-
-            box_selector_process(box_selector, editor_ctx);
-
-            if (ImGui::IsMouseReleased(0))
-            {
-                box_selector.state = BoxSelectorState_None;
-            }
+            box_selector.state = BoxSelectorState_None;
         }
+    }
+    break;
+    default:
+        assert(!"Unreachable code!");
         break;
-        default:
-            assert(!"Unreachable code!");
-            break;
     }
 }
 
@@ -816,34 +817,34 @@ void node_interaction_update(EditorContext& editor)
     NodeInteraction& node_interaction = editor.node_interaction;
     switch (node_interaction.state)
     {
-        case NodeInteractionState_MouseDown:
+    case NodeInteractionState_MouseDown:
+    {
+        assert(node_interaction.node_idx != INVALID_INDEX);
+        if (ImGui::IsMouseDragging(0) &&
+            editor.link_dragged.start_attr == INVALID_INDEX)
         {
-            assert(node_interaction.node_idx != INVALID_INDEX);
-            if (ImGui::IsMouseDragging(0) &&
-                editor.link_dragged.start_attr == INVALID_INDEX)
+            for (int i = 0; i < editor.selected_nodes.size(); ++i)
             {
-                for (int i = 0; i < editor.selected_nodes.size(); ++i)
+                const int idx = editor.selected_nodes[i];
+                NodeData& node = editor.nodes.pool[idx];
+                if (node.draggable)
                 {
-                    const int idx = editor.selected_nodes[i];
-                    NodeData& node = editor.nodes.pool[idx];
-                    if (node.draggable)
-                    {
-                        node.origin += ImGui::GetIO().MouseDelta;
-                    }
+                    node.origin += ImGui::GetIO().MouseDelta;
                 }
             }
-
-            if (ImGui::IsMouseReleased(0))
-            {
-                node_interaction.state = NodeInteractionState_None;
-            }
         }
+
+        if (ImGui::IsMouseReleased(0))
+        {
+            node_interaction.state = NodeInteractionState_None;
+        }
+    }
+    break;
+    case NodeInteractionState_None:
         break;
-        case NodeInteractionState_None:
-            break;
-        default:
-            assert(!"Unreachable code!");
-            break;
+    default:
+        assert(!"Unreachable code!");
+        break;
     }
 }
 
@@ -947,7 +948,7 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
     }
 }
 
-bool IsAttributeLinked(int id)
+bool is_attribute_linked(int id)
 {
     EditorContext& editor = editor_context_get();
     for (int i = 0; i < editor.links.pool.size(); ++i)
@@ -965,13 +966,17 @@ bool IsAttributeLinked(int id)
     return false;
 }
 
-void draw_pin_shape(const EditorContext& editor, const ImVec2 pin_pos, const PinData& pin, ImU32 pin_color)
+void draw_pin_shape(
+    const EditorContext& editor,
+    const ImVec2 pin_pos,
+    const PinData& pin,
+    ImU32 pin_color)
 {
     switch (pin.shape)
     {
     case PinShape::PinShape_Circle:
     {
-        if (IsAttributeLinked(pin.id))
+        if (is_attribute_linked(pin.id))
         {
             editor.grid_draw_list->AddCircleFilled(
                 pin_pos, g.style.pin_radius, pin_color);
@@ -985,7 +990,7 @@ void draw_pin_shape(const EditorContext& editor, const ImVec2 pin_pos, const Pin
     break;
     case PinShape::PinShape_Quad:
     {
-        if (IsAttributeLinked(pin.id))
+        if (is_attribute_linked(pin.id))
         {
             editor.grid_draw_list->AddQuadFilled(
                 pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
@@ -1003,12 +1008,11 @@ void draw_pin_shape(const EditorContext& editor, const ImVec2 pin_pos, const Pin
                 pin_pos + ImVec2(g.style.pin_radius, -g.style.pin_radius),
                 pin_color);
         }
-
     }
     break;
     case PinShape::PinShape_Triangle:
     {
-        if (IsAttributeLinked(pin.id))
+        if (is_attribute_linked(pin.id))
         {
             editor.grid_draw_list->AddTriangleFilled(
                 pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
@@ -1028,7 +1032,7 @@ void draw_pin_shape(const EditorContext& editor, const ImVec2 pin_pos, const Pin
     break;
     default:
     {
-        if (IsAttributeLinked(pin.id))
+        if (is_attribute_linked(pin.id))
         {
             editor.grid_draw_list->AddCircleFilled(
                 pin_pos, g.style.pin_radius, pin_color);
@@ -1672,9 +1676,15 @@ void EndNode()
     g.node_current.index = INVALID_INDEX;
 }
 
-void BeginInputAttribute(int id, PinShape shape) { begin_attribute(id, AttributeType_Input, shape); }
+void BeginInputAttribute(int id, PinShape shape)
+{
+    begin_attribute(id, AttributeType_Input, shape);
+}
 
-void BeginOutputAttribute(int id, PinShape shape) { begin_attribute(id, AttributeType_Output, shape); }
+void BeginOutputAttribute(int id, PinShape shape)
+{
+    begin_attribute(id, AttributeType_Output, shape);
+}
 
 void EndAttribute()
 {
@@ -1734,20 +1744,20 @@ float& lookup_style_var(const StyleVar item)
     float* style_var = 0;
     switch (item)
     {
-        case StyleVar_GridSpacing:
-            style_var = &g.style.grid_spacing;
-            break;
-        case StyleVar_NodeCornerRounding:
-            style_var = &g.style.node_corner_rounding;
-            break;
-        case StyleVar_NodePaddingHorizontal:
-            style_var = &g.style.node_padding_horizontal;
-            break;
-        case StyleVar_NodePaddingVertical:
-            style_var = &g.style.node_padding_vertical;
-            break;
-        default:
-            assert(!"Invalid StyleVar value!");
+    case StyleVar_GridSpacing:
+        style_var = &g.style.grid_spacing;
+        break;
+    case StyleVar_NodeCornerRounding:
+        style_var = &g.style.node_corner_rounding;
+        break;
+    case StyleVar_NodePaddingHorizontal:
+        style_var = &g.style.node_padding_horizontal;
+        break;
+    case StyleVar_NodePaddingVertical:
+        style_var = &g.style.node_padding_vertical;
+        break;
+    default:
+        assert(!"Invalid StyleVar value!");
     }
 
     return *style_var;

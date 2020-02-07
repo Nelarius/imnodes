@@ -23,7 +23,7 @@ BreakBeforeBraces: Custom
 ColumnLimit: 80
 Cpp11BracedListStyle: 'true'
 DerivePointerAlignment: 'false'
-IndentCaseLabels: 'true'
+IndentCaseLabels: 'false'
 IndentWidth: 4
 PenaltyExcessCharacter: 100000000
 PenaltyReturnTypeOnItsOwnLine: 100000000
