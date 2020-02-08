@@ -989,7 +989,7 @@ void draw_pin_shape(
     }
     break;
     default:
-        assert("Unreacable code!");
+        assert(!"Invalid PinShape value!");
         break;
     }
 }
