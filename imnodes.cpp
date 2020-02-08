@@ -337,6 +337,8 @@ struct
     int pin_hovered;
     bool link_dropped;
 
+    ImDrawList* canvas_draw_list;
+
     ImGuiTextBuffer text_buffer;
 } g;
 
@@ -639,7 +641,6 @@ struct EditorContext
 
     // ui related fields
     ImVec2 panning;
-    ImDrawList* grid_draw_list;
 
     ImVector<int> selected_nodes;
     ImVector<int> selected_links;
@@ -649,8 +650,8 @@ struct EditorContext
     NodeInteraction node_interaction;
 
     EditorContext()
-        : nodes(), pins(), links(), panning(0.f, 0.f), grid_draw_list(nullptr),
-          link_dragged(), box_selector()
+        : nodes(), pins(), links(), panning(0.f, 0.f), link_dragged(),
+          box_selector()
     {
     }
 };
@@ -778,11 +779,11 @@ void box_selector_update(
     case BoxSelectorState_Dragging:
     {
         box_selector.box_rect.Max = io.MousePos;
-        editor_ctx.grid_draw_list->AddRectFilled(
+        g.canvas_draw_list->AddRectFilled(
             box_selector.box_rect.Min,
             box_selector.box_rect.Max,
             box_selector_color);
-        editor_ctx.grid_draw_list->AddRect(
+        g.canvas_draw_list->AddRect(
             box_selector.box_rect.Min,
             box_selector.box_rect.Max,
             box_selector_outline);
@@ -938,7 +939,7 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
     for (float x = fmodf(offset.x, g.style.grid_spacing); x < canvas_size.x;
          x += g.style.grid_spacing)
     {
-        editor.grid_draw_list->AddLine(
+        g.canvas_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(x, 0.0f)),
             editor_space_to_screen_space(ImVec2(x, canvas_size.y)),
             g.style.colors[ColorStyle_GridLine]);
@@ -947,7 +948,7 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
     for (float y = fmodf(offset.y, g.style.grid_spacing); y < canvas_size.y;
          y += g.style.grid_spacing)
     {
-        editor.grid_draw_list->AddLine(
+        g.canvas_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(0.0f, y)),
             editor_space_to_screen_space(ImVec2(canvas_size.x, y)),
             g.style.colors[ColorStyle_GridLine]);
@@ -964,13 +965,13 @@ void draw_pin_shape(
     {
     case PinShape::PinShape_Circle:
     {
-        editor.grid_draw_list->AddCircleFilled(
+        g.canvas_draw_list->AddCircleFilled(
             pin_pos, g.style.pin_radius, pin_color);
     }
     break;
     case PinShape::PinShape_Quad:
     {
-        editor.grid_draw_list->AddQuadFilled(
+        g.canvas_draw_list->AddQuadFilled(
             pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
             pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
             pin_pos + ImVec2(g.style.pin_radius, g.style.pin_radius),
@@ -980,7 +981,7 @@ void draw_pin_shape(
     break;
     case PinShape::PinShape_Triangle:
     {
-        editor.grid_draw_list->AddTriangleFilled(
+        g.canvas_draw_list->AddTriangleFilled(
             pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
             pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
             pin_pos + ImVec2(g.style.pin_radius, 0),
@@ -1011,7 +1012,7 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
 
     if ((g.style.flags & StyleFlags_PinOutline) != 0)
     {
-        editor.grid_draw_list->AddCircle(
+        g.canvas_draw_list->AddCircle(
             pin_pos, g.style.pin_radius, pin.color_style.outline);
     }
 }
@@ -1048,7 +1049,7 @@ void draw_node(EditorContext& editor, int node_idx)
 
     {
         // node base
-        editor.grid_draw_list->AddRectFilled(
+        g.canvas_draw_list->AddRectFilled(
             node.rect.Min,
             node.rect.Max,
             node_background,
@@ -1057,7 +1058,7 @@ void draw_node(EditorContext& editor, int node_idx)
         // title bar:
         {
             ImRect title_rect = get_screen_space_title_bar_rect(node);
-            editor.grid_draw_list->AddRectFilled(
+            g.canvas_draw_list->AddRectFilled(
                 title_rect.Min,
                 title_rect.Max,
                 titlebar_background,
@@ -1071,7 +1072,7 @@ void draw_node(EditorContext& editor, int node_idx)
         }
         if ((g.style.flags & StyleFlags_NodeOutline) != 0)
         {
-            editor.grid_draw_list->AddRect(
+            g.canvas_draw_list->AddRect(
                 node.rect.Min,
                 node.rect.Max,
                 node.color_style.outline,
@@ -1116,7 +1117,7 @@ void draw_link(EditorContext& editor, int link_idx)
         link_color = link.color_style.hovered;
     }
 
-    editor.grid_draw_list->AddBezierCurve(
+    g.canvas_draw_list->AddBezierCurve(
         link_data.bezier.p0,
         link_data.bezier.p1,
         link_data.bezier.p2,
@@ -1322,8 +1323,6 @@ void BeginNodeEditor()
     editor.pins.update();
     editor.links.update();
 
-    assert(editor.grid_draw_list == nullptr);
-
     ImGui::BeginGroup();
     {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
@@ -1337,12 +1336,10 @@ void BeginNodeEditor()
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
         g.canvas_origin_screen_space = ImGui::GetCursorScreenPos();
 
-        // TODO: I don't think this needs to be a part of the editor state
-        //
         // NOTE: we have to fetch the canvas draw list *after* we call
         // BeginChild(), otherwise the ImGui UI elements are going to be
         // rendered into the parent window draw list.
-        editor.grid_draw_list = ImGui::GetWindowDrawList();
+        g.canvas_draw_list = ImGui::GetWindowDrawList();
 
         // prepare for layering the node content on top of the nodes
         // NOTE: the draw list has to be captured here, because we want all the
@@ -1424,7 +1421,7 @@ void EndNodeEditor()
                 end_pos,
                 pin.type,
                 g.style.link_line_segments_per_length);
-            editor.grid_draw_list->AddBezierCurve(
+            g.canvas_draw_list->AddBezierCurve(
                 link_data.bezier.p0,
                 link_data.bezier.p1,
                 link_data.bezier.p2,
@@ -1522,9 +1519,6 @@ void EndNodeEditor()
 
     node_interaction_update(editor);
 
-    // TODO: do we really need this here?
-    editor.grid_draw_list = nullptr;
-
     // apply panning if the mouse was dragged
     if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() &&
         (ImGui::IsMouseDragging(2, 0) || ImGui::IsMouseDragging(1, 0)))
@@ -1585,8 +1579,8 @@ void BeginNode(const int node_id)
     ImGui::SetCursorPos(
         grid_space_to_editor_space(get_node_content_origin(node)));
 
-    editor.grid_draw_list->ChannelsSplit(Channels_Count);
-    editor.grid_draw_list->ChannelsSetCurrent(Channels_ImGui);
+    g.canvas_draw_list->ChannelsSplit(Channels_Count);
+    g.canvas_draw_list->ChannelsSetCurrent(Channels_ImGui);
 
     ImGui::PushID(node_id);
     ImGui::BeginGroup();
@@ -1607,9 +1601,9 @@ void EndNode()
         node.rect = get_screen_space_node_rect(node, get_item_rect());
     }
 
-    editor.grid_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
+    g.canvas_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
     draw_node(editor, g.node_current.index);
-    editor.grid_draw_list->ChannelsMerge();
+    g.canvas_draw_list->ChannelsMerge();
 
     g.node_current.index = INVALID_INDEX;
 }
