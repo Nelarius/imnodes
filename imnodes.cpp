@@ -170,6 +170,7 @@ struct NodeData
     } layout_style;
 
     ImVector<ImRect> attribute_rects;
+    ImVector<int> pin_indices;
     bool draggable;
 
     NodeData()
@@ -178,7 +179,7 @@ struct NodeData
               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"),
           origin(100.0f, 100.0f), title_text_size(0.f, 0.f),
           rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
-          layout_style(), attribute_rects(), draggable(true)
+          layout_style(), attribute_rects(), pin_indices(), draggable(true)
     {
     }
 };
@@ -318,6 +319,12 @@ struct
             int index;
         } attribute;
     } node_current;
+
+    struct
+    {
+        int id;
+        int index;
+    } pin_current;
 
     struct
     {
@@ -668,7 +675,7 @@ ImVec2 get_screen_space_pin_coordinates(
     const EditorContext& editor,
     const int pin_id)
 {
-    const int pin_idx = editor.pins.id_map.GetInt(pin_id);
+    const int pin_idx = editor.pins.id_map.GetInt(pin_id, INVALID_INDEX);
     assert(pin_idx != INVALID_INDEX);
     const PinData& pin = editor.pins.pool[pin_idx];
     const NodeData& node = editor.nodes.pool[pin.node_idx];
@@ -947,24 +954,6 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
     }
 }
 
-bool is_attribute_linked(int id)
-{
-    EditorContext& editor = editor_context_get();
-    for (int i = 0; i < editor.links.pool.size(); ++i)
-    {
-        if (editor.links.in_use[i])
-        {
-            LinkData& link = editor.links.pool[i];
-            if (link.start_attr == id || link.end_attr == id)
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
 void draw_pin_shape(
     const EditorContext& editor,
     const ImVec2 pin_pos,
@@ -975,74 +964,32 @@ void draw_pin_shape(
     {
     case PinShape::PinShape_Circle:
     {
-        if (is_attribute_linked(pin.id))
-        {
-            editor.grid_draw_list->AddCircleFilled(
-                pin_pos, g.style.pin_radius, pin_color);
-        }
-        else
-        {
-            editor.grid_draw_list->AddCircle(
-                pin_pos, g.style.pin_radius, pin_color);
-        }
+        editor.grid_draw_list->AddCircleFilled(
+            pin_pos, g.style.pin_radius, pin_color);
     }
     break;
     case PinShape::PinShape_Quad:
     {
-        if (is_attribute_linked(pin.id))
-        {
-            editor.grid_draw_list->AddQuadFilled(
-                pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-                pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-                pin_pos + ImVec2(g.style.pin_radius, g.style.pin_radius),
-                pin_pos + ImVec2(g.style.pin_radius, -g.style.pin_radius),
-                pin_color);
-        }
-        else
-        {
-            editor.grid_draw_list->AddQuad(
-                pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-                pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-                pin_pos + ImVec2(g.style.pin_radius, g.style.pin_radius),
-                pin_pos + ImVec2(g.style.pin_radius, -g.style.pin_radius),
-                pin_color);
-        }
+        editor.grid_draw_list->AddQuadFilled(
+            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
+            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
+            pin_pos + ImVec2(g.style.pin_radius, g.style.pin_radius),
+            pin_pos + ImVec2(g.style.pin_radius, -g.style.pin_radius),
+            pin_color);
     }
     break;
     case PinShape::PinShape_Triangle:
     {
-        if (is_attribute_linked(pin.id))
-        {
-            editor.grid_draw_list->AddTriangleFilled(
-                pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-                pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-                pin_pos + ImVec2(g.style.pin_radius, 0),
-                pin_color);
-        }
-        else
-        {
-            editor.grid_draw_list->AddTriangle(
-                pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-                pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-                pin_pos + ImVec2(g.style.pin_radius, 0),
-                pin_color);
-        }
+        editor.grid_draw_list->AddTriangleFilled(
+            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
+            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
+            pin_pos + ImVec2(g.style.pin_radius, 0),
+            pin_color);
     }
     break;
     default:
-    {
-        if (is_attribute_linked(pin.id))
-        {
-            editor.grid_draw_list->AddCircleFilled(
-                pin_pos, g.style.pin_radius, pin_color);
-        }
-        else
-        {
-            editor.grid_draw_list->AddCircle(
-                pin_pos, g.style.pin_radius, pin_color);
-        }
-    }
-    break;
+        assert("Unreacable code!");
+        break;
     }
 }
 
@@ -1072,9 +1019,6 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
 void draw_node(EditorContext& editor, int node_idx)
 {
     const NodeData& node = editor.nodes.pool[node_idx];
-    ImGui::PushID(node.id);
-
-    editor.grid_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
 
     ImGui::SetCursorPos(node.origin + editor.panning);
     ImGui::InvisibleButton(node.name, node.rect.GetSize());
@@ -1135,7 +1079,10 @@ void draw_node(EditorContext& editor, int node_idx)
         }
     }
 
-    ImGui::PopID();
+    for (int i = 0; i < node.pin_indices.size(); ++i)
+    {
+        draw_pin(editor, node.pin_indices[i]);
+    }
 }
 
 void draw_link(EditorContext& editor, int link_idx)
@@ -1204,6 +1151,9 @@ void begin_attribute(int id, AttributeType type, PinShape shape)
     pin.color_style.background = g.style.colors[ColorStyle_Pin];
     pin.color_style.hovered = g.style.colors[ColorStyle_PinHovered];
     pin.color_style.outline = g.style.colors[ColorStyle_PinOutline];
+
+    g.pin_current.id = id;
+    g.pin_current.index = editor.pins.id_map.GetInt(id, INVALID_INDEX);
 }
 } // namespace
 
@@ -1386,12 +1336,17 @@ void BeginNodeEditor()
             true,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
         g.canvas_origin_screen_space = ImGui::GetCursorScreenPos();
+
+        // TODO: I don't think this needs to be a part of the editor state
+        //
+        // NOTE: we have to fetch the canvas draw list *after* we call
+        // BeginChild(), otherwise the ImGui UI elements are going to be
+        // rendered into the parent window draw list.
+        editor.grid_draw_list = ImGui::GetWindowDrawList();
+
         // prepare for layering the node content on top of the nodes
         // NOTE: the draw list has to be captured here, because we want all the
         // content to clip the scrolling_region child window.
-        editor.grid_draw_list = ImGui::GetWindowDrawList();
-        editor.grid_draw_list->ChannelsSplit(Channels_Count);
-
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
             g.canvas_rect_screen_space = ImRect(
@@ -1404,8 +1359,6 @@ void BeginNodeEditor()
             }
         }
     }
-
-    editor.grid_draw_list->ChannelsSetCurrent(Channels_ImGui);
 }
 
 void EndNodeEditor()
@@ -1417,24 +1370,6 @@ void EndNodeEditor()
 
     const bool is_mouse_clicked = ImGui::IsMouseClicked(0);
     const ImGuiIO& imgui_io = ImGui::GetIO();
-
-    for (int i = 0; i < editor.nodes.pool.size(); i++)
-    {
-        // TODO: perhaps consider putting this inside a BeginChild()  block
-        // to see if that would solve the overlapping node problem
-        if (editor.nodes.in_use[i])
-        {
-            draw_node(editor, i);
-        }
-    }
-
-    for (int i = 0; i < editor.pins.pool.size(); i++)
-    {
-        if (editor.pins.in_use[i])
-        {
-            draw_pin(editor, i);
-        }
-    }
 
     // check to see if the mouse was near any node
     if (g.node_hovered == INVALID_INDEX)
@@ -1581,16 +1516,13 @@ void EndNodeEditor()
 
         if (box_selector_active(editor.box_selector))
         {
-            editor.grid_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
             box_selector_update(editor.box_selector, editor, imgui_io);
         }
     }
 
     node_interaction_update(editor);
 
-    // set channel 0 before merging, or else UI rendering is broken
-    editor.grid_draw_list->ChannelsSetCurrent(0);
-    editor.grid_draw_list->ChannelsMerge();
+    // TODO: do we really need this here?
     editor.grid_draw_list = nullptr;
 
     // apply panning if the mouse was dragged
@@ -1611,10 +1543,11 @@ void EndNodeEditor()
     {
         NodeData& node = editor.nodes.pool[idx];
         node.attribute_rects.clear();
+        node.pin_indices.clear();
     }
 }
 
-void BeginNode(int node_id)
+void BeginNode(const int node_id)
 {
     // Remember to call BeginNodeEditor before calling BeginNode
     assert(g.current_scope == Scope_Editor);
@@ -1652,6 +1585,9 @@ void BeginNode(int node_id)
     ImGui::SetCursorPos(
         grid_space_to_editor_space(get_node_content_origin(node)));
 
+    editor.grid_draw_list->ChannelsSplit(Channels_Count);
+    editor.grid_draw_list->ChannelsSetCurrent(Channels_ImGui);
+
     ImGui::PushID(node_id);
     ImGui::BeginGroup();
 }
@@ -1663,12 +1599,18 @@ void EndNode()
 
     EditorContext& editor = editor_context_get();
 
+    // The node's rectangle depends on the ImGui UI group size.
     ImGui::EndGroup();
     ImGui::PopID();
     {
         NodeData& node = editor.nodes.pool[g.node_current.index];
         node.rect = get_screen_space_node_rect(node, get_item_rect());
     }
+
+    editor.grid_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
+    draw_node(editor, g.node_current.index);
+    editor.grid_draw_list->ChannelsMerge();
+
     g.node_current.index = INVALID_INDEX;
 }
 
@@ -1699,6 +1641,7 @@ void EndAttribute()
     NodeData& node_current =
         editor_context_get().nodes.pool[g.node_current.index];
     node_current.attribute_rects.push_back(get_item_rect());
+    node_current.pin_indices.push_back(g.pin_current.index);
 }
 
 void Link(int id, const int start_attr, const int end_attr)
