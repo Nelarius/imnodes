@@ -1341,9 +1341,6 @@ void BeginNodeEditor()
         // rendered into the parent window draw list.
         g.canvas_draw_list = ImGui::GetWindowDrawList();
 
-        // prepare for layering the node content on top of the nodes
-        // NOTE: the draw list has to be captured here, because we want all the
-        // content to clip the scrolling_region child window.
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
             g.canvas_rect_screen_space = ImRect(
