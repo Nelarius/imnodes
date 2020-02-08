@@ -58,10 +58,9 @@ enum ScopeFlags
 
 enum Channels
 {
-    Channel_Background = 0,
-    Channel_Foreground,
-    Channel_Ui,
-    Channel_Count
+    Channels_NodeBackground = 0,
+    Channels_ImGui,
+    Channels_Count
 };
 
 enum AttributeType
@@ -1075,7 +1074,7 @@ void draw_node(EditorContext& editor, int node_idx)
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::PushID(node.id);
 
-    editor.grid_draw_list->ChannelsSetCurrent(Channel_Foreground);
+    editor.grid_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
 
     ImGui::SetCursorPos(node.origin + editor.panning);
     ImGui::InvisibleButton(node.name, node.rect.GetSize());
@@ -1391,8 +1390,7 @@ void BeginNodeEditor()
         // NOTE: the draw list has to be captured here, because we want all the
         // content to clip the scrolling_region child window.
         editor.grid_draw_list = ImGui::GetWindowDrawList();
-        editor.grid_draw_list->ChannelsSplit(Channel_Count);
-        editor.grid_draw_list->ChannelsSetCurrent(Channel_Background);
+        editor.grid_draw_list->ChannelsSplit(Channels_Count);
 
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
@@ -1407,7 +1405,7 @@ void BeginNodeEditor()
         }
     }
 
-    editor.grid_draw_list->ChannelsSetCurrent(Channel_Ui);
+    editor.grid_draw_list->ChannelsSetCurrent(Channels_ImGui);
 }
 
 void EndNodeEditor()
@@ -1446,8 +1444,6 @@ void EndNodeEditor()
             editor.selected_nodes.clear();
         }
     }
-
-    editor.grid_draw_list->ChannelsSetCurrent(Channel_Background);
 
     for (int i = 0; i < editor.links.pool.size(); ++i)
     {
@@ -1585,7 +1581,7 @@ void EndNodeEditor()
 
         if (box_selector_active(editor.box_selector))
         {
-            editor.grid_draw_list->ChannelsSetCurrent(Channel_Foreground);
+            editor.grid_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
             box_selector_update(editor.box_selector, editor, imgui_io);
         }
     }
