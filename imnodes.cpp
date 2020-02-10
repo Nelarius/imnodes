@@ -1892,14 +1892,13 @@ void node_line_handler(EditorContext& editor, const char* line)
     {
         NodeData& node = editor.nodes.find_or_create_new(i);
         node.id = i;
-        // the next case won't work unless this assumption is true
-        assert(
-            editor.nodes.id_map.GetInt(i, INVALID_INDEX) ==
-            editor.nodes.pool.size() - 1);
+        g.node_current.index =
+            editor.nodes.id_map.GetInt(node.id, INVALID_INDEX);
     }
     else if (sscanf(line, "origin=%f,%f", &x, &y) == 2)
     {
-        editor.nodes.pool.back().origin = ImVec2(x, y);
+        assert(g.node_current.index != INVALID_INDEX);
+        editor.nodes.pool[g.node_current.index].origin = ImVec2(x, y);
     }
 }
 
@@ -2013,6 +2012,9 @@ void LoadEditorStateFromIniString(
             line_handler(editor, line);
         }
     }
+    // NOTE: node_line_handler uses this to keep track of the current node it is
+    // parsing
+    g.node_current.index = INVALID_INDEX;
     ImGui::MemFree(buf);
 }
 
