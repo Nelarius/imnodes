@@ -45,8 +45,11 @@ enum StyleFlags
 enum PinShape
 {
     PinShape_Circle = 0,
-    PinShape_Triangle = 1 << 0,
-    PinShape_Quad = 1 << 1,
+    PinShape_CircleFilled,
+    PinShape_Triangle,
+    PinShape_TriangleFilled,
+    PinShape_Quad,
+    PinShape_QuadFilled
 };
 
 struct Style
@@ -121,8 +124,8 @@ void EndNode();
 // for output attributes.
 //
 // The attribute ids must be unique.
-void BeginInputAttribute(int id, PinShape shape = PinShape_Circle);
-void BeginOutputAttribute(int id, PinShape shape = PinShape_Circle);
+void BeginInputAttribute(int id, PinShape shape = PinShape_CircleFilled);
+void BeginOutputAttribute(int id, PinShape shape = PinShape_CircleFilled);
 void EndAttribute();
 
 // Render a link between attributes.

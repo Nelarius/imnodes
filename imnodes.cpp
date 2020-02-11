@@ -956,20 +956,34 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
 }
 
 void draw_pin_shape(
-    const EditorContext& editor,
-    const ImVec2 pin_pos,
+    const ImVec2& pin_pos,
     const PinData& pin,
-    ImU32 pin_color)
+    const ImU32 pin_color)
 {
     switch (pin.shape)
     {
-    case PinShape::PinShape_Circle:
+    case PinShape_Circle:
+    {
+        g.canvas_draw_list->AddCircle(pin_pos, g.style.pin_radius, pin_color);
+    }
+    break;
+    case PinShape_CircleFilled:
     {
         g.canvas_draw_list->AddCircleFilled(
             pin_pos, g.style.pin_radius, pin_color);
     }
     break;
-    case PinShape::PinShape_Quad:
+    case PinShape_Quad:
+    {
+        g.canvas_draw_list->AddQuad(
+            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
+            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
+            pin_pos + ImVec2(g.style.pin_radius, g.style.pin_radius),
+            pin_pos + ImVec2(g.style.pin_radius, -g.style.pin_radius),
+            pin_color);
+    }
+    break;
+    case PinShape_QuadFilled:
     {
         g.canvas_draw_list->AddQuadFilled(
             pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
@@ -979,7 +993,16 @@ void draw_pin_shape(
             pin_color);
     }
     break;
-    case PinShape::PinShape_Triangle:
+    case PinShape_Triangle:
+    {
+        g.canvas_draw_list->AddTriangle(
+            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
+            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
+            pin_pos + ImVec2(g.style.pin_radius, 0),
+            pin_color);
+    }
+    break;
+    case PinShape_TriangleFilled:
     {
         g.canvas_draw_list->AddTriangleFilled(
             pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
@@ -1003,11 +1026,11 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
     if (is_mouse_hovering_near_point(pin_pos, g.style.pin_hover_radius))
     {
         g.pin_hovered = pin_idx;
-        draw_pin_shape(editor, pin_pos, pin, pin.color_style.hovered);
+        draw_pin_shape(pin_pos, pin, pin.color_style.hovered);
     }
     else
     {
-        draw_pin_shape(editor, pin_pos, pin, pin.color_style.background);
+        draw_pin_shape(pin_pos, pin, pin.color_style.background);
     }
 }
 
@@ -1595,12 +1618,12 @@ void EndNode()
     g.node_current.index = INVALID_INDEX;
 }
 
-void BeginInputAttribute(int id, PinShape shape)
+void BeginInputAttribute(const int id, const PinShape shape)
 {
     begin_attribute(id, AttributeType_Input, shape);
 }
 
-void BeginOutputAttribute(int id, PinShape shape)
+void BeginOutputAttribute(const int id, const PinShape shape)
 {
     begin_attribute(id, AttributeType_Output, shape);
 }
