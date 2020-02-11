@@ -194,7 +194,7 @@ struct PinData
 
     struct
     {
-        ImU32 background, hovered, outline;
+        ImU32 background, hovered;
     } color_style;
 
     PinData()
@@ -1009,12 +1009,6 @@ void draw_pin(const EditorContext& editor, const int pin_idx)
     {
         draw_pin_shape(editor, pin_pos, pin, pin.color_style.background);
     }
-
-    if ((g.style.flags & StyleFlags_PinOutline) != 0)
-    {
-        g.canvas_draw_list->AddCircle(
-            pin_pos, g.style.pin_radius, pin.color_style.outline);
-    }
 }
 
 void draw_node(EditorContext& editor, int node_idx)
@@ -1151,7 +1145,6 @@ void begin_attribute(int id, AttributeType type, PinShape shape)
     pin.shape = shape;
     pin.color_style.background = g.style.colors[ColorStyle_Pin];
     pin.color_style.hovered = g.style.colors[ColorStyle_PinHovered];
-    pin.color_style.outline = g.style.colors[ColorStyle_PinOutline];
 
     g.pin_current.id = id;
     g.pin_current.index = editor.pins.id_map.GetInt(id, INVALID_INDEX);
@@ -1241,7 +1234,6 @@ void StyleColorsDark()
     // pin colors match ImGui's button colors
     g.style.colors[ColorStyle_Pin] = IM_COL32(53, 150, 250, 180);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(53, 150, 250, 255);
-    g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
 
     g.style.colors[ColorStyle_BoxSelector] = IM_COL32(61, 133, 224, 30);
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(61, 133, 224, 150);
@@ -1266,7 +1258,6 @@ void StyleColorsClassic()
     g.style.colors[ColorStyle_LinkSelected] = IM_COL32(105, 99, 204, 153);
     g.style.colors[ColorStyle_Pin] = IM_COL32(89, 102, 156, 170);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(102, 122, 179, 200);
-    g.style.colors[ColorStyle_PinOutline] = IM_COL32(200, 200, 200, 255);
     g.style.colors[ColorStyle_BoxSelector] = IM_COL32(82, 82, 161, 100);
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
@@ -1292,7 +1283,6 @@ void StyleColorsLight()
     // original imgui values: 66, 150, 250
     g.style.colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 160);
     g.style.colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
-    g.style.colors[ColorStyle_PinOutline] = IM_COL32(66, 150, 250, 255);
     g.style.colors[ColorStyle_BoxSelector] = IM_COL32(90, 170, 250, 30);
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(225, 225, 225, 255);

@@ -20,7 +20,6 @@ enum ColorStyle
     ColorStyle_LinkSelected,
     ColorStyle_Pin,
     ColorStyle_PinHovered,
-    ColorStyle_PinOutline,
     ColorStyle_BoxSelector,
     ColorStyle_BoxSelectorOutline,
     ColorStyle_GridBackground,
@@ -40,7 +39,6 @@ enum StyleFlags
 {
     StyleFlags_None = 0,
     StyleFlags_NodeOutline = 1 << 0,
-    StyleFlags_PinOutline = 1 << 1,
     StyleFlags_GridLines = 1 << 2
 };
 
@@ -123,8 +121,8 @@ void EndNode();
 // for output attributes.
 //
 // The attribute ids must be unique.
-void BeginInputAttribute(int id, PinShape shape = PinShape::PinShape_Circle);
-void BeginOutputAttribute(int id, PinShape shape = PinShape::PinShape_Circle);
+void BeginInputAttribute(int id, PinShape shape = PinShape_Circle);
+void BeginOutputAttribute(int id, PinShape shape = PinShape_Circle);
 void EndAttribute();
 
 // Render a link between attributes.
