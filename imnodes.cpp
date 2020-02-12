@@ -21,6 +21,7 @@
 #endif
 
 #include <assert.h>
+#include <math.h>
 #include <new>
 #include <stdint.h>
 #include <string.h> // strlen, strncmp
@@ -955,59 +956,128 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
     }
 }
 
+struct QuadOffsets
+{
+    ImVec2 top_left, bottom_left, bottom_right, top_right;
+};
+
+QuadOffsets calculate_quad_offsets(const float side_length)
+{
+    const float half_side = 0.5f * side_length;
+
+    QuadOffsets offset;
+
+    offset.top_left = ImVec2(-half_side, half_side);
+    offset.bottom_left = ImVec2(-half_side, -half_side);
+    offset.bottom_right = ImVec2(half_side, -half_side);
+    offset.top_right = ImVec2(half_side, half_side);
+
+    return offset;
+}
+
+struct TriangleOffsets
+{
+    ImVec2 top_left, bottom_left, right;
+};
+
+TriangleOffsets calculate_triangle_offsets(const float side_length)
+{
+    // Calculates the Vec2 offsets from an equilateral triangle's midpoint to
+    // its vertices. Here is how the left_offset and right_offset are
+    // calculated.
+    //
+    // For an equilateral triangle of side length s, the
+    // triangle's height, h, is h = s * sqrt(3) / 2.
+    //
+    // The length from the base to the midpoint is (1 / 3) * h. The length from
+    // the midpoint to the triangle vertex is (2 / 3) * h.
+    const float sqrt_3 = sqrtf(3.0f);
+    const float left_offset = -0.1666666666667f * sqrt_3 * side_length;
+    const float right_offset = 0.333333333333f * sqrt_3 * side_length;
+    const float vertical_offset = 0.5f * side_length;
+
+    TriangleOffsets offset;
+    offset.top_left = ImVec2(left_offset, vertical_offset);
+    offset.bottom_left = ImVec2(left_offset, -vertical_offset);
+    offset.right = ImVec2(right_offset, 0.f);
+
+    return offset;
+}
+
 void draw_pin_shape(
     const ImVec2& pin_pos,
     const PinData& pin,
     const ImU32 pin_color)
 {
+    static const int circle_num_segments = 8;
+
     switch (pin.shape)
     {
     case PinShape_Circle:
     {
-        g.canvas_draw_list->AddCircle(pin_pos, g.style.pin_radius, pin_color);
+        g.canvas_draw_list->AddCircle(
+            pin_pos,
+            g.style.pin_circle_radius,
+            pin_color,
+            circle_num_segments,
+            g.style.pin_line_thickness);
     }
     break;
     case PinShape_CircleFilled:
     {
         g.canvas_draw_list->AddCircleFilled(
-            pin_pos, g.style.pin_radius, pin_color);
+            pin_pos, g.style.pin_circle_radius, pin_color, circle_num_segments);
     }
     break;
     case PinShape_Quad:
     {
+        const QuadOffsets offset =
+            calculate_quad_offsets(g.style.pin_quad_side_length);
         g.canvas_draw_list->AddQuad(
-            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-            pin_pos + ImVec2(g.style.pin_radius, g.style.pin_radius),
-            pin_pos + ImVec2(g.style.pin_radius, -g.style.pin_radius),
-            pin_color);
+            pin_pos + offset.top_left,
+            pin_pos + offset.bottom_left,
+            pin_pos + offset.bottom_right,
+            pin_pos + offset.top_right,
+            pin_color,
+            g.style.pin_line_thickness);
     }
     break;
     case PinShape_QuadFilled:
     {
+        const QuadOffsets offset =
+            calculate_quad_offsets(g.style.pin_quad_side_length);
         g.canvas_draw_list->AddQuadFilled(
-            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-            pin_pos + ImVec2(g.style.pin_radius, g.style.pin_radius),
-            pin_pos + ImVec2(g.style.pin_radius, -g.style.pin_radius),
+            pin_pos + offset.top_left,
+            pin_pos + offset.bottom_left,
+            pin_pos + offset.bottom_right,
+            pin_pos + offset.top_right,
             pin_color);
     }
     break;
     case PinShape_Triangle:
     {
+        const TriangleOffsets offset =
+            calculate_triangle_offsets(g.style.pin_triangle_side_length);
         g.canvas_draw_list->AddTriangle(
-            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-            pin_pos + ImVec2(g.style.pin_radius, 0),
-            pin_color);
+            pin_pos + offset.top_left,
+            pin_pos + offset.bottom_left,
+            pin_pos + offset.right,
+            pin_color,
+            // NOTE: for some weird reason, the line drawn by AddTriangle is
+            // much thinner than the lines drawn by AddCircle or AddQuad.
+            // Multiplying the line thickness by two seemed to solve the
+            // problem at a few different thickness values.
+            2.f * g.style.pin_line_thickness);
     }
     break;
     case PinShape_TriangleFilled:
     {
+        const TriangleOffsets offset =
+            calculate_triangle_offsets(g.style.pin_triangle_side_length);
         g.canvas_draw_list->AddTriangleFilled(
-            pin_pos + ImVec2(-g.style.pin_radius, -g.style.pin_radius),
-            pin_pos + ImVec2(-g.style.pin_radius, g.style.pin_radius),
-            pin_pos + ImVec2(g.style.pin_radius, 0),
+            pin_pos + offset.top_left,
+            pin_pos + offset.bottom_left,
+            pin_pos + offset.right,
             pin_color);
     }
     break;
