@@ -1,6 +1,6 @@
 #include "node_editor.h"
-#include "imnodes.h"
-#include "imgui.h"
+#include <imnodes.h>
+#include <imgui.h>
 
 #include <SDL_keycode.h>
 #include <cstdio>

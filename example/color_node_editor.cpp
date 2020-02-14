@@ -1,6 +1,7 @@
-#include "imnodes.h"
-#include "imgui.h"
 #include "node_editor.h"
+
+#include <imnodes.h>
+#include <imgui.h>
 
 #include <SDL_keycode.h>
 #include <algorithm> // for std::swap
