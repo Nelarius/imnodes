@@ -6,6 +6,8 @@
   <img src="https://raw.githubusercontent.com/Nelarius/imnodes/master/img/imnodes.gif?token=ADH_jEpqbBrw0nH-BUmOip490dyO2CnRks5cVZllwA%3D%3D">
 </p>
 
+[![Build Status](https://github.com/nelarius/imnodes/workflows/Build/badge.svg)](https://github.com/nelarius/imnodes/actions?workflow=Build)
+
 Features:
 
 * Create nodes, links, and pins in an immediate-mode style
