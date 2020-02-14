@@ -14,3 +14,7 @@ jobs:
       # This step prints an output (time) from the previous step's action.
       - name: premake5
         run: premake5 gmake
+      - name: make-debug
+        run: make all config=debug -j
+      - name: make-release
+        run: make all config=release -j

@@ -5,9 +5,7 @@ workspace "imnodes"
     end
 
     configurations { "Debug", "Release" }
-
     architecture "x86_64"
-
     defines { "IMGUI_DISABLE_OBSOLETE_FUNCTIONS" }
 
     filter "configurations:Debug"
@@ -41,6 +39,11 @@ workspace "imnodes"
         includedirs { "imgui", "gl3w/include" }
         filter "system:macosx"
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
+        filter "system:linux"
+            -- NOTE: This is to support inclusion via #include <SDL.h>.
+            -- Otherwise we would have to do <SDL2/SDL.h> which would not
+            -- be compatible with the macOS framework
+            includedirs { "/usr/include/SDL2" }
 
     project "example"
         location(project_location)
@@ -55,6 +58,9 @@ workspace "imnodes"
         filter "system:macosx"
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
             linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
+        filter "system:linux"
+            includedirs { "/usr/include/SDL2" }
+            links { "SDL2", "dl" }
 
     project "saveload"
         location(project_location)
@@ -69,6 +75,9 @@ workspace "imnodes"
         filter "system:macosx"
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
             linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
+        filter "system:linux"
+            includedirs { "/usr/include/SDL2" }
+            links { "SDL2", "dl" }
 
     project "colornode"
         location(project_location)
@@ -83,3 +92,6 @@ workspace "imnodes"
         filter "system:macosx"
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
             linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
+        filter "system:linux"
+            includedirs { "/usr/include/SDL2" }
+            links { "SDL2", "dl" }
