@@ -323,18 +323,18 @@ public:
             postorder.pop();
             switch (nodes_[node].type)
             {
-                case Node_Number:
-                    eval_stack.push(nodes_[node].number);
-                    break;
-                case Node_NumberExpression:
-                    break;
-                case Node_Operation:
-                    nodes_[node].operation(eval_stack);
-                    break;
-                case Node_Output:
-                    break;
-                default:
-                    assert("Invalid enum value!");
+            case Node_Number:
+                eval_stack.push(nodes_[node].number);
+                break;
+            case Node_NumberExpression:
+                break;
+            case Node_Operation:
+                nodes_[node].operation(eval_stack);
+                break;
+            case Node_Output:
+                break;
+            default:
+                assert("Invalid enum value!");
             }
         }
 
@@ -438,6 +438,10 @@ public:
                 IM_COL32(81, 148, 204, 255));
             imnodes::BeginNode(node.out);
 
+            imnodes::BeginNodeTitleBar();
+            ImGui::TextUnformatted("output");
+            imnodes::EndNodeTitleBar();
+
             ImGui::Dummy(ImVec2(node_width, 0.f));
             {
                 // TODO: the color style of the pin needs to be pushed here
@@ -511,6 +515,10 @@ public:
             const float node_width = 100.0f;
             imnodes::BeginNode(node.op);
 
+            imnodes::BeginNodeTitleBar();
+            ImGui::TextUnformatted("sine");
+            imnodes::EndNodeTitleBar();
+
             {
                 imnodes::BeginInputAttribute(int(node.input));
                 const float label_width = ImGui::CalcTextSize("number").x;
@@ -547,6 +555,10 @@ public:
         {
             imnodes::BeginNode(node);
 
+            imnodes::BeginNodeTitleBar();
+            ImGui::TextUnformatted("time");
+            imnodes::EndNodeTitleBar();
+
             imnodes::BeginOutputAttribute(int(node));
             ImGui::Text("output");
             imnodes::EndAttribute();
@@ -558,6 +570,10 @@ public:
         {
             const float node_width = 100.0f;
             imnodes::BeginNode(node.op);
+
+            imnodes::BeginNodeTitleBar();
+            ImGui::TextUnformatted("multiply");
+            imnodes::EndNodeTitleBar();
 
             {
                 imnodes::BeginInputAttribute(int(node.lhs));
@@ -606,6 +622,10 @@ public:
         {
             const float node_width = 100.0f;
             imnodes::BeginNode(node.op);
+
+            imnodes::BeginNodeTitleBar();
+            ImGui::TextUnformatted("add");
+            imnodes::EndNodeTitleBar();
 
             {
                 imnodes::BeginInputAttribute(int(node.lhs));
@@ -703,7 +723,6 @@ public:
                 graph_.add_edge(node.out, node.blue);
 
                 imnodes::SetNodeScreenSpacePos(node.out, click_pos);
-                imnodes::SetNodeName(node.out, "output");
             }
 
             if (ImGui::MenuItem("time"))
@@ -715,7 +734,6 @@ public:
                 time_nodes_.push_back(node);
 
                 imnodes::SetNodeScreenSpacePos(node, click_pos);
-                imnodes::SetNodeName(node, "time");
             }
 
             if (ImGui::MenuItem("sine"))
@@ -734,7 +752,6 @@ public:
                 sine_nodes_.push_back(node);
 
                 imnodes::SetNodeScreenSpacePos(node.op, click_pos);
-                imnodes::SetNodeName(node.op, "sine");
             }
 
             if (ImGui::MenuItem("multiply"))
@@ -755,7 +772,6 @@ public:
                 mul_nodes_.push_back(node);
 
                 imnodes::SetNodeScreenSpacePos(node.op, click_pos);
-                imnodes::SetNodeName(node.op, "multiply");
             }
 
             if (ImGui::MenuItem("add"))
@@ -776,7 +792,6 @@ public:
                 add_nodes_.push_back(node);
 
                 imnodes::SetNodeScreenSpacePos(node.op, click_pos);
-                imnodes::SetNodeName(node.op, "add");
             }
             ImGui::EndPopup();
         }
