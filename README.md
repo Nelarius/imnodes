@@ -47,11 +47,11 @@ Now you should have a workspace with a grid visible in the window. An empty node
 
 ```cpp
 const int hardcoded_node_id = 1;
-imnodes::SetNodeName(hardcoded_node_id, "empty node");
 
 imnodes::BeginNodeEditor();
 
 imnodes::BeginNode(hardcoded_node_id);
+ImGui::Dummy(ImVec2(80.0f, 45.0f));
 imnodes::EndNode();
 
 imnode::EndNodeEditor();
@@ -62,7 +62,6 @@ Nodes, like windows in `dear imgui` must be uniquely identified. But we can't us
 Attributes are the UI content of the node. An attribute will have a pin (the little circle) on either side of the node. There are two types of attributes: input, and output attributes. Input attribute pins are on the left side of the node, and output attribute pins are on the right. Like nodes, pins must be uniquely identified.
 
 ```cpp
-imnodes::SetNodeName(hardcoded_node_id, "output node");
 imnodes::BeginNode(hardcoded_node_id);
 
 const int output_attr_id = 2;
@@ -76,6 +75,20 @@ imnodes::EndNode();
 ```
 
 The extension doesn't really care what is in the attribute. It just renders the pin for the attribute, and allows the user to create links between pins.
+
+A title bar can be added to the node using `BeginNodeTitleBar` and `EndNodeTitleBar`. Like attributes, you place your title bar's content between the function calls. Note that these functions have to be called before adding attributes or other `dear imgui` UI elements to the node, since the node's layout is built in order, top-to-bottom.
+
+```cpp
+imnodes::BeginNode(hardcoded_node_id);
+
+imnodes::BeginNodeTitleBar();
+ImGui::TextUnformatted("output node");
+imnodes::EndNodeTitleBar();
+
+// pins and other node UI content omitted...
+
+imnodes::EndNode();
+```
 
 The user has to render their own links between nodes as well. A link is a curve which connects two attributes. A link is just a pair of attribute ids. And like nodes and attributes, links too have to be identified by unique integer values:
 
@@ -135,8 +148,6 @@ imnodes::PushColorStyle(
   imnodes::ColorStyle_TitleBar, IM_COL32(11, 109, 191, 255));
 imnodes::PushColorStyle(
   imnodes::ColorStyle_TitleBarSelected, IM_COL32(81, 148, 204, 255));
-
-imnodes::SetNodeName(hardcoded_node_id, "colorful node");
 
 imnodes::BeginNode(hardcoded_node_id);
 // node internals here...
