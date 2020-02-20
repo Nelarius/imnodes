@@ -34,6 +34,7 @@ workspace "imnodes"
         location(project_location)
         kind "StaticLib"
         language "C++"
+        cppdialect "C++98"
         targetdir "lib/%{cfg.buildcfg}"
         files { "imgui/**.h", "imgui/**.cpp" }
         includedirs { "imgui", "gl3w/include" }
@@ -45,14 +46,24 @@ workspace "imnodes"
             -- be compatible with the macOS framework
             includedirs { "/usr/include/SDL2" }
 
+    project "imnodes"
+        location(project_location)
+        kind "StaticLib"
+        language "C++"
+        cppdialect "C++98"
+        enablewarnings { "all" }
+        targetdir "lib/%{cfg.buildcfg}"
+        files { "imnodes.h", "imnodes.cpp" }
+        includedirs { "imgui" }
+
     project "example"
         location(project_location)
         kind "WindowedApp"
         language "C++"
         targetdir "bin/%{cfg.buildcfg}"
-        files {"example/main.cpp", "example/simple.cpp", "imnodes.cpp" }
+        files {"example/main.cpp", "example/simple.cpp" }
         includedirs { ".", "imgui", "gl3w/include" }
-        links { "gl3w", "imgui" }
+        links { "gl3w", "imgui", "imnodes" }
         filter { "action:gmake" }
             buildoptions { "-std=c++11" }
         filter "system:macosx"
@@ -67,9 +78,9 @@ workspace "imnodes"
         kind "WindowedApp"
         language "C++"
         targetdir "bin/%{cfg.buildcfg}"
-        files {"example/main.cpp", "example/save_load.cpp", "imnodes.cpp" }
+        files {"example/main.cpp", "example/save_load.cpp" }
         includedirs { ".", "imgui", "gl3w/include" }
-        links { "gl3w", "imgui" }
+        links { "gl3w", "imgui", "imnodes" }
         filter { "action:gmake" }
             buildoptions { "-std=c++11" }
         filter "system:macosx"
@@ -84,9 +95,9 @@ workspace "imnodes"
         kind "WindowedApp"
         language "C++"
         targetdir "bin/%{cfg.buildcfg}"
-        files {"example/main.cpp", "example/color_node_editor.cpp", "imnodes.cpp" }
+        files {"example/main.cpp", "example/color_node_editor.cpp" }
         includedirs { ".", "imgui", "gl3w/include" }
-        links { "gl3w", "imgui" }
+        links { "gl3w", "imgui", "imnodes" }
         filter { "action:gmake" }
             buildoptions { "-std=c++11" }
         filter "system:macosx"

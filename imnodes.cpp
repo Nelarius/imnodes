@@ -32,17 +32,6 @@ namespace imnodes
 {
 namespace
 {
-// Additional ImGui math operators
-inline ImVec2 operator*(const float lhs, const ImVec2& rhs)
-{
-    return ImVec2(lhs * rhs.x, lhs * rhs.y);
-}
-
-inline ImVec2 operator*(const ImVec2& lhs, const float rhs)
-{
-    return ImVec2(lhs.x * rhs, lhs.y * rhs);
-}
-
 static const int INVALID_INDEX = -1;
 
 bool initialized = false;
@@ -204,12 +193,6 @@ struct PinData
     }
 };
 
-bool operator==(const PinData& lhs, const PinData& rhs)
-{
-    return lhs.node_idx == rhs.node_idx &&
-           lhs.attribute_idx == rhs.attribute_idx && lhs.type == rhs.type;
-}
-
 struct LinkData
 {
     int id;
@@ -223,6 +206,33 @@ struct LinkData
     LinkData()
         : start_attr(INVALID_INDEX), end_attr(INVALID_INDEX), color_style()
     {
+    }
+};
+
+struct LinkPredicate
+{
+    bool operator()(const LinkData& lhs, const LinkData& rhs) const
+    {
+        // Do a unique compare by sorting the attribute ids.
+        // This catches duplicate links, whether they are in the
+        // same direction or not.
+
+        int lhs_start = lhs.start_attr;
+        int lhs_end = lhs.end_attr;
+        int rhs_start = rhs.start_attr;
+        int rhs_end = rhs.end_attr;
+
+        if (lhs_start > lhs_end)
+        {
+            ImSwap(lhs_start, lhs_end);
+        }
+
+        if (rhs_start > rhs_end)
+        {
+            ImSwap(rhs_start, rhs_end);
+        }
+
+        return lhs_start == rhs_start && lhs_end == rhs_end;
     }
 };
 
@@ -339,7 +349,7 @@ struct
 
 EditorContext& editor_context_get()
 {
-    assert(g.editor_ctx != nullptr);
+    assert(g.editor_ctx != NULL);
     return *g.editor_ctx;
 }
 
@@ -864,12 +874,6 @@ inline ImVec2 grid_space_to_editor_space(const ImVec2& v)
     return v + editor.panning;
 }
 
-inline ImVec2 grid_space_to_screen_space(const ImVec2& v)
-{
-    const EditorContext& editor = editor_context_get();
-    return v + g.canvas_origin_screen_space + editor.panning;
-}
-
 inline ImVec2 editor_space_to_screen_space(const ImVec2& v)
 {
     return g.canvas_origin_screen_space + v;
@@ -1216,6 +1220,17 @@ void begin_attribute(int id, AttributeType type, PinShape shape)
 
 // [SECTION] API implementation
 
+Style::Style()
+    : grid_spacing(32.f), node_corner_rounding(4.f),
+      node_padding_horizontal(8.f), node_padding_vertical(8.f),
+      link_thickness(3.f), link_line_segments_per_length(0.1f),
+      link_hover_distance(7.f), pin_circle_radius(4.f),
+      pin_quad_side_length(7.f), pin_triangle_side_length(9.5),
+      pin_line_thickness(1.f), pin_hover_radius(10.f), pin_offset(0.f),
+      flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), colors()
+{
+}
+
 EditorContext* EditorContextCreate()
 {
     void* mem = ImGui::MemAlloc(sizeof(EditorContext));
@@ -1241,8 +1256,6 @@ void EditorContextMoveToNode(const int node_id)
 {
     EditorContext& editor = editor_context_get();
     NodeData& node = editor.nodes.find_or_create_new(node_id);
-
-    const ImVec2 canvas_size = ImGui::GetWindowSize();
 
     editor.panning.x = -node.origin.x;
     editor.panning.y = -node.origin.y;
@@ -1494,34 +1507,6 @@ void EndNodeEditor()
             if (g.pin_hovered != INVALID_INDEX &&
                 pin_id_hovered != editor.link_dragged.start_attr)
             {
-                struct LinkPredicate
-                {
-                    bool operator()(const LinkData& lhs, const LinkData& rhs)
-                        const
-                    {
-                        // Do a unique compare by sorting the attribute ids.
-                        // This catches duplicate links, whether they are in the
-                        // same direction or not.
-
-                        int lhs_start = lhs.start_attr;
-                        int lhs_end = lhs.end_attr;
-                        int rhs_start = rhs.start_attr;
-                        int rhs_end = rhs.end_attr;
-
-                        if (lhs_start > lhs_end)
-                        {
-                            ImSwap(lhs_start, lhs_end);
-                        }
-
-                        if (rhs_start > rhs_end)
-                        {
-                            ImSwap(rhs_start, rhs_end);
-                        }
-
-                        return lhs_start == rhs_start && lhs_end == rhs_end;
-                    }
-                };
-
                 LinkData test_link;
                 test_link.start_attr = editor.link_dragged.start_attr;
                 test_link.end_attr = pin_id_hovered;
