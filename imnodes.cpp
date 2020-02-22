@@ -1432,7 +1432,7 @@ void EndNodeEditor()
     const ImGuiIO& imgui_io = ImGui::GetIO();
 
     // check to see if the mouse was near any node
-    if (g.node_hovered == INVALID_INDEX)
+    if (g.node_hovered == INVALID_INDEX && ImGui::IsWindowHovered())
     {
         if (is_mouse_clicked)
         {
@@ -1448,7 +1448,7 @@ void EndNodeEditor()
         }
     }
 
-    if (g.link_hovered == INVALID_INDEX)
+    if (g.link_hovered == INVALID_INDEX && ImGui::IsWindowHovered())
     {
         if (is_mouse_clicked)
         {
