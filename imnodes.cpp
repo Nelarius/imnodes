@@ -1617,6 +1617,7 @@ void BeginNode(const int node_id)
     g.canvas_draw_list->ChannelsSplit(Channels_Count);
     g.canvas_draw_list->ChannelsSetCurrent(Channels_ImGui);
 
+    ImGui::PushID(node.id);
     ImGui::BeginGroup();
 }
 
@@ -1629,6 +1630,7 @@ void EndNode()
 
     // The node's rectangle depends on the ImGui UI group size.
     ImGui::EndGroup();
+    ImGui::PopID();
     {
         NodeData& node = editor.nodes.pool[g.node_current.index];
         node.rect = get_item_rect();
