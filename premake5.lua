@@ -80,3 +80,5 @@ workspace "imnodes"
     imnodes_example_project("saveload", "save_load.cpp")
 
     imnodes_example_project("colornode", "color_node_editor.cpp")
+
+    imnodes_example_project("multieditor", "multi_editor.cpp")
