@@ -1,3 +1,22 @@
+function imnodes_example_project(name, example_file)
+    project(name)
+    location(project_location)
+    kind "WindowedApp"
+    language "C++"
+    targetdir "bin/%{cfg.buildcfg}"
+    files {"example/main.cpp", path.join("example", example_file) }
+    includedirs { ".", "imgui", "gl3w/include" }
+    links { "gl3w", "imgui", "imnodes" }
+    filter { "action:gmake" }
+        buildoptions { "-std=c++11" }
+    filter "system:macosx"
+        includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
+        linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
+    filter "system:linux"
+        includedirs { "/usr/include/SDL2" }
+        links { "SDL2", "dl" }
+end
+
 workspace "imnodes"
     local project_location = ""
     if _ACTION then
@@ -56,53 +75,8 @@ workspace "imnodes"
         files { "imnodes.h", "imnodes.cpp" }
         includedirs { "imgui" }
 
-    project "example"
-        location(project_location)
-        kind "WindowedApp"
-        language "C++"
-        targetdir "bin/%{cfg.buildcfg}"
-        files {"example/main.cpp", "example/simple.cpp" }
-        includedirs { ".", "imgui", "gl3w/include" }
-        links { "gl3w", "imgui", "imnodes" }
-        filter { "action:gmake" }
-            buildoptions { "-std=c++11" }
-        filter "system:macosx"
-            includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
-            linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
-        filter "system:linux"
-            includedirs { "/usr/include/SDL2" }
-            links { "SDL2", "dl" }
+    imnodes_example_project("simple", "simple.cpp")
 
-    project "saveload"
-        location(project_location)
-        kind "WindowedApp"
-        language "C++"
-        targetdir "bin/%{cfg.buildcfg}"
-        files {"example/main.cpp", "example/save_load.cpp" }
-        includedirs { ".", "imgui", "gl3w/include" }
-        links { "gl3w", "imgui", "imnodes" }
-        filter { "action:gmake" }
-            buildoptions { "-std=c++11" }
-        filter "system:macosx"
-            includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
-            linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
-        filter "system:linux"
-            includedirs { "/usr/include/SDL2" }
-            links { "SDL2", "dl" }
+    imnodes_example_project("saveload", "save_load.cpp")
 
-    project "colornode"
-        location(project_location)
-        kind "WindowedApp"
-        language "C++"
-        targetdir "bin/%{cfg.buildcfg}"
-        files {"example/main.cpp", "example/color_node_editor.cpp" }
-        includedirs { ".", "imgui", "gl3w/include" }
-        links { "gl3w", "imgui", "imnodes" }
-        filter { "action:gmake" }
-            buildoptions { "-std=c++11" }
-        filter "system:macosx"
-            includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
-            linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
-        filter "system:linux"
-            includedirs { "/usr/include/SDL2" }
-            links { "SDL2", "dl" }
+    imnodes_example_project("colornode", "color_node_editor.cpp")
