@@ -1973,8 +1973,14 @@ bool IsAnyAttributeActive(int* const attribute_id)
     {
         if (attribute_id != NULL)
         {
-            // TODO: this is broken -- it assigns an internal index as the id.
-            *attribute_id = g.active_item.attribute_idx.value();
+            // TODO: holy smokes, look at the amount of overhead just to get the
+            // pin id!
+            const EditorContext& editor = editor_context_get();
+            const int node_idx = g.active_item.node_idx.value();
+            const int attribute_idx = g.active_item.attribute_idx.value();
+            const int pin_idx =
+                editor.nodes.pool[node_idx].pin_indices[attribute_idx];
+            *attribute_id = editor.pins.pool[pin_idx].id;
         }
         return true;
     }
