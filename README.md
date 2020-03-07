@@ -11,11 +11,14 @@
 Features:
 
 * Create nodes, links, and pins in an immediate-mode style
+* Single header and source file, just copy-paste `imnodes.h` and `imnodes.cpp` into your project. The only dependency is `dear imgui` itself!
+* Written in the same style of C++ as `dear imgui` itself -- no modern C++ used
 * Use regular `dear imgui` widgets inside the nodes
 * Multiple node and link selection with a box selector
 * Nodes, links, and pins are fully customizable, from color style to layout
-* Single header and source file, just copy-paste `imnodes.h` and `imnodes.cpp` into your project. The only dependency is `dear imgui` itself!
-* Written in the same style of C++ as `dear imgui` itself -- no modern C++ used
+* Default themes match `dear imgui`'s default themes
+
+Scroll down for a brief tour, known issues, and further information!
 
 ## A brief tour
 
@@ -165,6 +168,10 @@ imnodes::Style& style = imnodes::GetStyle();
 style.colors[imnodes::ColorStyle_TitleBar] = IM_COL32(232, 27, 86, 255);
 style.colors[imnodes::ColorStyle_TitleBarSelected] = IM_COL32(241, 108, 146, 255);
 ```
+
+## Known issues
+
+* `ImGui::Separator()` spans the current window span. As a result, using a separator inside a node will result in the separator spilling out of the node into the node editor grid.
 
 ## Further information
 
