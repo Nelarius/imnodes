@@ -1509,7 +1509,8 @@ void BeginNodeEditor()
             "scrolling_region",
             ImVec2(0.f, 0.f),
             true,
-            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
+            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoScrollWithMouse);
         g.canvas_origin_screen_space = ImGui::GetCursorScreenPos();
 
         // NOTE: we have to fetch the canvas draw list *after* we call
