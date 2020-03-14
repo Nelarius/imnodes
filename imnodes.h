@@ -106,6 +106,7 @@ struct EditorContext;
 EditorContext* EditorContextCreate();
 void EditorContextFree(EditorContext*);
 void EditorContextSet(EditorContext*);
+ImVec2 EditorContextGetPanning();
 void EditorContextResetPanning(const ImVec2& pos);
 void EditorContextMoveToNode(const int node_id);
 
@@ -116,7 +117,6 @@ void Shutdown();
 // Returns the global style struct. See the struct declaration for default
 // values.
 Style& GetStyle();
-ImVec2 GeContextPanning();
 // Style presets matching the dear imgui styles of the same name.
 void StyleColorsDark(); // on by default
 void StyleColorsClassic();

@@ -1361,6 +1361,12 @@ void EditorContextFree(EditorContext* ctx)
 
 void EditorContextSet(EditorContext* ctx) { g.editor_ctx = ctx; }
 
+ImVec2 EditorContextGetPanning()
+{
+    const EditorContext& editor = editor_context_get();
+    return editor.panning;
+}
+
 void EditorContextResetPanning(const ImVec2& pos)
 {
     EditorContext& editor = editor_context_get();
@@ -1396,12 +1402,6 @@ void Initialize()
 void Shutdown() { EditorContextFree(g.default_editor_ctx); }
 
 Style& GetStyle() { return g.style; }
-
-ImVec2 GeContextPanning()
-{
-    const EditorContext& editor = editor_context_get();
-    return editor.panning;
-}
 
 void StyleColorsDark()
 {
