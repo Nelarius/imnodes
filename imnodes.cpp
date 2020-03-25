@@ -156,17 +156,13 @@ struct NodeData
         ImVec2 padding;
     } layout_style;
 
-    ImVector<ImRect> attribute_rects; // TODO: see PinData for more. These could
-                                      // just be stored in PinData directly! It
-                                      // would make the reference from the node
-                                      // to the pin one-directional!
     ImVector<PinData*> pins;
     bool draggable;
 
     NodeData()
         : id(0), origin(100.0f, 100.0f), title_bar_content_rect(),
           rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(),
-          layout_style(), attribute_rects(), pins(), draggable(true)
+          layout_style(), pins(), draggable(true)
     {
     }
 };
@@ -174,12 +170,8 @@ struct NodeData
 struct PinData
 {
     int id;
-    const NodeData* owning_node; // TODO: currently this field is used for node
-                                 // lookup when calculating screen-space pin
-                                 // coordinates. This could be replaced by just
-                                 // storing the rectangle here? This would
-                                 // remove the need for attribute_idx as well!
-    int attribute_idx;
+    const NodeData* owning_node;
+    ImRect attribute_rect;
     AttributeType type;
     PinShape shape;
 
@@ -189,13 +181,8 @@ struct PinData
     } color_style;
 
     PinData()
-        : id(), owning_node(), attribute_idx(), type(AttributeType_None),
-          color_style()
-    {
-    }
-
-    PinData(NodeData* node, int aindx, AttributeType t)
-        : id(), owning_node(node), attribute_idx(aindx), type(t), color_style()
+        : id(), owning_node(), attribute_rect(), type(AttributeType_None),
+          shape(PinShape_CircleFilled), color_style()
     {
     }
 };
@@ -730,7 +717,7 @@ ImVec2 get_screen_space_pin_coordinates(
     const PinData& pin = editor.pins.pool[pin_idx];
     const NodeData& node = *pin.owning_node;
     return get_screen_space_pin_coordinates(
-        node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
+        node.rect, pin.attribute_rect, pin.type);
 }
 
 // These functions are here, and not members of the BoxSelector struct, because
@@ -1097,7 +1084,7 @@ void draw_pin_shape(
 void draw_pin(const NodeData& node, const PinData& pin)
 {
     const ImVec2 pin_pos = get_screen_space_pin_coordinates(
-        node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
+        node.rect, pin.attribute_rect, pin.type);
     if (is_mouse_hovering_near_point(pin_pos, g.style.pin_hover_radius))
     {
         g.hovered_pin = &pin;
@@ -1251,7 +1238,6 @@ void begin_attribute(
     PinData& pin = editor.pins.find_or_create_new(id);
     pin.id = id;
     pin.owning_node = &node;
-    pin.attribute_idx = g.current_node->attribute_rects.size();
     pin.type = type;
     pin.shape = shape;
     pin.color_style.background = g.style.colors[ColorStyle_Pin];
@@ -1561,7 +1547,7 @@ void EndNodeEditor()
             const NodeData& node = *pin.owning_node;
 
             const ImVec2 start_pos = get_screen_space_pin_coordinates(
-                node.rect, node.attribute_rects[pin.attribute_idx], pin.type);
+                node.rect, pin.attribute_rect, pin.type);
             const ImVec2 end_pos = imgui_io.MousePos;
 
             const LinkBezierData link_data = get_link_renderable(
@@ -1630,7 +1616,6 @@ void EndNodeEditor()
     for (int idx = 0; idx < editor.nodes.pool.size(); idx++)
     {
         NodeData& node = editor.nodes.pool[idx];
-        node.attribute_rects.clear();
         node.pins.clear();
     }
 }
@@ -1738,7 +1723,7 @@ void EndAttribute()
         g.active_pin = g.current_pin;
     }
 
-    g.current_node->attribute_rects.push_back(get_item_rect());
+    g.current_pin->attribute_rect = get_item_rect();
     g.current_node->pins.push_back(g.current_pin);
     g.current_pin = NULL;
 }

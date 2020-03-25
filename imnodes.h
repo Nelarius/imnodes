@@ -159,7 +159,7 @@ void EndAttribute();
 // The attributes ids used here must match the ids used in
 // Begin(Input|Output)Attribute function calls. The order of start_attr and
 // end_attr doesn't make a difference for rendering the link.
-void Link(int id, int start_attr, int end_attr);
+void Link(int id, int start_attribute_id, int end_attribute_id);
 
 // Set's the node's position corresponding to the node id, either using screen
 // space coordinates, or node editor grid coordinates. You can even set the
@@ -197,11 +197,11 @@ bool IsAnyAttributeActive(int* attribute_id = 0);
 // The following functions should be used after calling EndNodeEditor().
 //
 // Is the user dragging a new link?
-bool IsLinkStarted(int* started_at_attr);
+bool IsLinkStarted(int* started_at_attribute_id);
 // Did the user drop the new link before connecting it to a second attribute?
 bool IsLinkDropped();
 // Did the user create a new link?
-bool IsLinkCreated(int* started_at_attr, int* ended_at_attr);
+bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id);
 
 // Use the following functions to write the editor context's state to a string,
 // or directly to a file. The editor context is serialized in the INI file
