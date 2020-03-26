@@ -193,30 +193,30 @@ struct PinData
 struct LinkData
 {
     int id;
-    int start_attribute_id, end_attribute_id;
+    const PinData *start_pin, *end_pin;
 
     struct
     {
         ImU32 base, hovered, selected;
     } color_style;
 
-    LinkData() : id(), start_attribute_id(), end_attribute_id(), color_style()
-    {
-    }
+    LinkData() : id(), start_pin(NULL), end_pin(NULL), color_style() {}
 };
 
 struct LinkPredicate
 {
     bool operator()(const LinkData& lhs, const LinkData& rhs) const
     {
-        // Do a unique compare by sorting the attribute ids.
+        // Do a unique compare by sorting the pins' addresses.
         // This catches duplicate links, whether they are in the
         // same direction or not.
+        // Sorting by pin address is the same as sorting by pin id,
+        // based on the assumption that all pins contain unique ids.
 
-        int lhs_start = lhs.start_attribute_id;
-        int lhs_end = lhs.end_attribute_id;
-        int rhs_start = rhs.start_attribute_id;
-        int rhs_end = rhs.end_attribute_id;
+        const PinData* lhs_start = lhs.start_pin;
+        const PinData* lhs_end = lhs.end_pin;
+        const PinData* rhs_start = rhs.start_pin;
+        const PinData* rhs_end = rhs.end_pin;
 
         if (lhs_start > lhs_end)
         {
@@ -236,58 +236,52 @@ struct LinkPredicate
 // is not yet complete.
 struct PartialLink
 {
-    PartialLink()
-        : m_start_attribute_id(), m_end_attribute_id(), m_start_engaged(false),
-          m_end_engaged(false)
-    {
-    }
+    PartialLink() : m_start_pin(NULL), m_end_pin(NULL) {}
 
     // Observers
 
-    inline bool has_start_attribute() const { return m_start_engaged; }
+    inline bool has_start_attribute() const { return m_start_pin != NULL; }
 
-    inline bool is_complete() const { return m_end_engaged; }
+    inline bool is_complete() const { return m_end_pin != NULL; }
 
-    inline int start_attribute_id() const
+    inline const PinData* start_pin() const
     {
-        assert(m_start_engaged);
-        return m_start_attribute_id;
+        assert(m_start_pin != NULL);
+        return m_start_pin;
     }
 
-    inline int end_attribute_id() const
+    inline const PinData* end_pin() const
     {
-        assert(m_start_engaged && m_end_engaged);
-        return m_end_attribute_id;
+        assert((m_start_pin != NULL) && (m_end_pin != NULL));
+        return m_end_pin;
     }
 
     // Modifiers
 
-    void start_link(const int id)
+    void start_link(const PinData* const pin)
     {
         // Don't start a link twice!
-        assert(!m_start_engaged);
-        m_start_attribute_id = id;
-        m_start_engaged = true;
+        assert(m_start_pin == NULL);
+        m_start_pin = pin;
     }
 
-    void finish_link(const int id)
+    void finish_link(const PinData* const pin)
     {
         // Don't finish a link before starting it!
-        assert(m_start_engaged);
-        assert(!m_end_engaged);
-        m_end_attribute_id = id;
-        m_end_engaged = true;
+        assert(m_start_pin != NULL);
+        assert(m_end_pin == NULL);
+        m_end_pin = pin;
     }
 
     void reset()
     {
-        m_start_engaged = false;
-        m_end_engaged = false;
+        m_start_pin = NULL;
+        m_end_pin = NULL;
     }
 
 private:
-    int m_start_attribute_id, m_end_attribute_id;
-    bool m_start_engaged, m_end_engaged;
+    const PinData* m_start_pin;
+    const PinData* m_end_pin;
 };
 
 struct BezierCurve
@@ -696,28 +690,15 @@ namespace
 {
 // [SECTION] ui state logic
 
-ImVec2 get_screen_space_pin_coordinates(
-    const ImRect& node_rect,
-    const ImRect& attr_rect,
-    const AttributeType type)
+ImVec2 get_screen_space_pin_coordinates(const PinData& pin)
 {
-    assert(type == AttributeType_Input || type == AttributeType_Output);
-    const float x = type == AttributeType_Input
+    assert(pin.type == AttributeType_Input || pin.type == AttributeType_Output);
+    const ImRect& node_rect = pin.owning_node->rect;
+    const ImRect& attr_rect = pin.attribute_rect;
+    const float x = pin.type == AttributeType_Input
                         ? (node_rect.Min.x - g.style.pin_offset)
                         : (node_rect.Max.x + g.style.pin_offset);
     return ImVec2(x, 0.5f * (attr_rect.Min.y + attr_rect.Max.y));
-}
-
-ImVec2 get_screen_space_pin_coordinates(
-    const EditorContext& editor,
-    const int pin_id)
-{
-    const int pin_idx = editor.pins.id_map.GetInt(pin_id, -1);
-    assert(pin_idx != -1);
-    const PinData& pin = editor.pins.pool[pin_idx];
-    const NodeData& node = *pin.owning_node;
-    return get_screen_space_pin_coordinates(
-        node.rect, pin.attribute_rect, pin.type);
 }
 
 // These functions are here, and not members of the BoxSelector struct, because
@@ -781,12 +762,12 @@ void box_selector_process(
         if (editor.links.in_use[i])
         {
             const LinkData& link = editor.links.pool[i];
-            const ImVec2 start = get_screen_space_pin_coordinates(
-                editor, link.start_attribute_id);
-            const ImVec2 end =
-                get_screen_space_pin_coordinates(editor, link.end_attribute_id);
-            const PinData& pin_start =
-                editor.pins.find_or_create_new(link.start_attribute_id);
+
+            const PinData& pin_start = *link.start_pin;
+            const PinData& pin_end = *link.end_pin;
+
+            const ImVec2 start = get_screen_space_pin_coordinates(pin_start);
+            const ImVec2 end = get_screen_space_pin_coordinates(pin_end);
 
             // Test
             if (rectangle_overlaps_link(box_rect, start, end, pin_start.type))
@@ -1083,8 +1064,7 @@ void draw_pin_shape(
 
 void draw_pin(const NodeData& node, const PinData& pin)
 {
-    const ImVec2 pin_pos = get_screen_space_pin_coordinates(
-        node.rect, pin.attribute_rect, pin.type);
+    const ImVec2 pin_pos = get_screen_space_pin_coordinates(pin);
     if (is_mouse_hovering_near_point(pin_pos, g.style.pin_hover_radius))
     {
         g.hovered_pin = &pin;
@@ -1178,15 +1158,14 @@ void draw_node(const NodeData& node)
 
 void draw_link(EditorContext& editor, const LinkData& link)
 {
-    const ImVec2 start =
-        get_screen_space_pin_coordinates(editor, link.start_attribute_id);
-    const ImVec2 end =
-        get_screen_space_pin_coordinates(editor, link.end_attribute_id);
-    const PinData& pin_start =
-        editor.pins.find_or_create_new(link.start_attribute_id);
+    const PinData& start_pin = *link.start_pin;
+    const PinData& end_pin = *link.end_pin;
+
+    const ImVec2 start = get_screen_space_pin_coordinates(start_pin);
+    const ImVec2 end = get_screen_space_pin_coordinates(end_pin);
 
     const LinkBezierData link_data = get_link_renderable(
-        start, end, pin_start.type, g.style.link_line_segments_per_length);
+        start, end, start_pin.type, g.style.link_line_segments_per_length);
 
     const bool is_hovered = is_mouse_hovering_near_link(link_data.bezier);
     if (is_hovered)
@@ -1255,23 +1234,21 @@ bool finish_link_at_hovered_pin(
         return false;
     }
 
-    const int hovered_pin_id = maybe_hovered_pin->id;
-    const int start_attribute_id = editor.link_dragged.start_attribute_id();
-
-    if (hovered_pin_id == start_attribute_id)
+    if (maybe_hovered_pin == editor.link_dragged.start_pin())
     {
         return false;
     }
 
     LinkData test_link;
-    test_link.start_attribute_id = start_attribute_id;
-    test_link.end_attribute_id = hovered_pin_id;
+    test_link.start_pin = editor.link_dragged.start_pin();
+    test_link.end_pin = maybe_hovered_pin;
     if (editor.links.contains(test_link, LinkPredicate()))
     {
         return false;
     }
 
-    editor.link_dragged.finish_link(hovered_pin_id);
+    editor.link_dragged.finish_link(maybe_hovered_pin);
+
     return true;
 }
 } // namespace
@@ -1529,7 +1506,7 @@ void EndNodeEditor()
 
     if (is_mouse_clicked && g.hovered_pin != NULL)
     {
-        editor.link_dragged.start_link(g.hovered_pin->id);
+        editor.link_dragged.start_link(g.hovered_pin);
     }
 
     if (editor.link_dragged.has_start_attribute())
@@ -1539,15 +1516,9 @@ void EndNodeEditor()
         // Render the link being dragged
         if (ImGui::IsMouseDown(0))
         {
-            const int pin_idx = editor.pins.id_map.GetInt(
-                static_cast<ImGuiID>(editor.link_dragged.start_attribute_id()),
-                -1);
-            assert(pin_idx != -1);
-            const PinData& pin = editor.pins.pool[pin_idx];
-            const NodeData& node = *pin.owning_node;
+            const PinData& pin = *editor.link_dragged.start_pin();
 
-            const ImVec2 start_pos = get_screen_space_pin_coordinates(
-                node.rect, pin.attribute_rect, pin.type);
+            const ImVec2 start_pos = get_screen_space_pin_coordinates(pin);
             const ImVec2 end_pos = imgui_io.MousePos;
 
             const LinkBezierData link_data = get_link_renderable(
@@ -1728,15 +1699,15 @@ void EndAttribute()
     g.current_pin = NULL;
 }
 
-void Link(int id, const int start_attr, const int end_attr)
+void Link(int id, const int start_attr_id, const int end_attr_id)
 {
     assert(g.current_scope == Scope_Editor);
 
     EditorContext& editor = editor_context_get();
     LinkData& link = editor.links.find_or_create_new(id);
     link.id = id;
-    link.start_attribute_id = start_attr;
-    link.end_attribute_id = end_attr;
+    link.start_pin = &editor.pins.find_or_create_new(start_attr_id);
+    link.end_pin = &editor.pins.find_or_create_new(end_attr_id);
     link.color_style.base = g.style.colors[ColorStyle_Link];
     link.color_style.hovered = g.style.colors[ColorStyle_LinkHovered];
     link.color_style.selected = g.style.colors[ColorStyle_LinkSelected];
@@ -1942,7 +1913,7 @@ bool IsLinkStarted(int* const started_at)
     const bool is_started = editor.link_dragged.has_start_attribute();
     if (is_started)
     {
-        *started_at = editor.link_dragged.start_attribute_id();
+        *started_at = editor.link_dragged.start_pin()->id;
     }
     return is_started;
 }
@@ -1953,17 +1924,17 @@ bool IsLinkDropped()
     return g.link_dropped;
 }
 
-bool IsLinkCreated(int* const started_at, int* const ended_at)
+bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)
 {
     assert(g.current_scope == Scope_None);
-    assert(started_at != NULL);
-    assert(ended_at != NULL);
+    assert(started_at_pin_id != NULL);
+    assert(ended_at_pin_id != NULL);
 
     const EditorContext& editor = editor_context_get();
     if (editor.link_dragged.is_complete())
     {
-        *started_at = editor.link_dragged.start_attribute_id();
-        *ended_at = editor.link_dragged.end_attribute_id();
+        *started_at_pin_id = editor.link_dragged.start_pin()->id;
+        *ended_at_pin_id = editor.link_dragged.end_pin()->id;
         return true;
     }
 
