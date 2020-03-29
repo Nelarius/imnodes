@@ -317,14 +317,6 @@ enum NodeInteractionState
     NodeInteractionState_None
 };
 
-struct NodeInteraction
-{
-    NodeInteractionState state;
-    // TODO: doesn't look like this struct is really needed
-
-    NodeInteraction() : state(NodeInteractionState_None) {}
-};
-
 struct ColorStyleElement
 {
     ImU32 color;
@@ -677,7 +669,7 @@ struct EditorContext
 
     PartialLink link_dragged;
     BoxSelector box_selector;
-    NodeInteraction node_interaction;
+    NodeInteractionState node_interaction_state;
 
     EditorContext()
         : nodes(), pins(), links(), panning(0.f, 0.f), link_dragged(),
@@ -821,8 +813,7 @@ void box_selector_update(
 
 void node_interaction_begin(EditorContext& editor, NodeData& node)
 {
-    NodeInteraction& node_interaction = editor.node_interaction;
-    node_interaction.state = NodeInteractionState_MouseDown;
+    editor.node_interaction_state = NodeInteractionState_MouseDown;
     // If the node is not already contained in the selection, then we want only
     // the interaction node to be selected, effective immediately.
     //
@@ -837,8 +828,7 @@ void node_interaction_begin(EditorContext& editor, NodeData& node)
 
 void node_interaction_update(EditorContext& editor)
 {
-    NodeInteraction& node_interaction = editor.node_interaction;
-    switch (node_interaction.state)
+    switch (editor.node_interaction_state)
     {
     case NodeInteractionState_MouseDown:
     {
@@ -857,7 +847,7 @@ void node_interaction_update(EditorContext& editor)
 
         if (ImGui::IsMouseReleased(0))
         {
-            node_interaction.state = NodeInteractionState_None;
+            editor.node_interaction_state = NodeInteractionState_None;
         }
     }
     break;
