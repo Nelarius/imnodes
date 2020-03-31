@@ -673,7 +673,7 @@ struct EditorContext
 
     EditorContext()
         : nodes(), pins(), links(), panning(0.f, 0.f), link_dragged(),
-          box_selector()
+          box_selector(), node_interaction_state(NodeInteractionState_None)
     {
     }
 };
