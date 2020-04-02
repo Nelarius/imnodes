@@ -91,7 +91,7 @@ struct ObjectPool
         memset(in_use.Data, 0, sizeof(bool) * in_use.size());
     }
 
-    int find_or_create_index_for(const int id)
+    inline int find_or_create_index_for(const int id)
     {
         int index = id_map.GetInt(static_cast<ImGuiID>(id), -1);
         if (index == -1)
@@ -387,8 +387,6 @@ struct
     ImVector<StyleElement> style_modifier_stack;
     ImGuiTextBuffer text_buffer;
 
-    // The lifetime of these pointers is the Begin/EndNode, Begin/EndAttribute
-    // function call pairs, respectively.
     int current_node_idx;
     int current_pin_idx;
 
