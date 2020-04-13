@@ -1639,7 +1639,8 @@ void EndNodeEditor()
         }
     }
 
-    if (is_mouse_clicked && !interaction_active(editor))
+    if (is_mouse_clicked && !interaction_active(editor) &&
+        ImGui::IsWindowHovered())
     {
         editor.selected_node_indices.clear();
         editor.selected_link_indices.clear();
