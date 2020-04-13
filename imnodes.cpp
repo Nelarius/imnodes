@@ -731,6 +731,16 @@ ImVec2 get_screen_space_pin_coordinates(
     return ImVec2(x, 0.5f * (attribute_rect.Min.y + attribute_rect.Max.y));
 }
 
+ImVec2 get_screen_space_pin_coordinates(
+    const EditorContext& editor,
+    const PinData& pin)
+{
+    const ImRect& parent_node_rect =
+        editor.nodes.pool[pin.parent_node_idx].rect;
+    return get_screen_space_pin_coordinates(
+        parent_node_rect, pin.attribute_rect, pin.type);
+}
+
 // These functions are here, and not members of the BoxSelector struct, because
 // implementing a C API in C++ is frustrating. EditorContext has a BoxSelector
 // field, but the state changes depend on the editor. So, these are implemented
@@ -1590,12 +1600,17 @@ void EndNodeEditor()
         {
             const PinData& pin =
                 editor.pins.pool[editor.link_dragged.start_pin_idx()];
-            const ImRect& parent_node_rect =
-                editor.nodes.pool[pin.parent_node_idx].rect;
 
-            const ImVec2 start_pos = get_screen_space_pin_coordinates(
-                parent_node_rect, pin.attribute_rect, pin.type);
-            const ImVec2 end_pos = imgui_io.MousePos;
+            const ImVec2 start_pos =
+                get_screen_space_pin_coordinates(editor, pin);
+
+            // If we are within the hover radius of the receiving pin, snap the
+            // endpoint to it
+            const ImVec2 end_pos =
+                g.hovered_pin_idx.has_value()
+                    ? get_screen_space_pin_coordinates(
+                          editor, editor.pins.pool[g.hovered_pin_idx.value()])
+                    : imgui_io.MousePos;
 
             const LinkBezierData link_data = get_link_renderable(
                 start_pos,
