@@ -346,10 +346,11 @@ struct BoxSelector
     BoxSelector() : state(BoxSelectorState_None), box_rect() {}
 };
 
-enum NodeInteractionState
+enum InteractionState
 {
-    NodeInteractionState_MouseDown,
-    NodeInteractionState_None
+    InteractionState_NodeMouseDown,
+    InteractionState_LinkMouseDown,
+    InteractionState_None
 };
 
 struct ColorStyleElement
@@ -704,12 +705,12 @@ struct EditorContext
 
     PartialLink link_dragged;
     BoxSelector box_selector;
-    NodeInteractionState node_interaction_state;
+    InteractionState interaction_state;
 
     EditorContext()
         : nodes(), pins(), links(), panning(0.f, 0.f), selected_node_indices(),
           selected_link_indices(), link_dragged(), box_selector(),
-          node_interaction_state(NodeInteractionState_None)
+          interaction_state(InteractionState_None)
     {
     }
 };
@@ -854,9 +855,35 @@ void box_selector_update(
     }
 }
 
-void node_interaction_begin(EditorContext& editor, const int node_idx)
+void translate_selected_nodes(EditorContext& editor)
 {
-    editor.node_interaction_state = NodeInteractionState_MouseDown;
+    if (ImGui::IsMouseDragging(0))
+    {
+        const ImGuiIO& io = ImGui::GetIO();
+        for (int i = 0; i < editor.selected_node_indices.size(); ++i)
+        {
+            const int node_idx = editor.selected_node_indices[i];
+            NodeData& node = editor.nodes.pool[node_idx];
+            if (node.draggable)
+            {
+                node.origin += io.MouseDelta;
+            }
+        }
+    }
+}
+
+void begin_node_interaction(EditorContext& editor, const int node_idx)
+{
+    // Don't start interacting with the node if we are about to start dragging
+    // a new link!
+    // TODO: dragging a new link should also be a part of this state machine.
+
+    if (g.hovered_pin_idx.has_value())
+    {
+        return;
+    }
+
+    editor.interaction_state = InteractionState_NodeMouseDown;
     // If the node is not already contained in the selection, then we want only
     // the interaction node to be selected, effective immediately.
     //
@@ -865,37 +892,55 @@ void node_interaction_begin(EditorContext& editor, const int node_idx)
     if (!editor.selected_node_indices.contains(node_idx))
     {
         editor.selected_node_indices.clear();
+        editor.selected_link_indices.clear();
         editor.selected_node_indices.push_back(node_idx);
     }
 }
 
-void node_interaction_update(EditorContext& editor)
+void begin_link_interaction(EditorContext& editor, const int link_idx)
 {
-    switch (editor.node_interaction_state)
+    editor.interaction_state = InteractionState_LinkMouseDown;
+
+    // Like the node interaction above, if the link is not already contained in
+    // the selection, we want to reset it.
+    if (!editor.selected_link_indices.contains(link_idx))
     {
-    case NodeInteractionState_MouseDown:
+        editor.selected_node_indices.clear();
+        editor.selected_link_indices.clear();
+        editor.selected_link_indices.push_back(link_idx);
+    }
+}
+
+bool interaction_active(EditorContext& editor)
+{
+    return editor.interaction_state != InteractionState_None;
+}
+
+void interaction_update(EditorContext& editor)
+{
+    switch (editor.interaction_state)
     {
-        if (ImGui::IsMouseDragging(0) &&
-            (!editor.link_dragged.has_start_attribute()))
-        {
-            for (int i = 0; i < editor.selected_node_indices.size(); ++i)
-            {
-                const int node_idx = editor.selected_node_indices[i];
-                NodeData& node = editor.nodes.pool[node_idx];
-                if (node.draggable)
-                {
-                    node.origin += ImGui::GetIO().MouseDelta;
-                }
-            }
-        }
+    case InteractionState_NodeMouseDown:
+    {
+        translate_selected_nodes(editor);
 
         if (ImGui::IsMouseReleased(0))
         {
-            editor.node_interaction_state = NodeInteractionState_None;
+            editor.interaction_state = InteractionState_None;
         }
     }
     break;
-    case NodeInteractionState_None:
+    case InteractionState_LinkMouseDown:
+    {
+        translate_selected_nodes(editor);
+
+        if (ImGui::IsMouseReleased(0))
+        {
+            editor.interaction_state = InteractionState_None;
+        }
+    }
+    break;
+    case InteractionState_None:
         break;
     default:
         assert(!"Unreachable code!");
@@ -1130,14 +1175,7 @@ void draw_node(EditorContext& editor, const int node_idx)
     ImGui::InvisibleButton("", node.rect.GetSize());
     ImGui::PopID();
 
-    if (ImGui::IsItemHovered())
-    {
-        g.hovered_node_idx = node_idx;
-        if (ImGui::IsMouseClicked(0))
-        {
-            node_interaction_begin(editor, node_idx);
-        }
-    }
+    const bool item_hovered = ImGui::IsItemHovered();
 
     ImU32 node_background = node.color_style.background;
     ImU32 titlebar_background = node.color_style.titlebar;
@@ -1147,7 +1185,7 @@ void draw_node(EditorContext& editor, const int node_idx)
         node_background = node.color_style.background_selected;
         titlebar_background = node.color_style.titlebar_selected;
     }
-    else if (g.hovered_node_idx == node_idx)
+    else if (item_hovered)
     {
         node_background = node.color_style.background_hovered;
         titlebar_background = node.color_style.titlebar_hovered;
@@ -1194,6 +1232,15 @@ void draw_node(EditorContext& editor, const int node_idx)
     {
         draw_pin(editor, node, node.pin_indices[i]);
     }
+
+    if (item_hovered)
+    {
+        g.hovered_node_idx = node_idx;
+        if (ImGui::IsMouseClicked(0))
+        {
+            begin_node_interaction(editor, node_idx);
+        }
+    }
 }
 
 void draw_link(EditorContext& editor, const int link_idx)
@@ -1223,7 +1270,7 @@ void draw_link(EditorContext& editor, const int link_idx)
         g.hovered_link_idx = link_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            editor.selected_link_indices.push_back(link_idx);
+            begin_link_interaction(editor, link_idx);
         }
     }
 
@@ -1519,28 +1566,11 @@ void EndNodeEditor()
     const bool is_mouse_clicked = ImGui::IsMouseClicked(0);
     const ImGuiIO& imgui_io = ImGui::GetIO();
 
-    // check to see if the mouse was near any node
-    if (!g.hovered_node_idx.has_value() && ImGui::IsWindowHovered())
-    {
-        if (is_mouse_clicked)
-        {
-            editor.selected_node_indices.clear();
-        }
-    }
-
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
     {
         if (editor.links.in_use[link_idx])
         {
             draw_link(editor, link_idx);
-        }
-    }
-
-    if (!g.hovered_link_idx.has_value() && ImGui::IsWindowHovered())
-    {
-        if (is_mouse_clicked)
-        {
-            editor.selected_link_indices.clear();
         }
     }
 
@@ -1594,6 +1624,14 @@ void EndNodeEditor()
         }
     }
 
+    if (is_mouse_clicked && !interaction_active(editor))
+    {
+        editor.selected_node_indices.clear();
+        editor.selected_link_indices.clear();
+    }
+
+    interaction_update(editor);
+
     {
         const bool any_ui_element_hovered =
             g.hovered_node_idx.has_value() || g.hovered_link_idx.has_value() ||
@@ -1613,8 +1651,6 @@ void EndNodeEditor()
             box_selector_update(editor.box_selector, editor, imgui_io);
         }
     }
-
-    node_interaction_update(editor);
 
     // apply panning if the mouse was dragged
     if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() &&
