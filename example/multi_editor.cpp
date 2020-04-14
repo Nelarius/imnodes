@@ -13,6 +13,8 @@ struct Node
 {
     int id;
     float value;
+
+    Node(const int i, const float v) : id(i), value(v) {}
 };
 
 struct Link
@@ -84,7 +86,7 @@ void show_editor(const char* editor_name, Editor& editor)
     {
         const int node_id = ++editor.current_id;
         imnodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
-        editor.nodes.push_back(Node{node_id, 0.f});
+        editor.nodes.push_back(Node(node_id, 0.f));
     }
 
     ImGui::End();
