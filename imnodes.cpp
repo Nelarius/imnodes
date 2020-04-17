@@ -911,14 +911,11 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
 {
     editor.interaction_state = InteractionState_LinkMouseDown;
 
-    // Like the node interaction above, if the link is not already contained in
-    // the selection, we want to reset it.
-    if (!editor.selected_link_indices.contains(link_idx))
-    {
-        editor.selected_node_indices.clear();
-        editor.selected_link_indices.clear();
-        editor.selected_link_indices.push_back(link_idx);
-    }
+    // When a link is selected, clear all other selections, and insert the link
+    // as the sole selection.
+    editor.selected_node_indices.clear();
+    editor.selected_link_indices.clear();
+    editor.selected_link_indices.push_back(link_idx);
 }
 
 bool interaction_active(EditorContext& editor)
@@ -942,8 +939,6 @@ void interaction_update(EditorContext& editor)
     break;
     case InteractionState_LinkMouseDown:
     {
-        translate_selected_nodes(editor);
-
         if (ImGui::IsMouseReleased(0))
         {
             editor.interaction_state = InteractionState_None;
