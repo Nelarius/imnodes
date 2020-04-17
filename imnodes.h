@@ -194,13 +194,7 @@ bool IsAttributeActive();
 // function argument.
 bool IsAnyAttributeActive(int* attribute_id = 0);
 
-// The following functions should be used after calling EndNodeEditor().
-//
-// Is the user dragging a new link?
-bool IsLinkStarted(int* started_at_attribute_id);
-// Did the user drop the new link before connecting it to a second attribute?
-bool IsLinkDropped();
-// Did the user create a new link?
+// Did the user create a new link? Call this after EndNodeEditor().
 bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id);
 
 // Use the following functions to write the editor context's state to a string,

@@ -361,7 +361,6 @@ struct
     OptionalIndex active_pin_idx;
 
     bool link_created;
-    bool link_dropped;
 } g;
 
 EditorContext& editor_context_get()
@@ -1539,7 +1538,6 @@ void BeginNodeEditor()
     g.active_pin_idx.reset();
 
     g.link_created = false;
-    g.link_dropped = false;
 
     // reset ui content for the current editor
     EditorContext& editor = editor_context_get();
@@ -1969,21 +1967,6 @@ bool IsAnyAttributeActive(int* const attribute_id)
     }
 
     return true;
-}
-
-bool IsLinkStarted(int* const started_at)
-{
-    assert(g.current_scope == Scope_None);
-    assert(started_at != NULL);
-
-    return false;
-}
-
-bool IsLinkDropped()
-{
-    assert(g.current_scope == Scope_None);
-
-    return false;
 }
 
 bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)
