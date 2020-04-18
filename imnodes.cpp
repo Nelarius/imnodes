@@ -778,11 +778,6 @@ void begin_canvas_interaction(EditorContext& editor)
     }
 }
 
-bool click_interaction_active(EditorContext& editor)
-{
-    return editor.click_interaction_type != ClickInteractionType_None;
-}
-
 void box_selector_update_selection(EditorContext& editor, ImRect box_rect)
 {
     // Invert box selector coordinates as needed
