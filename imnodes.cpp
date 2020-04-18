@@ -284,27 +284,13 @@ struct LinkBezierData
     int num_segments;
 };
 
-enum BoxSelectorState
-{
-    BoxSelectorState_Started,
-    BoxSelectorState_Dragging,
-    BoxSelectorState_None
-};
-
-struct BoxSelector
-{
-    BoxSelectorState state;
-    ImRect box_rect;
-
-    BoxSelector() : state(BoxSelectorState_None), box_rect() {}
-};
-
 enum ClickInteractionType
 {
     ClickInteractionType_Node,
     ClickInteractionType_Link,
     ClickInteractionType_LinkCreation,
     ClickInteractionType_Panning,
+    ClickInteractionType_BoxSelection,
     ClickInteractionType_None
 };
 
@@ -315,6 +301,11 @@ struct ClickInteractionState
         int start_pin_idx;
         int end_pin_idx;
     } link_creation;
+
+    struct
+    {
+        ImRect rect;
+    } box_selector;
 };
 
 struct ColorStyleElement
@@ -668,13 +659,12 @@ struct EditorContext
     ImVector<int> selected_node_indices;
     ImVector<int> selected_link_indices;
 
-    BoxSelector box_selector;
     ClickInteractionType click_interaction_type;
     ClickInteractionState click_interaction_state;
 
     EditorContext()
         : nodes(), pins(), links(), panning(0.f, 0.f), selected_node_indices(),
-          selected_link_indices(), box_selector(),
+          selected_link_indices(),
           click_interaction_type(ClickInteractionType_None),
           click_interaction_state()
     {
@@ -712,124 +702,6 @@ ImVec2 get_screen_space_pin_coordinates(
 // field, but the state changes depend on the editor. So, these are implemented
 // as C-style free functions so that the code is not too much of a mish-mash of
 // C functions and C++ method definitions.
-
-void box_selector_begin(BoxSelector& box_selector)
-{
-    box_selector.state = BoxSelectorState_Started;
-}
-
-bool box_selector_active(const BoxSelector& box_selector)
-{
-    return box_selector.state != BoxSelectorState_None;
-}
-
-void box_selector_process(
-    const BoxSelector& box_selector,
-    EditorContext& editor)
-{
-    ImRect box_rect = box_selector.box_rect;
-
-    // Invert box selector coordinates as needed
-
-    if (box_rect.Min.x > box_rect.Max.x)
-    {
-        ImSwap(box_rect.Min.x, box_rect.Max.x);
-    }
-
-    if (box_rect.Min.y > box_rect.Max.y)
-    {
-        ImSwap(box_rect.Min.y, box_rect.Max.y);
-    }
-
-    // Clearing selected nodes list
-    editor.selected_node_indices.clear();
-
-    // Test for overlap against node rectangles
-
-    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
-    {
-        if (editor.nodes.in_use[node_idx])
-        {
-            NodeData& node = editor.nodes.pool[node_idx];
-            if (box_rect.Overlaps(node.rect))
-            {
-                editor.selected_node_indices.push_back(node_idx);
-            }
-        }
-    }
-
-    // Clearing selected links list
-    editor.selected_link_indices.clear();
-
-    // Test for overlap against links
-
-    for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
-    {
-        if (editor.links.in_use[link_idx])
-        {
-            const LinkData& link = editor.links.pool[link_idx];
-
-            const PinData& pin_start = editor.pins.pool[link.start_pin_idx];
-            const PinData& pin_end = editor.pins.pool[link.end_pin_idx];
-            const ImRect& node_start_rect =
-                editor.nodes.pool[pin_start.parent_node_idx].rect;
-            const ImRect& node_end_rect =
-                editor.nodes.pool[pin_end.parent_node_idx].rect;
-
-            const ImVec2 start = get_screen_space_pin_coordinates(
-                node_start_rect, pin_start.attribute_rect, pin_start.type);
-            const ImVec2 end = get_screen_space_pin_coordinates(
-                node_end_rect, pin_end.attribute_rect, pin_end.type);
-
-            // Test
-            if (rectangle_overlaps_link(box_rect, start, end, pin_start.type))
-            {
-                editor.selected_link_indices.push_back(link_idx);
-            }
-        }
-    }
-}
-
-void box_selector_update(
-    BoxSelector& box_selector,
-    EditorContext& editor_ctx,
-    const ImGuiIO& io)
-{
-    const ImU32 box_selector_color = g.style.colors[ColorStyle_BoxSelector];
-    const ImU32 box_selector_outline =
-        g.style.colors[ColorStyle_BoxSelectorOutline];
-    switch (box_selector.state)
-    {
-    case BoxSelectorState_Started:
-        box_selector.box_rect.Min = io.MousePos;
-        box_selector.state = BoxSelectorState_Dragging;
-        // fallthrough to next case to get the rest of the state &
-        // render
-    case BoxSelectorState_Dragging:
-    {
-        box_selector.box_rect.Max = io.MousePos;
-        g.canvas_draw_list->AddRectFilled(
-            box_selector.box_rect.Min,
-            box_selector.box_rect.Max,
-            box_selector_color);
-        g.canvas_draw_list->AddRect(
-            box_selector.box_rect.Min,
-            box_selector.box_rect.Max,
-            box_selector_outline);
-
-        box_selector_process(box_selector, editor_ctx);
-
-        if (ImGui::IsMouseReleased(0))
-        {
-            box_selector.state = BoxSelectorState_None;
-        }
-    }
-    break;
-    default:
-        assert(!"Unreachable code!");
-        break;
-    }
-}
 
 void begin_node_selection(EditorContext& editor, const int node_idx)
 {
@@ -887,21 +759,93 @@ void begin_canvas_interaction(EditorContext& editor)
         return;
     }
 
+    const bool left_mouse_clicked = ImGui::IsMouseClicked(0);
+    const bool middle_mouse_clicked = ImGui::IsMouseClicked(2);
+
     const bool started_panning =
         g.io.emulate_three_button_mouse.enabled
-            ? (ImGui::IsMouseClicked(0) &&
-               *g.io.emulate_three_button_mouse.modifier)
-            : ImGui::IsMouseClicked(2);
+            ? (left_mouse_clicked && *g.io.emulate_three_button_mouse.modifier)
+            : middle_mouse_clicked;
 
-    if (started_panning)
+    editor.click_interaction_type = started_panning
+                                        ? ClickInteractionType_Panning
+                                        : ClickInteractionType_BoxSelection;
+
+    if (editor.click_interaction_type == ClickInteractionType_BoxSelection)
     {
-        editor.click_interaction_type = ClickInteractionType_Panning;
+        editor.click_interaction_state.box_selector.rect.Min =
+            ImGui::GetIO().MousePos;
     }
 }
 
 bool click_interaction_active(EditorContext& editor)
 {
     return editor.click_interaction_type != ClickInteractionType_None;
+}
+
+void box_selector_update_selection(EditorContext& editor, ImRect box_rect)
+{
+    // Invert box selector coordinates as needed
+
+    if (box_rect.Min.x > box_rect.Max.x)
+    {
+        ImSwap(box_rect.Min.x, box_rect.Max.x);
+    }
+
+    if (box_rect.Min.y > box_rect.Max.y)
+    {
+        ImSwap(box_rect.Min.y, box_rect.Max.y);
+    }
+
+    // Update node selection
+
+    editor.selected_node_indices.clear();
+
+    // Test for overlap against node rectangles
+
+    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
+    {
+        if (editor.nodes.in_use[node_idx])
+        {
+            NodeData& node = editor.nodes.pool[node_idx];
+            if (box_rect.Overlaps(node.rect))
+            {
+                editor.selected_node_indices.push_back(node_idx);
+            }
+        }
+    }
+
+    // Update link selection
+
+    editor.selected_link_indices.clear();
+
+    // Test for overlap against links
+
+    for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
+    {
+        if (editor.links.in_use[link_idx])
+        {
+            const LinkData& link = editor.links.pool[link_idx];
+
+            const PinData& pin_start = editor.pins.pool[link.start_pin_idx];
+            const PinData& pin_end = editor.pins.pool[link.end_pin_idx];
+            const ImRect& node_start_rect =
+                editor.nodes.pool[pin_start.parent_node_idx].rect;
+            const ImRect& node_end_rect =
+                editor.nodes.pool[pin_end.parent_node_idx].rect;
+
+            const ImVec2 start = get_screen_space_pin_coordinates(
+                node_start_rect, pin_start.attribute_rect, pin_start.type);
+            const ImVec2 end = get_screen_space_pin_coordinates(
+                node_end_rect, pin_end.attribute_rect, pin_end.type);
+
+            // Test
+            if (rectangle_overlaps_link(box_rect, start, end, pin_start.type))
+            {
+                editor.selected_link_indices.push_back(link_idx);
+            }
+        }
+    }
 }
 
 void translate_selected_nodes(EditorContext& editor)
@@ -958,6 +902,27 @@ void click_interaction_update(EditorContext& editor)
 
     switch (editor.click_interaction_type)
     {
+    case ClickInteractionType_BoxSelection:
+    {
+        ImRect& box_rect = editor.click_interaction_state.box_selector.rect;
+        box_rect.Max = ImGui::GetIO().MousePos;
+
+        box_selector_update_selection(editor, box_rect);
+
+        const ImU32 box_selector_color = g.style.colors[ColorStyle_BoxSelector];
+        const ImU32 box_selector_outline =
+            g.style.colors[ColorStyle_BoxSelectorOutline];
+        g.canvas_draw_list->AddRectFilled(
+            box_rect.Min, box_rect.Max, box_selector_color);
+        g.canvas_draw_list->AddRect(
+            box_rect.Min, box_rect.Max, box_selector_outline);
+
+        if (left_mouse_released)
+        {
+            editor.click_interaction_type = ClickInteractionType_None;
+        }
+    }
+    break;
     case ClickInteractionType_Node:
     {
         translate_selected_nodes(editor);
@@ -1647,8 +1612,6 @@ void EndNodeEditor()
     const bool is_left_mouse_clicked = ImGui::IsMouseClicked(0);
     const bool is_middle_mouse_clicked = ImGui::IsMouseClicked(2);
 
-    const ImGuiIO& imgui_io = ImGui::GetIO();
-
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
     {
         if (editor.links.in_use[link_idx])
@@ -1663,38 +1626,6 @@ void EndNodeEditor()
     }
 
     click_interaction_update(editor);
-
-    if (is_left_mouse_clicked && !click_interaction_active(editor) &&
-        ImGui::IsWindowHovered())
-    {
-        editor.selected_node_indices.clear();
-        editor.selected_link_indices.clear();
-    }
-
-    {
-        const bool any_ui_element_hovered =
-            g.hovered_node_idx.has_value() || g.hovered_link_idx.has_value() ||
-            g.hovered_pin_idx.has_value() || ImGui::IsAnyItemHovered();
-
-        const bool is_mouse_clicked_in_canvas =
-            is_left_mouse_clicked &&
-            g.canvas_rect_screen_space.Contains(ImGui::GetMousePos());
-
-        // start the box selector
-        // TODO: this is weird and hacky
-        if (!any_ui_element_hovered && is_mouse_clicked_in_canvas &&
-            !click_interaction_active(editor))
-        {
-            assert(!click_interaction_active(editor));
-            box_selector_begin(editor.box_selector);
-        }
-
-        if (box_selector_active(editor.box_selector))
-        {
-            assert(!click_interaction_active(editor));
-            box_selector_update(editor.box_selector, editor, imgui_io);
-        }
-    }
 
     // pop style
     ImGui::EndChild();      // end scrolling region
