@@ -301,8 +301,8 @@ struct BoxSelector
 
 enum ClickInteractionType
 {
-    ClickInteractionType_NodeMouseDown,
-    ClickInteractionType_LinkMouseDown,
+    ClickInteractionType_Node,
+    ClickInteractionType_Link,
     ClickInteractionType_LinkCreation,
     ClickInteractionType_None
 };
@@ -856,7 +856,7 @@ void begin_node_selection(EditorContext& editor, const int node_idx)
         return;
     }
 
-    editor.click_interaction_type = ClickInteractionType_NodeMouseDown;
+    editor.click_interaction_type = ClickInteractionType_Node;
     // If the node is not already contained in the selection, then we want only
     // the interaction node to be selected, effective immediately.
     //
@@ -872,7 +872,7 @@ void begin_node_selection(EditorContext& editor, const int node_idx)
 
 void begin_link_selection(EditorContext& editor, const int link_idx)
 {
-    editor.click_interaction_type = ClickInteractionType_LinkMouseDown;
+    editor.click_interaction_type = ClickInteractionType_Link;
 
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
@@ -930,7 +930,7 @@ void click_interaction_update(EditorContext& editor)
 
     switch (editor.click_interaction_type)
     {
-    case ClickInteractionType_NodeMouseDown:
+    case ClickInteractionType_Node:
     {
         translate_selected_nodes(editor);
 
@@ -940,7 +940,7 @@ void click_interaction_update(EditorContext& editor)
         }
     }
     break;
-    case ClickInteractionType_LinkMouseDown:
+    case ClickInteractionType_Link:
     {
         if (left_mouse_released)
         {
