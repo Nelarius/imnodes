@@ -304,6 +304,7 @@ enum ClickInteractionType
     ClickInteractionType_Node,
     ClickInteractionType_Link,
     ClickInteractionType_LinkCreation,
+    ClickInteractionType_Panning,
     ClickInteractionType_None
 };
 
@@ -346,6 +347,7 @@ struct
     ImRect canvas_rect_screen_space;
     ScopeFlags current_scope;
 
+    IO io;
     Style style;
     ImVector<ColorStyleElement> color_modifier_stack;
     ImVector<StyleElement> style_modifier_stack;
@@ -829,23 +831,6 @@ void box_selector_update(
     }
 }
 
-void translate_selected_nodes(EditorContext& editor)
-{
-    if (ImGui::IsMouseDragging(0))
-    {
-        const ImGuiIO& io = ImGui::GetIO();
-        for (int i = 0; i < editor.selected_node_indices.size(); ++i)
-        {
-            const int node_idx = editor.selected_node_indices[i];
-            NodeData& node = editor.nodes.pool[node_idx];
-            if (node.draggable)
-            {
-                node.origin += io.MouseDelta;
-            }
-        }
-    }
-}
-
 void begin_node_selection(EditorContext& editor, const int node_idx)
 {
     // Don't start selecting a node if we are e.g. already creating and dragging
@@ -888,9 +873,52 @@ void begin_link_creation(EditorContext& editor, const int hovered_pin_idx)
         hovered_pin_idx;
 }
 
+void begin_canvas_interaction(EditorContext& editor)
+{
+    const bool any_ui_element_hovered =
+        g.hovered_node_idx.has_value() || g.hovered_link_idx.has_value() ||
+        g.hovered_pin_idx.has_value() || ImGui::IsAnyItemHovered();
+
+    const bool mouse_not_in_canvas =
+        !g.canvas_rect_screen_space.Contains(ImGui::GetMousePos());
+
+    if (any_ui_element_hovered || mouse_not_in_canvas)
+    {
+        return;
+    }
+
+    const bool started_panning =
+        g.io.emulate_three_button_mouse.enabled
+            ? (ImGui::IsMouseClicked(0) &&
+               *g.io.emulate_three_button_mouse.modifier)
+            : ImGui::IsMouseClicked(2);
+
+    if (started_panning)
+    {
+        editor.click_interaction_type = ClickInteractionType_Panning;
+    }
+}
+
 bool click_interaction_active(EditorContext& editor)
 {
     return editor.click_interaction_type != ClickInteractionType_None;
+}
+
+void translate_selected_nodes(EditorContext& editor)
+{
+    if (ImGui::IsMouseDragging(0))
+    {
+        const ImGuiIO& io = ImGui::GetIO();
+        for (int i = 0; i < editor.selected_node_indices.size(); ++i)
+        {
+            const int node_idx = editor.selected_node_indices[i];
+            NodeData& node = editor.nodes.pool[node_idx];
+            if (node.draggable)
+            {
+                node.origin += io.MouseDelta;
+            }
+        }
+    }
 }
 
 bool finish_link_at_hovered_pin(
@@ -982,6 +1010,24 @@ void click_interaction_update(EditorContext& editor)
             g.link_created =
                 finish_link_at_hovered_pin(editor, g.hovered_pin_idx);
 
+            editor.click_interaction_type = ClickInteractionType_None;
+        }
+    }
+    break;
+    case ClickInteractionType_Panning:
+    {
+        const bool dragging =
+            g.io.emulate_three_button_mouse.enabled
+                ? (ImGui::IsMouseDragging(0, 0.f) &&
+                   (*g.io.emulate_three_button_mouse.modifier))
+                : ImGui::IsMouseDragging(2, 0.f);
+
+        if (dragging)
+        {
+            editor.panning += ImGui::GetIO().MouseDelta;
+        }
+        else
+        {
             editor.click_interaction_type = ClickInteractionType_None;
         }
     }
@@ -1380,6 +1426,13 @@ void begin_attribute(
 
 // [SECTION] API implementation
 
+IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse()
+    : enabled(false), modifier(NULL)
+{
+}
+
+IO::IO() : emulate_three_button_mouse() {}
+
 Style::Style()
     : grid_spacing(32.f), node_corner_rounding(4.f),
       node_padding_horizontal(8.f), node_padding_vertical(8.f),
@@ -1441,10 +1494,16 @@ void Initialize()
     g.default_editor_ctx = EditorContextCreate();
     EditorContextSet(g.default_editor_ctx);
 
+    const ImGuiIO& io = ImGui::GetIO();
+
+    g.io.emulate_three_button_mouse.modifier = &io.KeyAlt;
+
     StyleColorsDark();
 }
 
 void Shutdown() { EditorContextFree(g.default_editor_ctx); }
+
+IO& GetIO() { return g.io; }
 
 Style& GetStyle() { return g.style; }
 
@@ -1585,7 +1644,9 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
-    const bool is_mouse_clicked = ImGui::IsMouseClicked(0);
+    const bool is_left_mouse_clicked = ImGui::IsMouseClicked(0);
+    const bool is_middle_mouse_clicked = ImGui::IsMouseClicked(2);
+
     const ImGuiIO& imgui_io = ImGui::GetIO();
 
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
@@ -1596,25 +1657,33 @@ void EndNodeEditor()
         }
     }
 
-    if (is_mouse_clicked && !click_interaction_active(editor) &&
+    if (is_left_mouse_clicked || is_middle_mouse_clicked)
+    {
+        begin_canvas_interaction(editor);
+    }
+
+    click_interaction_update(editor);
+
+    if (is_left_mouse_clicked && !click_interaction_active(editor) &&
         ImGui::IsWindowHovered())
     {
         editor.selected_node_indices.clear();
         editor.selected_link_indices.clear();
     }
 
-    click_interaction_update(editor);
-
     {
         const bool any_ui_element_hovered =
             g.hovered_node_idx.has_value() || g.hovered_link_idx.has_value() ||
             g.hovered_pin_idx.has_value() || ImGui::IsAnyItemHovered();
+
         const bool is_mouse_clicked_in_canvas =
-            is_mouse_clicked &&
+            is_left_mouse_clicked &&
             g.canvas_rect_screen_space.Contains(ImGui::GetMousePos());
 
         // start the box selector
-        if (!any_ui_element_hovered && is_mouse_clicked_in_canvas)
+        // TODO: this is weird and hacky
+        if (!any_ui_element_hovered && is_mouse_clicked_in_canvas &&
+            !click_interaction_active(editor))
         {
             assert(!click_interaction_active(editor));
             box_selector_begin(editor.box_selector);
@@ -1625,13 +1694,6 @@ void EndNodeEditor()
             assert(!click_interaction_active(editor));
             box_selector_update(editor.box_selector, editor, imgui_io);
         }
-    }
-
-    // apply panning if the mouse was dragged
-    if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() &&
-        (ImGui::IsMouseDragging(2, 0) || ImGui::IsMouseDragging(1, 0)))
-    {
-        editor.panning = editor.panning + imgui_io.MouseDelta;
     }
 
     // pop style

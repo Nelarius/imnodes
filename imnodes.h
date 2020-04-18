@@ -52,6 +52,21 @@ enum PinShape
     PinShape_QuadFilled
 };
 
+struct IO
+{
+    struct EmulateThreeButtonMouse
+    {
+        EmulateThreeButtonMouse();
+
+        // Controls whether this feature is enabled or not.
+        bool enabled;
+        const bool* modifier; // The keyboard modifier to use with the mouse
+                              // left click. Set to &ImGuiIO::KeyAlt by default.
+    } emulate_three_button_mouse;
+
+    IO();
+};
+
 struct Style
 {
     float grid_spacing;
@@ -113,6 +128,8 @@ void EditorContextMoveToNode(const int node_id);
 // Initialize the node editor system.
 void Initialize();
 void Shutdown();
+
+IO& GetIO();
 
 // Returns the global style struct. See the struct declaration for default
 // values.

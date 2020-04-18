@@ -420,8 +420,14 @@ public:
         time_context.update();
 
         ImGui::Begin("Color node editor");
-        ImGui::Text("A -- add node");
-        ImGui::Text("X -- delete selected node or link");
+        ImGui::Columns(2);
+        ImGui::TextUnformatted("A -- add node");
+        ImGui::TextUnformatted("X -- deleted selected node or link");
+        ImGui::NextColumn();
+        ImGui::Checkbox(
+            "emulate three button mouse",
+            &imnodes::GetIO().emulate_three_button_mouse.enabled);
+        ImGui::Columns(1);
 
         imnodes::BeginNodeEditor();
 
