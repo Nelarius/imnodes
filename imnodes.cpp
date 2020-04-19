@@ -751,7 +751,8 @@ void begin_canvas_interaction(EditorContext& editor)
         g.hovered_pin_idx.has_value() || ImGui::IsAnyItemHovered();
 
     const bool mouse_not_in_canvas =
-        !g.canvas_rect_screen_space.Contains(ImGui::GetMousePos());
+        !(g.canvas_rect_screen_space.Contains(ImGui::GetMousePos()) &&
+          ImGui::IsWindowHovered());
 
     if (any_ui_element_hovered || mouse_not_in_canvas)
     {
