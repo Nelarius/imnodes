@@ -843,36 +843,34 @@ public:
         {
             // in the expression graph, we want the edge to always go from
             // the number to the operation, since the graph is directed!
-            const size_t from_id = graph_.node(link_start).type == Node_Number
-                                       ? link_start
-                                       : link_end;
-            const size_t to_id = graph_.node(link_end).type == Node_Operation
-                                     ? link_end
-                                     : link_start;
 
-            bool invalid_node = false;
-            for (size_t edge : graph_.edges_to_node(from_id))
-            {
-                if (graph_.edge(edge).from == to_id)
-                {
-                    invalid_node = true;
-                    break;
-                }
-            }
+            const Node& from_node = graph_.node(link_start);
+            const Node& to_node = graph_.node(link_end);
 
-            invalid_node = (graph_.node(from_id).type != Node_Number ||
-                            graph_.node(to_id).type != Node_Operation) ||
-                           invalid_node;
+            const bool invalid_node = from_node.type == to_node.type;
 
             if (!invalid_node)
             {
-                graph_.add_edge(from_id, to_id);
-                Node& node_from = graph_.node(from_id);
-                Node& node_to = graph_.node(to_id);
+                if (from_node.type == Node_Operation)
+                {
+                    std::swap(link_start, link_end);
+                }
+
+                graph_.add_edge(
+                    static_cast<size_t>(link_start.id),
+                    static_cast<size_t>(link_end.id));
+
+                Node& node_from = graph_.node(link_start);
                 node_from.type = node_from.type == Node_Number
                                      ? Node_NumberExpression
                                      : node_from.type;
             }
+        }
+
+        Id link_id;
+        if (imnodes::IsLinkDestroyed(&link_id.id))
+        {
+            graph_.erase_edge(link_id);
         }
 
         ImGui::End();

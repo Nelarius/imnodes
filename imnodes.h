@@ -211,8 +211,11 @@ bool IsAttributeActive();
 // function argument.
 bool IsAnyAttributeActive(int* attribute_id = 0);
 
-// Did the user create a new link? Call this after EndNodeEditor().
+// The following two functions should be called after EndNodeEditor().
+// Did the user create a new link?
 bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id);
+// Was a link detached from a pin by the user?
+bool IsLinkDestroyed(int* link_id);
 
 // Use the following functions to write the editor context's state to a string,
 // or directly to a file. The editor context is serialized in the INI file

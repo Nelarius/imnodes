@@ -352,6 +352,7 @@ struct
     OptionalIndex hovered_pin_idx;
 
     OptionalIndex active_pin_idx;
+    OptionalIndex deleted_link_idx;
 
     bool link_created;
 } g;
@@ -727,9 +728,23 @@ void begin_node_selection(EditorContext& editor, const int node_idx)
     }
 }
 
-void begin_link_selection(EditorContext& editor, const int link_idx)
+void begin_link_interaction(EditorContext& editor, const int link_idx)
 {
-    editor.click_interaction_type = ClickInteractionType_Link;
+    if (editor.click_interaction_type == ClickInteractionType_LinkCreation)
+    {
+        ClickInteractionState& state = editor.click_interaction_state;
+        const LinkData& link = editor.links.pool[link_idx];
+        state.link_creation.start_pin_idx =
+            g.hovered_pin_idx == link.start_pin_idx ? link.end_pin_idx
+                                                    : link.start_pin_idx;
+
+        g.deleted_link_idx = link_idx;
+    }
+    else
+    {
+        assert(editor.click_interaction_type == ClickInteractionType_None);
+        editor.click_interaction_type = ClickInteractionType_Link;
+    }
 
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
@@ -1332,8 +1347,18 @@ void draw_link(EditorContext& editor, const int link_idx)
         g.hovered_link_idx = link_idx;
         if (ImGui::IsMouseClicked(0))
         {
-            begin_link_selection(editor, link_idx);
+            begin_link_interaction(editor, link_idx);
         }
+    }
+
+    // It's possible for a link to be deleted in begin_link_interaction. A user
+    // may detach a link, resulting in the link wire snapping to the mouse
+    // position.
+    //
+    // In other words, skip rendering the link if it was deleted.
+    if (g.deleted_link_idx == link_idx)
+    {
+        return;
     }
 
     ImU32 link_color = link.color_style.base;
@@ -1555,6 +1580,7 @@ void BeginNodeEditor()
     g.hovered_link_idx.reset();
     g.hovered_pin_idx.reset();
     g.active_pin_idx.reset();
+    g.deleted_link_idx.reset();
 
     g.link_created = false;
 
@@ -1975,6 +2001,21 @@ bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)
     }
 
     return g.link_created;
+}
+
+bool IsLinkDestroyed(int* const link_id)
+{
+    assert(g.current_scope == Scope_None);
+
+    const bool link_destroyed = g.deleted_link_idx.has_value();
+    if (link_destroyed)
+    {
+        const EditorContext& editor = editor_context_get();
+        const int link_idx = g.deleted_link_idx.value();
+        *link_id = editor.links.pool[link_idx].id;
+    }
+
+    return link_destroyed;
 }
 
 namespace

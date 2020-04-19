@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <SDL_scancode.h>
 
+#include <algorithm>
 #include <vector>
 
 namespace example
@@ -78,6 +79,21 @@ void show_editor(const char* editor_name, Editor& editor)
         {
             link.id = ++editor.current_id;
             editor.links.push_back(link);
+        }
+    }
+
+    {
+        int link_id;
+        if (imnodes::IsLinkDestroyed(&link_id))
+        {
+            auto iter = std::find_if(
+                editor.links.begin(),
+                editor.links.end(),
+                [link_id](const Link& link) -> bool {
+                    return link.id == link_id;
+                });
+            assert(iter != editor.links.end());
+            editor.links.erase(iter);
         }
     }
 
