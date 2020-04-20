@@ -726,7 +726,6 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
     }
     else
     {
-        assert(editor.click_interaction_type == ClickInteractionType_None);
         editor.click_interaction_type = ClickInteractionType_Link;
     }
 
