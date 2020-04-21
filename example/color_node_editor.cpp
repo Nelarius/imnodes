@@ -691,10 +691,11 @@ public:
             imnodes::Link(iter->first, iter->second.from, iter->second.to);
         }
 
-        imnodes::EndNodeEditor();
-
         const bool open_popup =
-            ImGui::IsMouseClicked(1) || ImGui::IsKeyReleased(SDL_SCANCODE_A);
+            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A);
+
+        imnodes::EndNodeEditor();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
         if (!ImGui::IsAnyItemHovered() && open_popup)

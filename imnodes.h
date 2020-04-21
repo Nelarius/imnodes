@@ -187,6 +187,9 @@ void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 // Enable or disable the ability to click and drag a specific node.
 void SetNodeDraggable(int node_id, const bool draggable);
 
+// Returns true if the current node editor canvas is being hovered over by the
+// mouse, and is not blocked by any other windows.
+bool IsEditorHovered();
 // The following functions return true if a UI element is being hovered over by
 // the mouse cursor. Assigns the id of the UI element being hovered over to the
 // function argument. Use these functions after EndNodeEditor() has been called.

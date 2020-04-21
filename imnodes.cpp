@@ -1858,6 +1858,12 @@ void SetNodeDraggable(int node_id, const bool draggable)
     node.draggable = draggable;
 }
 
+bool IsEditorHovered()
+{
+    return g.canvas_rect_screen_space.Contains(ImGui::GetMousePos()) &&
+           ImGui::IsWindowHovered();
+}
+
 bool IsNodeHovered(int* const node_id)
 {
     assert(g.current_scope == Scope_None);
