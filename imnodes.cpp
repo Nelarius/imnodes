@@ -718,10 +718,6 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
     {
         ClickInteractionState& state = editor.click_interaction_state;
         const LinkData& link = editor.links.pool[link_idx];
-        state.link_creation.start_pin_idx =
-            g.hovered_pin_idx == link.start_pin_idx ? link.end_pin_idx
-                                                    : link.start_pin_idx;
-
         g.deleted_link_idx = link_idx;
     }
     else
