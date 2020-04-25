@@ -1897,7 +1897,7 @@ bool IsPinHovered(int* const attr)
     assert(g.current_scope == Scope_None);
     assert(attr != NULL);
 
-    const bool is_hovered = g.hovered_pin_idx.value();
+    const bool is_hovered = g.hovered_pin_idx.has_value();
     if (is_hovered)
     {
         const EditorContext& editor = editor_context_get();
