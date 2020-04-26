@@ -42,14 +42,26 @@ enum StyleFlags
     StyleFlags_GridLines = 1 << 2
 };
 
+// This enum controls the way attribute pins look.
 enum PinShape
 {
-    PinShape_Circle = 0,
+    PinShape_Circle,
     PinShape_CircleFilled,
     PinShape_Triangle,
     PinShape_TriangleFilled,
     PinShape_Quad,
     PinShape_QuadFilled
+};
+
+// This enum controls the way the attribute pins behave.
+enum AttributeFlags
+{
+    AttributeFlags_None = 0,
+    // Allow detaching a link by clicking and dragging the link at a pin it is
+    // connected to. NOTE: the user has to actually delete the link for this to
+    // work. A deleted link can be detected by calling IsLinkDestroyed() after
+    // EndNodeEditor().
+    AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0
 };
 
 struct IO
@@ -161,16 +173,21 @@ void BeginNodeTitleBar();
 void EndNodeTitleBar();
 
 // Attributes are ImGui UI elements embedded within the node. Attributes have
-// circular pins rendered next to them. Links are created between pins.
+// pin shapes rendered next to them. Links are created between pins.
 //
-// Input and output attributes are otherwise the same, except that pins are
-// rendered on the left of the node for input attributes, and on the right side
-// for output attributes.
+// Input and output attributes are otherwise identical, except that pins are
+// rendered on the left side of the node for input attributes, and on the right
+// side for output attributes.
 //
 // The attribute ids must be unique.
 void BeginInputAttribute(int id, PinShape shape = PinShape_CircleFilled);
 void BeginOutputAttribute(int id, PinShape shape = PinShape_CircleFilled);
 void EndAttribute();
+
+// Push a single AttributeFlags value. By default, only AttributeFlags_None is
+// set.
+void PushAttributeFlag(AttributeFlags flag);
+void PopAttributeFlag();
 
 // Render a link between attributes.
 // The attributes ids used here must match the ids used in

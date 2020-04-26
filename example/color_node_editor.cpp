@@ -429,6 +429,8 @@ public:
             &imnodes::GetIO().emulate_three_button_mouse.enabled);
         ImGui::Columns(1);
 
+        imnodes::PushAttributeFlag(
+            imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
         imnodes::BeginNodeEditor();
 
         for (const auto& node : output_nodes_)
@@ -696,6 +698,7 @@ public:
             imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A);
 
         imnodes::EndNodeEditor();
+        imnodes::PopAttributeFlag();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
         if (!ImGui::IsAnyItemHovered() && open_popup)

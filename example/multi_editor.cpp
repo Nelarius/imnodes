@@ -116,6 +116,8 @@ void NodeEditorInitialize()
 {
     editor1.context = imnodes::EditorContextCreate();
     editor2.context = imnodes::EditorContextCreate();
+    imnodes::PushAttributeFlag(
+        imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
 }
 
 void NodeEditorShow()
@@ -126,6 +128,7 @@ void NodeEditorShow()
 
 void NodeEditorShutdown()
 {
+    imnodes::PopAttributeFlag();
     imnodes::EditorContextFree(editor1.context);
     imnodes::EditorContextFree(editor2.context);
 }

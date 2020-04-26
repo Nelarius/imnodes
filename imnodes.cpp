@@ -217,6 +217,7 @@ struct PinData
     ImRect attribute_rect;
     AttributeType type;
     PinShape shape;
+    int flags;
 
     struct
     {
@@ -225,7 +226,8 @@ struct PinData
 
     PinData()
         : id(), parent_node_idx(), attribute_rect(), type(AttributeType_None),
-          shape(PinShape_CircleFilled), color_style()
+          shape(PinShape_CircleFilled), flags(AttributeFlags_None),
+          color_style()
     {
     }
 };
@@ -343,6 +345,9 @@ struct
     ImVector<ColorStyleElement> color_modifier_stack;
     ImVector<StyleElement> style_modifier_stack;
     ImGuiTextBuffer text_buffer;
+
+    int current_attribute_flags;
+    ImVector<int> attribute_flag_stack;
 
     int current_node_idx;
     int current_pin_idx;
@@ -712,28 +717,48 @@ void begin_node_selection(EditorContext& editor, const int node_idx)
     }
 }
 
-void begin_link_interaction(EditorContext& editor, const int link_idx)
+void begin_link_selection(EditorContext& editor, const int link_idx)
 {
-    if (editor.click_interaction_type == ClickInteractionType_LinkCreation)
-    {
-        ClickInteractionState& state = editor.click_interaction_state;
-        const LinkData& link = editor.links.pool[link_idx];
-        state.link_creation.start_pin_idx =
-            g.hovered_pin_idx == link.start_pin_idx ? link.end_pin_idx
-                                                    : link.start_pin_idx;
-
-        g.deleted_link_idx = link_idx;
-    }
-    else
-    {
-        editor.click_interaction_type = ClickInteractionType_Link;
-    }
-
+    editor.click_interaction_type = ClickInteractionType_Link;
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
     editor.selected_node_indices.clear();
     editor.selected_link_indices.clear();
     editor.selected_link_indices.push_back(link_idx);
+}
+
+void begin_link_detach(
+    EditorContext& editor,
+    const int link_idx,
+    const int detach_pin_idx)
+{
+    const LinkData& link = editor.links.pool[link_idx];
+    ClickInteractionState& state = editor.click_interaction_state;
+    state.link_creation.start_pin_idx = detach_pin_idx == link.start_pin_idx
+                                            ? link.end_pin_idx
+                                            : link.start_pin_idx;
+    g.deleted_link_idx = link_idx;
+}
+
+void begin_link_interaction(EditorContext& editor, const int link_idx)
+{
+    if (editor.click_interaction_type == ClickInteractionType_LinkCreation)
+    {
+        const int hovered_pin_idx = g.hovered_pin_idx.value();
+        const PinData& pin = editor.pins.pool[hovered_pin_idx];
+        // TODO: maybe the hovered pin flags could be pushed to the global
+        // state, so that we wouldn't have to do a heap lookup here just for a
+        // flag value
+        if ((pin.flags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
+        {
+            begin_link_detach(editor, link_idx, hovered_pin_idx);
+        }
+        return;
+    }
+    else
+    {
+        begin_link_selection(editor, link_idx);
+    }
 }
 
 void begin_link_creation(EditorContext& editor, const int hovered_pin_idx)
@@ -1389,6 +1414,7 @@ void begin_attribute(
     pin.parent_node_idx = node_idx;
     pin.type = type;
     pin.shape = shape;
+    pin.flags = g.current_attribute_flags;
     pin.color_style.background = g.style.colors[ColorStyle_Pin];
     pin.color_style.hovered = g.style.colors[ColorStyle_PinHovered];
 }
@@ -1465,8 +1491,10 @@ void Initialize()
     EditorContextSet(g.default_editor_ctx);
 
     const ImGuiIO& io = ImGui::GetIO();
-
     g.io.emulate_three_button_mouse.modifier = &io.KeyAlt;
+
+    g.current_attribute_flags = AttributeFlags_None;
+    g.attribute_flag_stack.push_back(g.current_attribute_flags);
 
     StyleColorsDark();
 }
@@ -1756,6 +1784,22 @@ void EndAttribute()
     NodeData& node = editor.nodes.pool[g.current_node_idx];
     pin.attribute_rect = get_item_rect();
     node.pin_indices.push_back(g.current_pin_idx);
+}
+
+void PushAttributeFlag(AttributeFlags flag)
+{
+    g.current_attribute_flags |= static_cast<int>(flag);
+    g.attribute_flag_stack.push_back(g.current_attribute_flags);
+}
+
+void PopAttributeFlag()
+{
+    // PopAttributeFlag called without a matching PushAttributeFlag!
+    // The bottom value is always the default value, pushed in Initialize().
+    assert(g.attribute_flag_stack.size() > 1);
+
+    g.attribute_flag_stack.pop_back();
+    g.current_attribute_flags = g.attribute_flag_stack.back();
 }
 
 void Link(int id, const int start_attr_id, const int end_attr_id)
