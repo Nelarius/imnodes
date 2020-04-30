@@ -355,6 +355,7 @@ struct
     OptionalIndex hovered_node_idx;
     OptionalIndex hovered_link_idx;
     OptionalIndex hovered_pin_idx;
+    int hovered_pin_flags;
 
     OptionalIndex active_pin_idx;
     OptionalIndex deleted_link_idx;
@@ -745,11 +746,8 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
     if (editor.click_interaction_type == ClickInteractionType_LinkCreation)
     {
         const int hovered_pin_idx = g.hovered_pin_idx.value();
-        const PinData& pin = editor.pins.pool[hovered_pin_idx];
-        // TODO: maybe the hovered pin flags could be pushed to the global
-        // state, so that we wouldn't have to do a heap lookup here just for a
-        // flag value
-        if ((pin.flags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
+        if ((g.hovered_pin_flags &
+             AttributeFlags_EnableLinkDetachWithDragClick) != 0)
         {
             begin_link_detach(editor, link_idx, hovered_pin_idx);
         }
@@ -1231,6 +1229,7 @@ void draw_pin(
     if (is_mouse_hovering_near_point(pin_pos, g.style.pin_hover_radius))
     {
         g.hovered_pin_idx = pin_idx;
+        g.hovered_pin_flags = pin.flags;
         draw_pin_shape(pin_pos, pin, pin.color_style.hovered);
 
         if (left_mouse_clicked)
@@ -1592,6 +1591,7 @@ void BeginNodeEditor()
     g.hovered_node_idx.reset();
     g.hovered_link_idx.reset();
     g.hovered_pin_idx.reset();
+    g.hovered_pin_flags = AttributeFlags_None;
     g.active_pin_idx.reset();
     g.deleted_link_idx.reset();
 
