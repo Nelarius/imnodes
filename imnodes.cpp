@@ -217,6 +217,7 @@ struct PinData
     ImRect attribute_rect;
     AttributeType type;
     PinShape shape;
+    ImVec2 pos; // screen-space coordinates
     int flags;
 
     struct
@@ -226,7 +227,7 @@ struct PinData
 
     PinData()
         : id(), parent_node_idx(), attribute_rect(), type(AttributeType_None),
-          shape(PinShape_CircleFilled), flags(AttributeFlags_None),
+          shape(PinShape_CircleFilled), pos(), flags(AttributeFlags_None),
           color_style()
     {
     }
@@ -743,19 +744,54 @@ void begin_link_detach(
 
 void begin_link_interaction(EditorContext& editor, const int link_idx)
 {
+    struct FlagIdxPair
+    {
+        const int flags;
+        const int idx;
+
+        FlagIdxPair(const int f, const int i) : flags(f), idx(i) {}
+    };
+
+    // First check if we are clicking a link in the vicinity of a pin.
+    // This may result in a link detach via click and drag.
     if (editor.click_interaction_type == ClickInteractionType_LinkCreation)
     {
-        const int hovered_pin_idx = g.hovered_pin_idx.value();
         if ((g.hovered_pin_flags &
              AttributeFlags_EnableLinkDetachWithDragClick) != 0)
         {
-            begin_link_detach(editor, link_idx, hovered_pin_idx);
+            begin_link_detach(editor, link_idx, g.hovered_pin_idx.value());
         }
-        return;
     }
+    // If we aren't near a pin, check if we are clicking the link with the
+    // modifier pressed. This may also result in a link detach via clicking.
     else
     {
-        begin_link_selection(editor, link_idx);
+        const LinkData& link = editor.links.pool[link_idx];
+        const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
+        const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
+        const ImVec2& mouse_pos = ImGui::GetIO().MousePos;
+        const float dist_to_start = ImLengthSqr(start_pin.pos - mouse_pos);
+        const float dist_to_end = ImLengthSqr(end_pin.pos - mouse_pos);
+        const FlagIdxPair closest_pin =
+            dist_to_start < dist_to_end
+                ? FlagIdxPair(start_pin.flags, link.start_pin_idx)
+                : FlagIdxPair(end_pin.flags, link.end_pin_idx);
+        const bool modifier_pressed =
+            g.io.link_detach_with_modifier_click.modifier == NULL
+                ? false
+                : *g.io.link_detach_with_modifier_click.modifier;
+
+        if (modifier_pressed &&
+            (closest_pin.flags &
+             AttributeFlags_EnableLinkDetachWithModifierClick) != 0)
+        {
+            editor.click_interaction_type = ClickInteractionType_LinkCreation;
+            begin_link_detach(editor, link_idx, closest_pin.idx);
+        }
+        else
+        {
+            begin_link_selection(editor, link_idx);
+        }
     }
 }
 
@@ -1221,26 +1257,28 @@ void draw_pin(
     const int pin_idx,
     const bool left_mouse_clicked)
 {
-    const PinData& pin = editor.pins.pool[pin_idx];
+    PinData& pin = editor.pins.pool[pin_idx];
     const ImRect& parent_node_rect =
         editor.nodes.pool[pin.parent_node_idx].rect;
-    const ImVec2 pin_pos = get_screen_space_pin_coordinates(
+
+    pin.pos = get_screen_space_pin_coordinates(
         parent_node_rect, pin.attribute_rect, pin.type);
-    if (is_mouse_hovering_near_point(pin_pos, g.style.pin_hover_radius))
+
+    ImU32 pin_color = pin.color_style.background;
+
+    if (is_mouse_hovering_near_point(pin.pos, g.style.pin_hover_radius))
     {
         g.hovered_pin_idx = pin_idx;
         g.hovered_pin_flags = pin.flags;
-        draw_pin_shape(pin_pos, pin, pin.color_style.hovered);
+        pin_color = pin.color_style.hovered;
 
         if (left_mouse_clicked)
         {
             begin_link_creation(editor, pin_idx);
         }
     }
-    else
-    {
-        draw_pin_shape(pin_pos, pin, pin.color_style.background);
-    }
+
+    draw_pin_shape(pin.pos, pin, pin_color);
 }
 
 // TODO: It may be useful to make this an EditorContext method, since this uses
@@ -1333,19 +1371,10 @@ void draw_link(EditorContext& editor, const int link_idx)
     const LinkData& link = editor.links.pool[link_idx];
     const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
     const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
-    const ImRect& start_parent_node_rect =
-        editor.nodes.pool[start_pin.parent_node_idx].rect;
-    const ImRect& end_parent_node_rect =
-        editor.nodes.pool[end_pin.parent_node_idx].rect;
-
-    const ImVec2 start_pos = get_screen_space_pin_coordinates(
-        start_parent_node_rect, start_pin.attribute_rect, start_pin.type);
-    const ImVec2 end_pos = get_screen_space_pin_coordinates(
-        end_parent_node_rect, end_pin.attribute_rect, end_pin.type);
 
     const LinkBezierData link_data = get_link_renderable(
-        start_pos,
-        end_pos,
+        start_pin.pos,
+        end_pin.pos,
         start_pin.type,
         g.style.link_line_segments_per_length);
 
@@ -1426,7 +1455,11 @@ IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse()
 {
 }
 
-IO::IO() : emulate_three_button_mouse() {}
+IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : modifier(NULL)
+{
+}
+
+IO::IO() : emulate_three_button_mouse(), link_detach_with_modifier_click() {}
 
 Style::Style()
     : grid_spacing(32.f), node_corner_rounding(4.f),
@@ -1491,6 +1524,7 @@ void Initialize()
 
     const ImGuiIO& io = ImGui::GetIO();
     g.io.emulate_three_button_mouse.modifier = &io.KeyAlt;
+    g.io.link_detach_with_modifier_click.modifier = &io.KeyCtrl;
 
     g.current_attribute_flags = AttributeFlags_None;
     g.attribute_flag_stack.push_back(g.current_attribute_flags);

@@ -57,11 +57,16 @@ enum PinShape
 enum AttributeFlags
 {
     AttributeFlags_None = 0,
-    // Allow detaching a link by clicking and dragging the link at a pin it is
-    // connected to. NOTE: the user has to actually delete the link for this to
-    // work. A deleted link can be detected by calling IsLinkDestroyed() after
-    // EndNodeEditor().
-    AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0
+    // Allow detaching a link by left-clicking and dragging the link at a pin it
+    // is connected to. NOTE: the user has to actually delete the link for this
+    // to work. A deleted link can be detected by calling IsLinkDestroyed()
+    // after EndNodeEditor().
+    AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0,
+    // Allow detaching a link by left-clicking it with the modifier pressed. The
+    // link wire will now jump to the mouse cursor position. NOTE: the user has
+    // to delete the link for this to work. A deleted link can be detected by
+    // calling IsLinkDestroyed() after EndNodeEditor().
+    AttributeFlags_EnableLinkDetachWithModifierClick = 1 << 1
 };
 
 struct IO
@@ -75,6 +80,16 @@ struct IO
         const bool* modifier; // The keyboard modifier to use with the mouse
                               // left click. Set to &ImGuiIO::KeyAlt by default.
     } emulate_three_button_mouse;
+
+    struct LinkDetachWithModifierClick
+    {
+        LinkDetachWithModifierClick();
+
+        // When this modifier is pressed, and a link is left-clicked, the link
+        // wire will jump to the mouse cursor. Set to &ImGuiIO::KeyCtrl by
+        // default. This feature is disabled if the modifier is NULL.
+        const bool* modifier;
+    } link_detach_with_modifier_click;
 
     IO();
 };
