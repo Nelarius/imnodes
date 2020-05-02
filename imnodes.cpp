@@ -744,14 +744,6 @@ void begin_link_detach(
 
 void begin_link_interaction(EditorContext& editor, const int link_idx)
 {
-    struct FlagIdxPair
-    {
-        const int flags;
-        const int idx;
-
-        FlagIdxPair(const int f, const int i) : flags(f), idx(i) {}
-    };
-
     // First check if we are clicking a link in the vicinity of a pin.
     // This may result in a link detach via click and drag.
     if (editor.click_interaction_type == ClickInteractionType_LinkCreation)
@@ -766,27 +758,25 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
     // modifier pressed. This may also result in a link detach via clicking.
     else
     {
-        const LinkData& link = editor.links.pool[link_idx];
-        const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
-        const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
-        const ImVec2& mouse_pos = ImGui::GetIO().MousePos;
-        const float dist_to_start = ImLengthSqr(start_pin.pos - mouse_pos);
-        const float dist_to_end = ImLengthSqr(end_pin.pos - mouse_pos);
-        const FlagIdxPair closest_pin =
-            dist_to_start < dist_to_end
-                ? FlagIdxPair(start_pin.flags, link.start_pin_idx)
-                : FlagIdxPair(end_pin.flags, link.end_pin_idx);
         const bool modifier_pressed =
             g.io.link_detach_with_modifier_click.modifier == NULL
                 ? false
                 : *g.io.link_detach_with_modifier_click.modifier;
 
-        if (modifier_pressed &&
-            (closest_pin.flags &
-             AttributeFlags_EnableLinkDetachWithModifierClick) != 0)
+        if (modifier_pressed)
         {
+            const LinkData& link = editor.links.pool[link_idx];
+            const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
+            const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
+            const ImVec2& mouse_pos = ImGui::GetIO().MousePos;
+            const float dist_to_start = ImLengthSqr(start_pin.pos - mouse_pos);
+            const float dist_to_end = ImLengthSqr(end_pin.pos - mouse_pos);
+            const int closest_pin_idx = dist_to_start < dist_to_end
+                                            ? link.start_pin_idx
+                                            : link.end_pin_idx;
+
             editor.click_interaction_type = ClickInteractionType_LinkCreation;
-            begin_link_detach(editor, link_idx, closest_pin.idx);
+            begin_link_detach(editor, link_idx, closest_pin_idx);
         }
         else
         {
@@ -1524,7 +1514,6 @@ void Initialize()
 
     const ImGuiIO& io = ImGui::GetIO();
     g.io.emulate_three_button_mouse.modifier = &io.KeyAlt;
-    g.io.link_detach_with_modifier_click.modifier = &io.KeyCtrl;
 
     g.current_attribute_flags = AttributeFlags_None;
     g.attribute_flag_stack.push_back(g.current_attribute_flags);

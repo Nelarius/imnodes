@@ -61,12 +61,7 @@ enum AttributeFlags
     // is connected to. NOTE: the user has to actually delete the link for this
     // to work. A deleted link can be detected by calling IsLinkDestroyed()
     // after EndNodeEditor().
-    AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0,
-    // Allow detaching a link by left-clicking it with the modifier pressed. The
-    // link wire will now jump to the mouse cursor position. NOTE: the user has
-    // to delete the link for this to work. A deleted link can be detected by
-    // calling IsLinkDestroyed() after EndNodeEditor().
-    AttributeFlags_EnableLinkDetachWithModifierClick = 1 << 1
+    AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0
 };
 
 struct IO
@@ -85,9 +80,15 @@ struct IO
     {
         LinkDetachWithModifierClick();
 
-        // When this modifier is pressed, and a link is left-clicked, the link
-        // wire will jump to the mouse cursor. Set to &ImGuiIO::KeyCtrl by
-        // default. This feature is disabled if the modifier is NULL.
+        // Pointer to a boolean value indicating when the desired modifier is
+        // pressed. Set to NULL by default (i.e. this feature is disabled). To
+        // enable the feature, set the link to point to, for example,
+        // &ImGuiIO::KeyCtrl.
+        //
+        // Left-clicking a link with this modifier pressed will detach that
+        // link. NOTE: the user has to actually delete the link for this to
+        // work. A deleted link can be detected by calling IsLinkDestroyed()
+        // after EndNodeEditor().
         const bool* modifier;
     } link_detach_with_modifier_click;
 

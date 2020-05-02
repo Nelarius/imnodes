@@ -431,8 +431,6 @@ public:
 
         imnodes::PushAttributeFlag(
             imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
-        imnodes::PushAttributeFlag(
-            imnodes::AttributeFlags_EnableLinkDetachWithModifierClick);
         imnodes::BeginNodeEditor();
 
         for (const auto& node : output_nodes_)
@@ -700,7 +698,6 @@ public:
             imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A);
 
         imnodes::EndNodeEditor();
-        imnodes::PopAttributeFlag();
         imnodes::PopAttributeFlag();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
@@ -1067,6 +1064,9 @@ void NodeEditorInitialize()
     style.colors[imnodes::ColorStyle_Pin] = IM_COL32(255, 210, 0, 255);
     style.colors[imnodes::ColorStyle_PinHovered] = IM_COL32(255, 237, 154, 255);
     style.flags = imnodes::StyleFlags_GridLines;
+
+    imnodes::IO& io = imnodes::GetIO();
+    io.link_detach_with_modifier_click.modifier = &ImGui::GetIO().KeyCtrl;
 }
 
 void NodeEditorShow() { color_editor.show(); }
