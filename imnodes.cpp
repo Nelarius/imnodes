@@ -56,6 +56,14 @@ enum AttributeType
     AttributeType_Output
 };
 
+enum ElementStateChange
+{
+    ElementStateChange_None = 0,
+    ElementStateChange_LinkStarted = 1 << 0,
+    ElementStateChange_LinkDropped = 1 << 1,
+    ElementStateChange_LinkCreated = 1 << 2
+};
+
 // [SECTION] internal data structures
 
 // The object T must have the following interface:
@@ -361,7 +369,7 @@ struct
     OptionalIndex active_pin_idx;
     OptionalIndex deleted_link_idx;
 
-    bool link_created;
+    int element_state_change;
 } g;
 
 EditorContext& editor_context_get()
@@ -790,6 +798,7 @@ void begin_link_creation(EditorContext& editor, const int hovered_pin_idx)
     editor.click_interaction_type = ClickInteractionType_LinkCreation;
     editor.click_interaction_state.link_creation.start_pin_idx =
         hovered_pin_idx;
+    g.element_state_change |= ElementStateChange_LinkStarted;
 }
 
 void begin_canvas_interaction(EditorContext& editor)
@@ -914,6 +923,7 @@ bool finish_link_at_hovered_pin(
 {
     if (!maybe_hovered_pin_idx.has_value())
     {
+        g.element_state_change |= ElementStateChange_LinkDropped;
         return false;
     }
 
@@ -1015,8 +1025,13 @@ void click_interaction_update(EditorContext& editor)
 
         if (left_mouse_released)
         {
-            g.link_created =
+            const bool link_created_succesfully =
                 finish_link_at_hovered_pin(editor, g.hovered_pin_idx);
+
+            if (link_created_succesfully)
+            {
+                g.element_state_change |= ElementStateChange_LinkCreated;
+            }
 
             editor.click_interaction_type = ClickInteractionType_None;
         }
@@ -1618,7 +1633,7 @@ void BeginNodeEditor()
     g.active_pin_idx.reset();
     g.deleted_link_idx.reset();
 
-    g.link_created = false;
+    g.element_state_change = ElementStateChange_None;
 
     // reset ui content for the current editor
     EditorContext& editor = editor_context_get();
@@ -2041,13 +2056,43 @@ bool IsAnyAttributeActive(int* const attribute_id)
     return true;
 }
 
+bool IsLinkStarted(int* const started_at_id)
+{
+    // Call this function after EndNodeEditor()!
+    assert(g.current_scope == Scope_None);
+    assert(started_at_id != NULL);
+
+    const bool is_started =
+        (g.element_state_change & ElementStateChange_LinkStarted) != 0;
+    if (is_started)
+    {
+        const EditorContext& editor = editor_context_get();
+        const int pin_idx =
+            editor.click_interaction_state.link_creation.start_pin_idx;
+        *started_at_id = editor.pins.pool[pin_idx].id;
+    }
+
+    return is_started;
+}
+
+bool IsLinkDropped()
+{
+    // Call this function after EndNodeEditor()!
+    assert(g.current_scope == Scope_None);
+
+    return (g.element_state_change & ElementStateChange_LinkDropped) != 0;
+}
+
 bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)
 {
     assert(g.current_scope == Scope_None);
     assert(started_at_pin_id != NULL);
     assert(ended_at_pin_id != NULL);
 
-    if (g.link_created)
+    const bool is_created =
+        (g.element_state_change & ElementStateChange_LinkCreated) != 0;
+
+    if (is_created)
     {
         const EditorContext& editor = editor_context_get();
         const int start_idx =
@@ -2058,7 +2103,7 @@ bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)
         *ended_at_pin_id = editor.pins.pool[end_idx].id;
     }
 
-    return g.link_created;
+    return is_created;
 }
 
 bool IsLinkDestroyed(int* const link_id)

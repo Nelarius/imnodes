@@ -247,10 +247,17 @@ bool IsAttributeActive();
 // function argument.
 bool IsAnyAttributeActive(int* attribute_id = 0);
 
-// The following two functions should be called after EndNodeEditor().
-// Did the user create a new link?
+// Use the following functions to query a change of state for an existing link,
+// or new link. Call these after EndNodeEditor().
+
+// Did the user start dragging a new link from a pin?
+bool IsLinkStarted(int* started_at_attribute_id);
+// Did the user drop the dragged link before attaching it to a pin?
+bool IsLinkDropped();
+// Did the user finish creating a new link?
 bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id);
-// Was a link detached from a pin by the user?
+// Was an existing link detached from a pin by the user? The detached link's id
+// is assigned to the output argument link_id.
 bool IsLinkDestroyed(int* link_id);
 
 // Use the following functions to write the editor context's state to a string,
