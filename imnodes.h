@@ -45,7 +45,8 @@ enum StyleFlags
 // This enum controls the way attribute pins look.
 enum PinShape
 {
-    PinShape_Circle,
+	PinShape_None,
+	PinShape_Circle,
     PinShape_CircleFilled,
     PinShape_Triangle,
     PinShape_TriangleFilled,

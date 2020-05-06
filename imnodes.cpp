@@ -1182,6 +1182,10 @@ void draw_pin_shape(
 
     switch (pin.shape)
     {
+    case PinShape_None:
+    {
+    }
+    break;
     case PinShape_Circle:
     {
         g.canvas_draw_list->AddCircle(
