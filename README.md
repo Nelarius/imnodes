@@ -20,6 +20,24 @@ Features:
 
 Scroll down for a brief tour, known issues, and further information!
 
+## Build the examples
+
+This repository includes a few example files, under `example/`. You can copy-paste them into your own imgui project, or you can build them here, in this repository. To build here:
+* SDL2 needs to be installed
+* premake5 is used to generate the build files
+
+```bash
+# Assuming you've installed SDL2 via vcpkg, for instance
+$ premake5 gmake \
+    --sdl-include-path=/Users/nelarius/vcpkg/installed/x64-osx/include/SDL2 \
+    --sdl-link-path=/Users/nelarius/vcpkg/installed/x64-osx/lib
+
+# Or alternatively, if you are on MacOS and have the SDL2 framework installed
+$ premake5 gmake --use-sdl-framework
+
+$ make all -j
+```
+
 ## A brief tour
 
 Here is a small overview of how the extension is used. For more information on example usage, scroll to the bottom of the README.
