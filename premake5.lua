@@ -1,28 +1,80 @@
+newoption {
+    trigger     = "sdl-include-path",
+    value       = "path",
+    description = "The location of your SDL2 header files"
+}
+
+newoption {
+    trigger     = "sdl-link-path",
+    value       = "path",
+    description = "The location of your SDL2 link libraries"
+}
+
+newoption {
+    trigger     = "use-sdl-framework",
+    description = "Use the installed SDL2 framework (on MacOS)"
+}
+
+local projectlocation = os.getcwd()
+
+if _ACTION then
+    projectlocation = path.join(projectlocation, "build", _ACTION)
+end
+
 function imnodes_example_project(name, example_file)
     project(name)
-    location(project_location)
+    location(projectlocation)
     kind "WindowedApp"
     language "C++"
     targetdir "bin/%{cfg.buildcfg}"
+    debugdir "bin/%{cfg.buildcfg}"
     files {"example/main.cpp", path.join("example", example_file) }
-    includedirs { ".", "imgui", "gl3w/include" }
+    includedirs {
+        os.getcwd(),
+        "imgui",
+        "gl3w/include"
+    }
     links { "gl3w", "imgui", "imnodes" }
     filter { "action:gmake" }
         buildoptions { "-std=c++11" }
-    filter "system:macosx"
+
+    if _OPTIONS["sdl-include-path"] then
+        includedirs { _OPTIONS["sdl-include-path"] }
+    end
+
+    if _OPTIONS["sdl-link-path"] then
+        libdirs { _OPTIONS["sdl-link-path"] }
+
+        filter "system:macosx"
+            links {
+                "iconv",
+                "AudioToolbox.framework",
+                "Carbon.framework",
+                "Cocoa.framework",
+                "CoreAudio.framework",
+                "CoreVideo.framework",
+                "ForceFeedback.framework",
+                "IOKit.framework"
+            }
+    end
+
+    if _OPTIONS["use-sdl-framework"] then
         includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
         linkoptions { "-F/Library/Frameworks -framework SDL2 -framework CoreFoundation" }
+    else
+        links { "SDL2" }
+    end
+
+    filter "system:windows"
+        defines { "SDL_MAIN_HANDLED" }
+        links { "opengl32" }
+        postbuildcommands { "{COPY} " .. path.join(os.getcwd(), _OPTIONS["sdl-link-path"], "SDL2.dll") .. " %{cfg.targetdir}" }
+
     filter "system:linux"
-        includedirs { "/usr/include/SDL2" }
-        links { "SDL2", "dl" }
+        links { "dl" }
 end
 
 workspace "imnodes"
-    local project_location = ""
-    if _ACTION then
-        project_location = "build/" .. _ACTION
-    end
-
     configurations { "Debug", "Release" }
     architecture "x86_64"
     defines { "IMGUI_DISABLE_OBSOLETE_FUNCTIONS" }
@@ -39,10 +91,12 @@ workspace "imnodes"
 
     warnings "Extra"
 
-    startproject "example"
+    startproject "colornode"
+
+    group "dependencies"
 
     project "gl3w"
-        location(project_location)
+        location(projectlocation)
         kind "StaticLib"
         language "C"
         targetdir "lib/%{cfg.buildcfg}"
@@ -50,23 +104,28 @@ workspace "imnodes"
         includedirs { "gl3w/include" }
 
     project "imgui"
-        location(project_location)
+        location(projectlocation)
         kind "StaticLib"
         language "C++"
         cppdialect "C++98"
         targetdir "lib/%{cfg.buildcfg}"
         files { "imgui/**.h", "imgui/**.cpp" }
-        includedirs { "imgui", "gl3w/include" }
-        filter "system:macosx"
+        includedirs {
+            "imgui",
+            "gl3w/include" }
+
+        if _OPTIONS["sdl-include-path"] then
+            includedirs { _OPTIONS["sdl-include-path"] }
+        end
+
+        if _OPTIONS["use-sdl-framework"] then
             includedirs { "/Library/Frameworks/SDL2.framework/Headers" }
-        filter "system:linux"
-            -- NOTE: This is to support inclusion via #include <SDL.h>.
-            -- Otherwise we would have to do <SDL2/SDL.h> which would not
-            -- be compatible with the macOS framework
-            includedirs { "/usr/include/SDL2" }
+        end
+
+    group "imnodes"
 
     project "imnodes"
-        location(project_location)
+        location(projectlocation)
         kind "StaticLib"
         language "C++"
         cppdialect "C++98"
@@ -74,6 +133,8 @@ workspace "imnodes"
         targetdir "lib/%{cfg.buildcfg}"
         files { "imnodes.h", "imnodes.cpp" }
         includedirs { "imgui" }
+
+    group "examples"
 
     imnodes_example_project("simple", "simple.cpp")
 

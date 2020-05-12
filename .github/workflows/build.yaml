@@ -11,9 +11,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         id: checkout
-      # This step prints an output (time) from the previous step's action.
       - name: premake5
-        run: premake5 gmake
+        run: premake5 gmake --sdl-include-path=/usr/include/SDL2
       - name: make-debug
         run: make all config=debug -j
       - name: make-release
