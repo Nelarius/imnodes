@@ -16,6 +16,8 @@ newoption {
 }
 
 local projectlocation = os.getcwd()
+local gl3wlocation = path.join(os.getcwd(), "dependencies/gl3w")
+local imguilocation = path.join(os.getcwd(), "dependencies/imgui")
 
 if _ACTION then
     projectlocation = path.join(projectlocation, "build", _ACTION)
@@ -31,8 +33,8 @@ function imnodes_example_project(name, example_file)
     files {"example/main.cpp", path.join("example", example_file) }
     includedirs {
         os.getcwd(),
-        "imgui",
-        "gl3w/include"
+        imguilocation,
+        path.join(gl3wlocation, "include")
     }
     links { "gl3w", "imgui", "imnodes" }
     filter { "action:gmake" }
@@ -100,8 +102,8 @@ workspace "imnodes"
         kind "StaticLib"
         language "C"
         targetdir "lib/%{cfg.buildcfg}"
-        files { "gl3w/src/gl3w.c" }
-        includedirs { "gl3w/include" }
+        files { path.join(gl3wlocation, "src/gl3w.c") }
+        includedirs { path.join(gl3wlocation, "include") }
 
     project "imgui"
         location(projectlocation)
@@ -109,10 +111,10 @@ workspace "imnodes"
         language "C++"
         cppdialect "C++98"
         targetdir "lib/%{cfg.buildcfg}"
-        files { "imgui/**.h", "imgui/**.cpp" }
+        files { path.join(imguilocation, "**.cpp") }
         includedirs {
-            "imgui",
-            "gl3w/include" }
+            imguilocation,
+            path.join(gl3wlocation, "include") }
 
         if _OPTIONS["sdl-include-path"] then
             includedirs { _OPTIONS["sdl-include-path"] }
@@ -132,7 +134,7 @@ workspace "imnodes"
         enablewarnings { "all" }
         targetdir "lib/%{cfg.buildcfg}"
         files { "imnodes.h", "imnodes.cpp" }
-        includedirs { "imgui" }
+        includedirs { path.join(imguilocation) }
 
     group "examples"
 
