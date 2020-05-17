@@ -35,7 +35,7 @@ function imnodes_example_project(name, example_file)
     includedirs {
         os.getcwd(),
         imguilocation,
-        path.join(gl3wlocation, "include"),_OPTIONS["sdl-include-path"]
+        path.join(gl3wlocation, "include"),
     }
     links { "gl3w", "imgui", "imnodes" }
 
