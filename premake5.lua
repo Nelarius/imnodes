@@ -26,19 +26,18 @@ end
 function imnodes_example_project(name, example_file)
     project(name)
     location(projectlocation)
-    kind "WindowedApp"
+    kind "ConsoleApp"
     language "C++"
+    cppdialect "C++11"
     targetdir "bin/%{cfg.buildcfg}"
     debugdir "bin/%{cfg.buildcfg}"
     files {"example/main.cpp", path.join("example", example_file) }
     includedirs {
         os.getcwd(),
         imguilocation,
-        path.join(gl3wlocation, "include")
+        path.join(gl3wlocation, "include"),_OPTIONS["sdl-include-path"]
     }
     links { "gl3w", "imgui", "imnodes" }
-    filter { "action:gmake" }
-        buildoptions { "-std=c++11" }
 
     if _OPTIONS["sdl-include-path"] then
         includedirs { _OPTIONS["sdl-include-path"] }
@@ -58,6 +57,7 @@ function imnodes_example_project(name, example_file)
                 "ForceFeedback.framework",
                 "IOKit.framework"
             }
+        filter "*"
     end
 
     if _OPTIONS["use-sdl-framework"] then
@@ -70,7 +70,12 @@ function imnodes_example_project(name, example_file)
     filter "system:windows"
         defines { "SDL_MAIN_HANDLED" }
         links { "opengl32" }
-        postbuildcommands { "{COPY} " .. path.join(os.getcwd(), _OPTIONS["sdl-link-path"], "SDL2.dll") .. " %{cfg.targetdir}" }
+        if _OPTIONS["sdl-link-path"] then
+            postbuildcommands { 
+                "{COPY} " .. 
+                path.join(os.getcwd(), _OPTIONS["sdl-link-path"].."/../bin/", "SDL2.dll") .. 
+                " %{cfg.targetdir}" }
+        end
 
     filter "system:linux"
         links { "dl" }
