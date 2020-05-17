@@ -1258,7 +1258,6 @@ void draw_pin_shape(
 
 void draw_pin(
     EditorContext& editor,
-    const NodeData& node,
     const int pin_idx,
     const bool left_mouse_clicked)
 {
@@ -1358,7 +1357,7 @@ void draw_node(EditorContext& editor, const int node_idx)
 
     for (int i = 0; i < node.pin_indices.size(); ++i)
     {
-        draw_pin(editor, node, node.pin_indices[i], left_mouse_clicked);
+        draw_pin(editor, node.pin_indices[i], left_mouse_clicked);
     }
 
     if (item_hovered)

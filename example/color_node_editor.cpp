@@ -894,6 +894,8 @@ public:
 private:
     struct OutputNode
     {
+        // TODO: converting this implicitly to int is causing tons of warnings
+        // in MSVC
         size_t red, green, blue, out;
     };
 
