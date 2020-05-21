@@ -90,7 +90,7 @@ imnodes::BeginOutputAttribute(output_attr_id);
 // in between Begin|EndAttribute calls, you can call ImGui
 // UI functions
 ImGui::Text("output pin");
-imnodes::EndAttribute();
+imnodes::EndOutputAttribute();
 
 imnodes::EndNode();
 ```

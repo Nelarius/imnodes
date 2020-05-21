@@ -26,12 +26,12 @@ public:
 
         imnodes::BeginInputAttribute(2);
         ImGui::Text("input");
-        imnodes::EndAttribute();
+        imnodes::EndInputAttribute();
 
         imnodes::BeginOutputAttribute(3);
         ImGui::Indent(40);
         ImGui::Text("output");
-        imnodes::EndAttribute();
+        imnodes::EndOutputAttribute();
 
         imnodes::EndNode();
         imnodes::EndNodeEditor();

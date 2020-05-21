@@ -51,23 +51,25 @@ public:
 
             imnodes::BeginInputAttribute(make_id(elem.first, 0));
             ImGui::Text("input");
-            imnodes::EndAttribute();
+            imnodes::EndInputAttribute();
             ImGui::Spacing();
             {
+                imnodes::BeginStaticAttribute(make_id(elem.first, 1));
                 const float label_width = ImGui::CalcTextSize("number").x;
                 ImGui::Text("number");
                 ImGui::PushItemWidth(node_width - label_width - 6.0f);
                 ImGui::SameLine();
                 ImGui::DragFloat("##hidelabel", &elem.second, 0.01f);
                 ImGui::PopItemWidth();
+                imnodes::EndStaticAttribute();
             }
             ImGui::Spacing();
             {
-                imnodes::BeginOutputAttribute(make_id(elem.first, 1));
+                imnodes::BeginOutputAttribute(make_id(elem.first, 2));
                 const float label_width = ImGui::CalcTextSize("output").x;
                 ImGui::Indent(node_width - label_width - 1.5f);
                 ImGui::Text("output");
-                imnodes::EndAttribute();
+                imnodes::EndOutputAttribute();
             }
 
             imnodes::EndNode();
@@ -93,7 +95,7 @@ public:
 
             imnodes::BeginInputAttribute(make_id(elem.first, 0));
             ImGui::Text("input");
-            imnodes::EndAttribute();
+            imnodes::EndInputAttribute();
             ImGui::Spacing();
 
             {
@@ -102,7 +104,7 @@ public:
                 ImGui::PushItemWidth(node_width - label_width - 6.0f);
                 ImGui::ColorEdit3("color", elem.second.data);
                 ImGui::PopItemWidth();
-                imnodes::EndAttribute();
+                imnodes::EndOutputAttribute();
             }
             ImGui::Spacing();
             {
@@ -110,7 +112,7 @@ public:
                 const float label_width = ImGui::CalcTextSize("output").x;
                 ImGui::Indent(node_width - label_width - 1.5f);
                 ImGui::Text("output");
-                imnodes::EndAttribute();
+                imnodes::EndOutputAttribute();
             }
 
             imnodes::EndNode();

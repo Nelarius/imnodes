@@ -188,16 +188,29 @@ void EndNode();
 void BeginNodeTitleBar();
 void EndNodeTitleBar();
 
-// Attributes are ImGui UI elements embedded within the node. Attributes have
-// pin shapes rendered next to them. Links are created between pins.
+// Attributes are ImGui UI elements embedded within the node. Attributes can
+// have pin shapes rendered next to them. Links are created between pins.
 //
-// Input and output attributes are otherwise identical, except that pins are
-// rendered on the left side of the node for input attributes, and on the right
-// side for output attributes.
+// The activity status of an attribute can be checked via the
+// IsAttributeActive() and IsAnyAttributeActive() function calls. This is one
+// easy way of checking for any changes made to an attribute's drag float UI,
+// for instance.
 //
-// The attribute ids must be unique.
+// Each attribute id must be unique.
+
+// Create an input attribute block. The pin is rendered on left side.
 void BeginInputAttribute(int id, PinShape shape = PinShape_CircleFilled);
+void EndInputAttribute();
+// Create an output attribute block. The pin is rendered on the right side.
 void BeginOutputAttribute(int id, PinShape shape = PinShape_CircleFilled);
+void EndOutputAttribute();
+// Create a static attribute block. A static attribute has no pin, and therefore
+// can't be linked to anything. However, you can still use IsAttributeActive()
+// and IsAnyAttributeActive() to check for attribute activity.
+void BeginStaticAttribute(int id);
+void EndStaticAttribute();
+// Deprecated, but can be used with any of the three previous Begin{*}Attribute
+// functions.
 void EndAttribute();
 
 // Push a single AttributeFlags value. By default, only AttributeFlags_None is

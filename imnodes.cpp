@@ -21,6 +21,7 @@
 #endif
 
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <new>
 #include <stdint.h>
@@ -360,16 +361,19 @@ struct
 
     int current_node_idx;
     int current_pin_idx;
+    int current_attribute_id;
 
     OptionalIndex hovered_node_idx;
     OptionalIndex hovered_link_idx;
     OptionalIndex hovered_pin_idx;
     int hovered_pin_flags;
 
-    OptionalIndex active_pin_idx;
     OptionalIndex deleted_link_idx;
 
     int element_state_change;
+
+    int active_attribute_id;
+    bool active_attribute;
 } g;
 
 EditorContext& editor_context_get()
@@ -1423,7 +1427,7 @@ void draw_link(EditorContext& editor, const int link_idx)
         link_data.num_segments);
 }
 
-void begin_attribute(
+void begin_pin_attribute(
     const int id,
     const AttributeType type,
     const PinShape shape,
@@ -1439,6 +1443,8 @@ void begin_attribute(
 
     EditorContext& editor = editor_context_get();
 
+    g.current_attribute_id = id;
+
     const int pin_idx = editor.pins.find_or_create_index_for(id);
     g.current_pin_idx = pin_idx;
     PinData& pin = editor.pins.pool[pin_idx];
@@ -1449,6 +1455,27 @@ void begin_attribute(
     pin.flags = g.current_attribute_flags;
     pin.color_style.background = g.style.colors[ColorStyle_Pin];
     pin.color_style.hovered = g.style.colors[ColorStyle_PinHovered];
+}
+
+void end_pin_attribute()
+{
+    assert(g.current_scope == Scope_Attribute);
+    g.current_scope = Scope_Node;
+
+    ImGui::PopID();
+    ImGui::EndGroup();
+
+    if (ImGui::IsItemActive())
+    {
+        g.active_attribute = true;
+        g.active_attribute_id = g.current_attribute_id;
+    }
+
+    EditorContext& editor = editor_context_get();
+    PinData& pin = editor.pins.pool[g.current_pin_idx];
+    NodeData& node = editor.nodes.pool[g.current_node_idx];
+    pin.attribute_rect = get_item_rect();
+    node.pin_indices.push_back(g.current_pin_idx);
 }
 } // namespace
 
@@ -1522,6 +1549,9 @@ void Initialize()
     g.canvas_origin_screen_space = ImVec2(0.0f, 0.0f);
     g.canvas_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
     g.current_scope = Scope_None;
+
+    g.current_pin_idx = INT_MAX;
+    g.current_node_idx = INT_MAX;
 
     g.default_editor_ctx = EditorContextCreate();
     EditorContextSet(g.default_editor_ctx);
@@ -1629,10 +1659,11 @@ void BeginNodeEditor()
     g.hovered_link_idx.reset();
     g.hovered_pin_idx.reset();
     g.hovered_pin_flags = AttributeFlags_None;
-    g.active_pin_idx.reset();
     g.deleted_link_idx.reset();
 
     g.element_state_change = ElementStateChange_None;
+
+    g.active_attribute = false;
 
     // reset ui content for the current editor
     EditorContext& editor = editor_context_get();
@@ -1795,16 +1826,33 @@ void EndNodeTitleBar()
 
 void BeginInputAttribute(const int id, const PinShape shape)
 {
-    begin_attribute(id, AttributeType_Input, shape, g.current_node_idx);
+    begin_pin_attribute(id, AttributeType_Input, shape, g.current_node_idx);
 }
+
+void EndInputAttribute() { end_pin_attribute(); }
 
 void BeginOutputAttribute(const int id, const PinShape shape)
 {
-    begin_attribute(id, AttributeType_Output, shape, g.current_node_idx);
+    begin_pin_attribute(id, AttributeType_Output, shape, g.current_node_idx);
 }
 
-void EndAttribute()
+void EndOutputAttribute() { end_pin_attribute(); }
+
+void BeginStaticAttribute(const int id)
 {
+    // Make sure to call BeginNode() before calling BeginAttribute()
+    assert(g.current_scope == Scope_Node);
+    g.current_scope = Scope_Attribute;
+
+    g.current_attribute_id = id;
+
+    ImGui::BeginGroup();
+    ImGui::PushID(id);
+}
+
+void EndStaticAttribute()
+{
+    // Make sure to call BeginNode() before calling BeginAttribute()
     assert(g.current_scope == Scope_Attribute);
     g.current_scope = Scope_Node;
 
@@ -1813,14 +1861,41 @@ void EndAttribute()
 
     if (ImGui::IsItemActive())
     {
-        g.active_pin_idx = g.current_pin_idx;
+        g.active_attribute = true;
+        g.active_attribute_id = g.current_attribute_id;
+    }
+}
+
+void EndAttribute()
+{
+#pragma message("EndAttribute() is deprecated and will be removed.")
+#pragma message(                                                               \
+    "Use EndInputAttribute/EndOutputAttribute/EndStaticAttribute variants instead.")
+
+    assert(g.current_scope == Scope_Attribute);
+    g.current_scope = Scope_Node;
+
+    ImGui::PopID();
+    ImGui::EndGroup();
+
+    if (ImGui::IsItemActive())
+    {
+        g.active_attribute = true;
+        g.active_attribute_id = g.current_attribute_id;
     }
 
     EditorContext& editor = editor_context_get();
-    PinData& pin = editor.pins.pool[g.current_pin_idx];
-    NodeData& node = editor.nodes.pool[g.current_node_idx];
-    pin.attribute_rect = get_item_rect();
-    node.pin_indices.push_back(g.current_pin_idx);
+
+    // This is a terrible hack to accommodate this function to be used with
+    // BeginStaticAttribute:
+    if (g.current_pin_idx < editor.pins.pool.size() &&
+        editor.pins.pool[g.current_pin_idx].id == g.current_attribute_id)
+    {
+        PinData& pin = editor.pins.pool[g.current_pin_idx];
+        NodeData& node = editor.nodes.pool[g.current_node_idx];
+        pin.attribute_rect = get_item_rect();
+        node.pin_indices.push_back(g.current_pin_idx);
+    }
 }
 
 void PushAttributeFlag(AttributeFlags flag)
@@ -2029,27 +2104,26 @@ bool IsAttributeActive()
 {
     assert((g.current_scope & Scope_Node) != 0);
 
-    if (!g.active_pin_idx.has_value())
+    if (!g.active_attribute)
     {
         return false;
     }
 
-    return g.active_pin_idx == g.current_pin_idx;
+    return g.active_attribute_id == g.current_attribute_id;
 }
 
 bool IsAnyAttributeActive(int* const attribute_id)
 {
     assert((g.current_scope & (Scope_Node | Scope_Attribute)) == 0);
 
-    if (!g.active_pin_idx.has_value())
+    if (!g.active_attribute)
     {
         return false;
     }
 
     if (attribute_id != NULL)
     {
-        const EditorContext& editor = editor_context_get();
-        *attribute_id = editor.pins.pool[g.active_pin_idx.value()].id;
+        *attribute_id = g.active_attribute_id;
     }
 
     return true;

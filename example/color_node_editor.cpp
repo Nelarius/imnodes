@@ -468,7 +468,7 @@ public:
                         1.0f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
 
             ImGui::Spacing();
@@ -489,7 +489,7 @@ public:
                         1.f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
 
             ImGui::Spacing();
@@ -510,7 +510,7 @@ public:
                         1.0f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
             imnodes::EndNode();
             imnodes::PopColorStyle();
@@ -543,7 +543,7 @@ public:
                         1.0f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
 
             ImGui::Spacing();
@@ -553,7 +553,7 @@ public:
                 const float label_width = ImGui::CalcTextSize("output").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("output");
-                imnodes::EndAttribute();
+                imnodes::EndOutputAttribute();
             }
 
             imnodes::EndNode();
@@ -569,7 +569,7 @@ public:
 
             imnodes::BeginOutputAttribute(int(node));
             ImGui::Text("output");
-            imnodes::EndAttribute();
+            imnodes::EndOutputAttribute();
 
             imnodes::EndNode();
         }
@@ -595,7 +595,7 @@ public:
                         "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
 
             {
@@ -610,7 +610,7 @@ public:
                         "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
 
             ImGui::Spacing();
@@ -620,7 +620,7 @@ public:
                 const float label_width = ImGui::CalcTextSize("result").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("result");
-                imnodes::EndAttribute();
+                imnodes::EndOutputAttribute();
             }
 
             imnodes::EndNode();
@@ -647,7 +647,7 @@ public:
                         "##hidelabel", &graph_.node(node.lhs).number, 0.01f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
 
             {
@@ -662,7 +662,7 @@ public:
                         "##hidelabel", &graph_.node(node.rhs).number, 0.01f);
                     ImGui::PopItemWidth();
                 }
-                imnodes::EndAttribute();
+                imnodes::EndInputAttribute();
             }
 
             ImGui::Spacing();
@@ -672,7 +672,7 @@ public:
                 const float label_width = ImGui::CalcTextSize("result").x;
                 ImGui::Indent(node_width - label_width);
                 ImGui::Text("result");
-                imnodes::EndAttribute();
+                imnodes::EndOutputAttribute();
             }
 
             imnodes::EndNode();
