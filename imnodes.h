@@ -2,6 +2,15 @@
 
 #include <stddef.h>
 
+#if defined(__GNUC__) || defined(__clang__)
+#define DEPRECATED __attribute__((deprecated))
+#elif defined(_MSC_VER)
+#define DEPRECATED __declspec(deprecated)
+#else
+#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
+#define DEPRECATED
+#endif
+
 struct ImVec2;
 
 namespace imnodes
@@ -209,9 +218,9 @@ void EndOutputAttribute();
 // and IsAnyAttributeActive() to check for attribute activity.
 void BeginStaticAttribute(int id);
 void EndStaticAttribute();
-// Deprecated, but can be used with any of the three previous Begin{*}Attribute
+// Can still be used with any of the three previous Begin{*}Attribute
 // functions.
-void EndAttribute();
+DEPRECATED void EndAttribute();
 
 // Push a single AttributeFlags value. By default, only AttributeFlags_None is
 // set.

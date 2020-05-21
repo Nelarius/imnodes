@@ -1868,10 +1868,6 @@ void EndStaticAttribute()
 
 void EndAttribute()
 {
-#pragma message("EndAttribute() is deprecated and will be removed.")
-#pragma message(                                                               \
-    "Use EndInputAttribute/EndOutputAttribute/EndStaticAttribute variants instead.")
-
     assert(g.current_scope == Scope_Attribute);
     g.current_scope = Scope_Node;
 
