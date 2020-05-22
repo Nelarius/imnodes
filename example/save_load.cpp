@@ -1,188 +1,114 @@
 #include "node_editor.h"
+
 #include <imnodes.h>
 #include <imgui.h>
-
 #include <SDL_keycode.h>
-#include <cstdio>
+
+#include <algorithm>
+#include <cassert>
 #include <fstream>
-#include <string>
-#include <unordered_map>
-#include <utility>
+#include <ios> // for std::streamsize
+#include <stddef.h>
 #include <vector>
 
 namespace example
 {
 namespace
 {
-struct Color3
+struct Node
 {
-    float data[3];
+    int id;
+    float value;
+
+    Node() = default;
+
+    Node(const int i, const float v) : id(i), value(v) {}
 };
 
-inline int make_id(int node, int attribute) { return (node << 16) | attribute; }
+struct Link
+{
+    int id;
+    int start_attr, end_attr;
+};
 
 class SaveLoadEditor
 {
 public:
-    SaveLoadEditor() : current_id_(0), float_nodes_(), color_nodes_(), links_()
-    {
-    }
+    SaveLoadEditor() : nodes_(), links_(), current_id_(0) {}
 
     void show()
     {
         ImGui::Begin("Save & load example");
+        ImGui::TextUnformatted("A -- add node");
+        ImGui::TextUnformatted(
+            "Close the executable and rerun it -- your nodes should be exactly "
+            "where you left them!");
 
         imnodes::BeginNodeEditor();
 
-        imnodes::PushColorStyle(
-            imnodes::ColorStyle_TitleBar, IM_COL32(39, 117, 82, 255));
-        imnodes::PushColorStyle(
-            imnodes::ColorStyle_TitleBarHovered, IM_COL32(73, 147, 113, 255));
-        imnodes::PushColorStyle(
-            imnodes::ColorStyle_TitleBarSelected, IM_COL32(117, 176, 149, 255));
-        for (auto& elem : float_nodes_)
+        for (Node& node : nodes_)
         {
-            const float node_width = 150.0f;
-            imnodes::BeginNode(elem.first);
+            imnodes::BeginNode(node.id);
 
             imnodes::BeginNodeTitleBar();
-            ImGui::TextUnformatted("drag float");
+            ImGui::TextUnformatted("node");
             imnodes::EndNodeTitleBar();
 
-            imnodes::BeginInputAttribute(make_id(elem.first, 0));
-            ImGui::Text("input");
+            imnodes::BeginInputAttribute(node.id << 8);
+            ImGui::TextUnformatted("input");
             imnodes::EndInputAttribute();
-            ImGui::Spacing();
-            {
-                imnodes::BeginStaticAttribute(make_id(elem.first, 1));
-                const float label_width = ImGui::CalcTextSize("number").x;
-                ImGui::Text("number");
-                ImGui::PushItemWidth(node_width - label_width - 6.0f);
-                ImGui::SameLine();
-                ImGui::DragFloat("##hidelabel", &elem.second, 0.01f);
-                ImGui::PopItemWidth();
-                imnodes::EndStaticAttribute();
-            }
-            ImGui::Spacing();
-            {
-                imnodes::BeginOutputAttribute(make_id(elem.first, 2));
-                const float label_width = ImGui::CalcTextSize("output").x;
-                ImGui::Indent(node_width - label_width - 1.5f);
-                ImGui::Text("output");
-                imnodes::EndOutputAttribute();
-            }
+
+            imnodes::BeginStaticAttribute(node.id << 16);
+            ImGui::PushItemWidth(120.f);
+            ImGui::DragFloat("value", &node.value, 0.01f);
+            ImGui::PopItemWidth();
+            imnodes::EndStaticAttribute();
+
+            imnodes::BeginOutputAttribute(node.id << 24);
+            const float text_width = ImGui::CalcTextSize("output").x;
+            ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
+            ImGui::TextUnformatted("output");
+            imnodes::EndOutputAttribute();
 
             imnodes::EndNode();
         }
-        imnodes::PopColorStyle();
-        imnodes::PopColorStyle();
-        imnodes::PopColorStyle();
 
-        imnodes::PushColorStyle(
-            imnodes::ColorStyle_TitleBar, IM_COL32(41, 81, 109, 255));
-        imnodes::PushColorStyle(
-            imnodes::ColorStyle_TitleBarHovered, IM_COL32(72, 109, 136, 255));
-        imnodes::PushColorStyle(
-            imnodes::ColorStyle_TitleBarSelected, IM_COL32(112, 142, 164, 255));
-        for (auto& elem : color_nodes_)
+        for (const Link& link : links_)
         {
-            const float node_width = 200.0f;
-            imnodes::BeginNode(elem.first);
-
-            imnodes::BeginNodeTitleBar();
-            ImGui::TextUnformatted("float");
-            imnodes::EndNodeTitleBar();
-
-            imnodes::BeginInputAttribute(make_id(elem.first, 0));
-            ImGui::Text("input");
-            imnodes::EndInputAttribute();
-            ImGui::Spacing();
-
-            {
-                imnodes::BeginOutputAttribute(make_id(elem.first, 1));
-                const float label_width = ImGui::CalcTextSize("color").x;
-                ImGui::PushItemWidth(node_width - label_width - 6.0f);
-                ImGui::ColorEdit3("color", elem.second.data);
-                ImGui::PopItemWidth();
-                imnodes::EndOutputAttribute();
-            }
-            ImGui::Spacing();
-            {
-                imnodes::BeginOutputAttribute(make_id(elem.first, 2));
-                const float label_width = ImGui::CalcTextSize("output").x;
-                ImGui::Indent(node_width - label_width - 1.5f);
-                ImGui::Text("output");
-                imnodes::EndOutputAttribute();
-            }
-
-            imnodes::EndNode();
-        }
-        imnodes::PopColorStyle();
-        imnodes::PopColorStyle();
-        imnodes::PopColorStyle();
-
-        for (const auto linkpair : links_)
-        {
-            imnodes::Link(
-                linkpair.first, linkpair.second.start, linkpair.second.end);
+            imnodes::Link(link.id, link.start_attr, link.end_attr);
         }
 
-        // Context menu for adding new nodes
-
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
-
-        if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(1))
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A))
         {
-            ImGui::OpenPopup("context menu");
+            const int node_id = ++current_id_;
+            imnodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
+            nodes_.push_back(Node(node_id, 0.f));
         }
 
-        if (ImGui::BeginPopup("context menu"))
-        {
-            int new_node = -1;
-            ImVec2 click_pos = ImGui::GetMousePosOnOpeningCurrentPopup();
-
-            if (ImGui::MenuItem("drag float node"))
-            {
-                new_node = current_id_++;
-                float_nodes_.insert(std::make_pair(new_node, 0.f));
-            }
-
-            if (ImGui::MenuItem("color node"))
-            {
-                new_node = current_id_++;
-                color_nodes_.insert(std::make_pair(new_node, Color3{}));
-            }
-
-            ImGui::EndPopup();
-
-            if (new_node != -1)
-            {
-                imnodes::SetNodeScreenSpacePos(new_node, click_pos);
-            }
-        }
-
-        ImGui::PopStyleVar();
         imnodes::EndNodeEditor();
 
-        int link_start, link_end;
-        if (imnodes::IsLinkCreated(&link_start, &link_end))
         {
-            links_.insert(
-                std::make_pair(current_id_++, Link{link_start, link_end}));
+            Link link;
+            if (imnodes::IsLinkCreated(&link.start_attr, &link.end_attr))
+            {
+                link.id = ++current_id_;
+                links_.push_back(link);
+            }
         }
 
         {
-            const int num_selected = imnodes::NumSelectedLinks();
-            if (num_selected > 0 && ImGui::IsKeyReleased(SDL_SCANCODE_X))
+            int link_id;
+            if (imnodes::IsLinkDestroyed(&link_id))
             {
-                static std::vector<int> selected_links;
-                selected_links.resize(static_cast<size_t>(num_selected), -1);
-                imnodes::GetSelectedLinks(selected_links.data());
-                for (const int link_id : selected_links)
-                {
-                    links_.erase(link_id);
-                }
-                selected_links.clear();
+                auto iter = std::find_if(
+                    links_.begin(),
+                    links_.end(),
+                    [link_id](const Link& link) -> bool {
+                        return link.id == link_id;
+                    });
+                assert(iter != links_.end());
+                links_.erase(iter);
             }
         }
 
@@ -191,123 +117,103 @@ public:
 
     void save()
     {
-        {
-            std::ofstream fout;
-            fout.open("editor.ini");
+        // Save the internal imnodes state
+        imnodes::SaveCurrentEditorStateToIniFile("save_load.ini");
 
-            for (const auto& elem : float_nodes_)
-            {
-                fout << "[float-node]\n";
-                fout << "id=" << elem.first << "\n";
-                fout << "data=" << elem.second << "\n\n";
-            }
+        // Dump our editor state as bytes into a file
 
-            for (const auto& elem : color_nodes_)
-            {
-                fout << "[color-node]\n";
-                fout << "id=" << elem.first << "\n";
-                fout << "data=" << elem.second.data[0] << ","
-                     << elem.second.data[1] << "," << elem.second.data[2]
-                     << "\n\n";
-            }
+        std::fstream fout(
+            "save_load.bytes",
+            std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
 
-            for (const auto& link : links_)
-            {
-                fout << "[link]\n";
-                fout << "id=" << link.first << "\n";
-                fout << "data=" << link.second.start << "," << link.second.end
-                     << "\n\n";
-            }
+        // copy the node vector to file
+        const size_t num_nodes = nodes_.size();
+        fout.write(
+            reinterpret_cast<const char*>(&num_nodes),
+            static_cast<std::streamsize>(sizeof(size_t)));
+        fout.write(
+            reinterpret_cast<const char*>(nodes_.data()),
+            static_cast<std::streamsize>(sizeof(Node) * num_nodes));
 
-            fout.close();
-        }
+        // copy the link vector to file
+        const size_t num_links = links_.size();
+        fout.write(
+            reinterpret_cast<const char*>(&num_links),
+            static_cast<std::streamsize>(sizeof(size_t)));
+        fout.write(
+            reinterpret_cast<const char*>(links_.data()),
+            static_cast<std::streamsize>(sizeof(Link) * num_links));
 
-        imnodes::SaveCurrentEditorStateToIniFile("imnodes.ini");
+        // copy the current_id to file
+        fout.write(
+            reinterpret_cast<const char*>(&current_id_),
+            static_cast<std::streamsize>(sizeof(int)));
     }
 
     void load()
     {
+        // Load the internal imnodes state
+        imnodes::LoadCurrentEditorStateFromIniFile("save_load.ini");
+
+        // Load our editor state into memory
+
+        std::fstream fin(
+            "save_load.bytes", std::ios_base::in | std::ios_base::binary);
+
+        if (!fin.is_open())
         {
-            std::ifstream fin("editor.ini");
-            if (fin.is_open())
-            {
-                // a simple, stupid ini parser
-                std::string line;
-                while (std::getline(fin, line))
-                {
-                    if (line == "[float-node]")
-                    {
-                        int id;
-                        float value;
-                        std::getline(fin, line);
-                        std::sscanf(line.c_str(), "id=%i", &id);
-                        std::getline(fin, line);
-                        std::sscanf(line.c_str(), "data=%f", &value);
-                        float_nodes_.insert(std::make_pair(id, value));
-                        if (id > current_id_)
-                        {
-                            current_id_ = id;
-                        }
-                    }
-                    else if (line == "[color-node]")
-                    {
-                        int id;
-                        Color3 color;
-                        std::getline(fin, line);
-                        std::sscanf(line.c_str(), "id=%i", &id);
-                        std::getline(fin, line);
-                        std::sscanf(
-                            line.c_str(),
-                            "data=%f,%f,%f",
-                            color.data,
-                            color.data + 1,
-                            color.data + 2);
-                        color_nodes_.insert(std::make_pair(id, color));
-                        if (id > current_id_)
-                        {
-                            current_id_ = id;
-                        }
-                    }
-                    else if (line == "[link]")
-                    {
-                        int id;
-                        Link link;
-                        std::getline(fin, line);
-                        std::sscanf(line.c_str(), "id=%i", &id);
-                        std::getline(fin, line);
-                        std::sscanf(
-                            line.c_str(), "data=%i,%i", &link.start, &link.end);
-                        links_.insert(std::make_pair(id, link));
-                        if (id > current_id_)
-                        {
-                            current_id_ = id;
-                        }
-                    }
-                }
-            }
+            return;
         }
 
-        imnodes::LoadCurrentEditorStateFromIniFile("imnodes.ini");
+        // copy nodes into memory
+        size_t num_nodes;
+        fin.read(
+            reinterpret_cast<char*>(&num_nodes),
+            static_cast<std::streamsize>(sizeof(size_t)));
+        nodes_.resize(num_nodes);
+        fin.read(
+            reinterpret_cast<char*>(nodes_.data()),
+            static_cast<std::streamsize>(sizeof(Node) * num_nodes));
+
+        // copy links into memory
+        size_t num_links;
+        fin.read(
+            reinterpret_cast<char*>(&num_links),
+            static_cast<std::streamsize>(sizeof(size_t)));
+        links_.resize(num_links);
+        fin.read(
+            reinterpret_cast<char*>(links_.data()),
+            static_cast<std::streamsize>(sizeof(Link) * num_links));
+
+        // copy current_id into memory
+        fin.read(
+            reinterpret_cast<char*>(&current_id_),
+            static_cast<std::streamsize>(sizeof(int)));
     }
 
 private:
-    struct Link
-    {
-        int start, end;
-    };
-
+    std::vector<Node> nodes_;
+    std::vector<Link> links_;
     int current_id_;
-    std::unordered_map<int, float> float_nodes_;
-    std::unordered_map<int, Color3> color_nodes_;
-    std::unordered_map<int, Link> links_;
 };
 
 static SaveLoadEditor editor;
 } // namespace
 
-void NodeEditorInitialize() { editor.load(); }
+void NodeEditorInitialize()
+{
+    imnodes::GetIO().link_detach_with_modifier_click.modifier =
+        &ImGui::GetIO().KeyCtrl;
+    imnodes::PushAttributeFlag(
+        imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
+    editor.load();
+}
 
 void NodeEditorShow() { editor.show(); }
 
-void NodeEditorShutdown() { editor.save(); }
+void NodeEditorShutdown()
+{
+    imnodes::PopAttributeFlag();
+    editor.save();
+}
 } // namespace example
