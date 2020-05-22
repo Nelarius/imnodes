@@ -143,7 +143,7 @@ workspace "imnodes"
 
     group "examples"
 
-    imnodes_example_project("simple", "simple.cpp")
+    imnodes_example_project("hello", "hello.cpp")
 
     imnodes_example_project("saveload", "save_load.cpp")
 

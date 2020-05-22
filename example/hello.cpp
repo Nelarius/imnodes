@@ -10,7 +10,7 @@ namespace example
 {
 namespace
 {
-class SimpleNodeEditor
+class HelloWorldNodeEditor
 {
 public:
     void show()
@@ -40,7 +40,7 @@ public:
     }
 };
 
-static SimpleNodeEditor editor;
+static HelloWorldNodeEditor editor;
 } // namespace
 
 void NodeEditorInitialize()
