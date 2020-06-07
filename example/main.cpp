@@ -66,8 +66,8 @@ int main(int, char**)
     imnodes::Initialize();
 
     // Setup style
-    ImGui::StyleColorsClassic();
-    imnodes::StyleColorsClassic();
+    ImGui::StyleColorsDark();
+    imnodes::StyleColorsDark();
 
     bool done = false;
     bool initialized = false;
