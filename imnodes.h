@@ -66,10 +66,9 @@ enum PinShape
 enum AttributeFlags
 {
     AttributeFlags_None = 0,
-    // Allow detaching a link by left-clicking and dragging the link at a pin it
-    // is connected to. NOTE: the user has to actually delete the link for this
-    // to work. A deleted link can be detected by calling IsLinkDestroyed()
-    // after EndNodeEditor().
+    // Allow detaching a link by left-clicking and dragging the link at a pin it is connected to.
+    // NOTE: the user has to actually delete the link for this to work. A deleted link can be
+    // detected by calling IsLinkDestroyed() after EndNodeEditor().
     AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0
 };
 
@@ -81,23 +80,21 @@ struct IO
 
         // Controls whether this feature is enabled or not.
         bool enabled;
-        const bool* modifier; // The keyboard modifier to use with the mouse
-                              // left click. Set to &ImGuiIO::KeyAlt by default.
+        const bool* modifier; // The keyboard modifier to use with the mouse left click. Set to
+                              // &ImGuiIO::KeyAlt by default.
     } emulate_three_button_mouse;
 
     struct LinkDetachWithModifierClick
     {
         LinkDetachWithModifierClick();
 
-        // Pointer to a boolean value indicating when the desired modifier is
-        // pressed. Set to NULL by default (i.e. this feature is disabled). To
-        // enable the feature, set the link to point to, for example,
-        // &ImGuiIO::KeyCtrl.
+        // Pointer to a boolean value indicating when the desired modifier is pressed. Set to NULL
+        // by default (i.e. this feature is disabled). To enable the feature, set the link to point
+        // to, for example, &ImGuiIO::KeyCtrl.
         //
-        // Left-clicking a link with this modifier pressed will detach that
-        // link. NOTE: the user has to actually delete the link for this to
-        // work. A deleted link can be detected by calling IsLinkDestroyed()
-        // after EndNodeEditor().
+        // Left-clicking a link with this modifier pressed will detach that link. NOTE: the user has
+        // to actually delete the link for this to work. A deleted link can be detected by calling
+        // IsLinkDestroyed() after EndNodeEditor().
         const bool* modifier;
     } link_detach_with_modifier_click;
 
@@ -116,43 +113,38 @@ struct Style
     float link_line_segments_per_length;
     float link_hover_distance;
 
-    // The following variables control the look and behavior of the pins. The
-    // default size of each pin shape is balanced to occupy approximately the
-    // same surface area on the screen.
+    // The following variables control the look and behavior of the pins. The default size of each
+    // pin shape is balanced to occupy approximately the same surface area on the screen.
 
-    // The circle radius used when the pin shape is either PinShape_Circle or
-    // PinShape_CircleFilled.
+    // The circle radius used when the pin shape is either PinShape_Circle or PinShape_CircleFilled.
     float pin_circle_radius;
-    // The quad side length used when the shape is either PinShape_Quad or
-    // PinShape_QuadFilled.
+    // The quad side length used when the shape is either PinShape_Quad or PinShape_QuadFilled.
     float pin_quad_side_length;
-    // The equilateral triangle side length used when the pin shape is either
-    // PinShape_Triangle or PinShape_TriangleFilled.
+    // The equilateral triangle side length used when the pin shape is either PinShape_Triangle or
+    // PinShape_TriangleFilled.
     float pin_triangle_side_length;
     // The thickness of the line used when the pin shape is not filled.
     float pin_line_thickness;
-    // The radius from the pin's center position inside of which it is detected
-    // as being hovered over.
+    // The radius from the pin's center position inside of which it is detected as being hovered
+    // over.
     float pin_hover_radius;
-    // Offsets the pins' positions from the edge of the node to the outside of
-    // the node.
+    // Offsets the pins' positions from the edge of the node to the outside of the node.
     float pin_offset;
 
     // By default, StyleFlags_NodeOutline and StyleFlags_Gridlines are enabled.
     StyleFlags flags;
-    // Set these mid-frame using Push/PopColorStyle. You can index this color
-    // array with with a ColorStyle enum value.
+    // Set these mid-frame using Push/PopColorStyle. You can index this color array with with a
+    // ColorStyle enum value.
     unsigned int colors[ColorStyle_Count];
 
     Style();
 };
 
-// An editor context corresponds to a set of nodes in a single workspace
-// (created with a single Begin/EndNodeEditor pair)
+// An editor context corresponds to a set of nodes in a single workspace (created with a single
+// Begin/EndNodeEditor pair)
 //
-// By default, the library creates an editor context behind the scenes, so
-// using any of the imnodes functions doesn't require you to explicitly create a
-// context.
+// By default, the library creates an editor context behind the scenes, so using any of the imnodes
+// functions doesn't require you to explicitly create a context.
 struct EditorContext;
 
 EditorContext* EditorContextCreate();
@@ -168,17 +160,15 @@ void Shutdown();
 
 IO& GetIO();
 
-// Returns the global style struct. See the struct declaration for default
-// values.
+// Returns the global style struct. See the struct declaration for default values.
 Style& GetStyle();
 // Style presets matching the dear imgui styles of the same name.
 void StyleColorsDark(); // on by default
 void StyleColorsClassic();
 void StyleColorsLight();
 
-// The top-level function call. Call this before calling BeginNode/EndNode.
-// Calling this function will result the node editor grid workspace being
-// rendered.
+// The top-level function call. Call this before calling BeginNode/EndNode. Calling this function
+// will result the node editor grid workspace being rendered.
 void BeginNodeEditor();
 void EndNodeEditor();
 
@@ -191,19 +181,18 @@ void PopStyleVar();
 void BeginNode(int id);
 void EndNode();
 
-// Place your node title bar content (such as the node title, using ImGui::Text)
-// between the following function calls. These functions have to be called
-// before adding any attributes, or the layout of the node will be incorrect.
+// Place your node title bar content (such as the node title, using ImGui::Text) between the
+// following function calls. These functions have to be called before adding any attributes, or the
+// layout of the node will be incorrect.
 void BeginNodeTitleBar();
 void EndNodeTitleBar();
 
-// Attributes are ImGui UI elements embedded within the node. Attributes can
-// have pin shapes rendered next to them. Links are created between pins.
+// Attributes are ImGui UI elements embedded within the node. Attributes can have pin shapes
+// rendered next to them. Links are created between pins.
 //
-// The activity status of an attribute can be checked via the
-// IsAttributeActive() and IsAnyAttributeActive() function calls. This is one
-// easy way of checking for any changes made to an attribute's drag float UI,
-// for instance.
+// The activity status of an attribute can be checked via the IsAttributeActive() and
+// IsAnyAttributeActive() function calls. This is one easy way of checking for any changes made to
+// an attribute's drag float UI, for instance.
 //
 // Each attribute id must be unique.
 
@@ -213,64 +202,60 @@ void EndInputAttribute();
 // Create an output attribute block. The pin is rendered on the right side.
 void BeginOutputAttribute(int id, PinShape shape = PinShape_CircleFilled);
 void EndOutputAttribute();
-// Create a static attribute block. A static attribute has no pin, and therefore
-// can't be linked to anything. However, you can still use IsAttributeActive()
-// and IsAnyAttributeActive() to check for attribute activity.
+// Create a static attribute block. A static attribute has no pin, and therefore can't be linked to
+// anything. However, you can still use IsAttributeActive() and IsAnyAttributeActive() to check for
+// attribute activity.
 void BeginStaticAttribute(int id);
 void EndStaticAttribute();
-// Can still be used with any of the three previous Begin{*}Attribute
-// functions.
+// Can still be used with any of the three previous Begin{*}Attribute functions.
 DEPRECATED void EndAttribute();
 
-// Push a single AttributeFlags value. By default, only AttributeFlags_None is
-// set.
+// Push a single AttributeFlags value. By default, only AttributeFlags_None is set.
 void PushAttributeFlag(AttributeFlags flag);
 void PopAttributeFlag();
 
 // Render a link between attributes.
-// The attributes ids used here must match the ids used in
-// Begin(Input|Output)Attribute function calls. The order of start_attr and
-// end_attr doesn't make a difference for rendering the link.
+// The attributes ids used here must match the ids used in Begin(Input|Output)Attribute function
+// calls. The order of start_attr and end_attr doesn't make a difference for rendering the link.
 void Link(int id, int start_attribute_id, int end_attribute_id);
 
-// Set's the node's position corresponding to the node id, either using screen
-// space coordinates, or node editor grid coordinates. You can even set the
-// position before the node has been created with BeginNode().
+// Set's the node's position corresponding to the node id, either using screen space coordinates, or
+// node editor grid coordinates. You can even set the position before the node has been created with
+// BeginNode().
 
 void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 // Enable or disable the ability to click and drag a specific node.
 void SetNodeDraggable(int node_id, const bool draggable);
 
-// Returns true if the current node editor canvas is being hovered over by the
-// mouse, and is not blocked by any other windows.
+// Returns true if the current node editor canvas is being hovered over by the mouse, and is not
+// blocked by any other windows.
 bool IsEditorHovered();
-// The following functions return true if a UI element is being hovered over by
-// the mouse cursor. Assigns the id of the UI element being hovered over to the
-// function argument. Use these functions after EndNodeEditor() has been called.
+// The following functions return true if a UI element is being hovered over by the mouse cursor.
+// Assigns the id of the UI element being hovered over to the function argument. Use these functions
+// after EndNodeEditor() has been called.
 bool IsNodeHovered(int* node_id);
 bool IsLinkHovered(int* link_id);
 bool IsPinHovered(int* attribute_id);
 
-// Use The following two functions to query the number of selected nodes or
-// links in the current editor. Use after calling EndNodeEditor().
+// Use The following two functions to query the number of selected nodes or links in the current
+// editor. Use after calling EndNodeEditor().
 int NumSelectedNodes();
 int NumSelectedLinks();
-// Get the selected node/link ids. The pointer argument should point to an
-// integer array with at least as many elements as the respective
-// NumSelectedNodes/NumSelectedLinks function call returned.
+// Get the selected node/link ids. The pointer argument should point to an integer array with at
+// least as many elements as the respective NumSelectedNodes/NumSelectedLinks function call
+// returned.
 void GetSelectedNodes(int* node_ids);
 void GetSelectedLinks(int* link_ids);
 
-// Was the previous attribute active? This will continuously return true while
-// the left mouse button is being pressed over the UI content of the attribute.
+// Was the previous attribute active? This will continuously return true while the left mouse button
+// is being pressed over the UI content of the attribute.
 bool IsAttributeActive();
-// Was any attribute active? If so, sets the active attribute id to the output
-// function argument.
+// Was any attribute active? If so, sets the active attribute id to the output function argument.
 bool IsAnyAttributeActive(int* attribute_id = 0);
 
-// Use the following functions to query a change of state for an existing link,
-// or new link. Call these after EndNodeEditor().
+// Use the following functions to query a change of state for an existing link, or new link. Call
+// these after EndNodeEditor().
 
 // Did the user start dragging a new link from a pin?
 bool IsLinkStarted(int* started_at_attribute_id);
@@ -278,29 +263,21 @@ bool IsLinkStarted(int* started_at_attribute_id);
 bool IsLinkDropped();
 // Did the user finish creating a new link?
 bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id);
-// Was an existing link detached from a pin by the user? The detached link's id
-// is assigned to the output argument link_id.
+// Was an existing link detached from a pin by the user? The detached link's id is assigned to the
+// output argument link_id.
 bool IsLinkDestroyed(int* link_id);
 
-// Use the following functions to write the editor context's state to a string,
-// or directly to a file. The editor context is serialized in the INI file
-// format.
+// Use the following functions to write the editor context's state to a string, or directly to a
+// file. The editor context is serialized in the INI file format.
 
 const char* SaveCurrentEditorStateToIniString(size_t* data_size = NULL);
-const char* SaveEditorStateToIniString(
-    const EditorContext* editor,
-    size_t* data_size = NULL);
+const char* SaveEditorStateToIniString(const EditorContext* editor, size_t* data_size = NULL);
 
 void LoadCurrentEditorStateFromIniString(const char* data, size_t data_size);
-void LoadEditorStateFromIniString(
-    EditorContext* editor,
-    const char* data,
-    size_t data_size);
+void LoadEditorStateFromIniString(EditorContext* editor, const char* data, size_t data_size);
 
 void SaveCurrentEditorStateToIniFile(const char* file_name);
-void SaveEditorStateToIniFile(
-    const EditorContext* editor,
-    const char* file_name);
+void SaveEditorStateToIniFile(const EditorContext* editor, const char* file_name);
 
 void LoadCurrentEditorStateFromIniFile(const char* file_name);
 void LoadEditorStateFromIniFile(EditorContext* editor, const char* file_name);

@@ -21,7 +21,7 @@ BraceWrapping: {
     IndentBraces: 'false'
 }
 BreakBeforeBraces: Custom
-ColumnLimit: 80
+ColumnLimit: 100
 Cpp11BracedListStyle: 'true'
 DerivePointerAlignment: 'false'
 IndentCaseLabels: 'false'

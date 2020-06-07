@@ -101,10 +101,8 @@ public:
             int link_id;
             if (imnodes::IsLinkDestroyed(&link_id))
             {
-                auto iter = std::find_if(
-                    links_.begin(),
-                    links_.end(),
-                    [link_id](const Link& link) -> bool {
+                auto iter =
+                    std::find_if(links_.begin(), links_.end(), [link_id](const Link& link) -> bool {
                         return link.id == link_id;
                     });
                 assert(iter != links_.end());
@@ -123,8 +121,7 @@ public:
         // Dump our editor state as bytes into a file
 
         std::fstream fout(
-            "save_load.bytes",
-            std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+            "save_load.bytes", std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
 
         // copy the node vector to file
         const size_t num_nodes = nodes_.size();
@@ -146,8 +143,7 @@ public:
 
         // copy the current_id to file
         fout.write(
-            reinterpret_cast<const char*>(&current_id_),
-            static_cast<std::streamsize>(sizeof(int)));
+            reinterpret_cast<const char*>(&current_id_), static_cast<std::streamsize>(sizeof(int)));
     }
 
     void load()
@@ -157,8 +153,7 @@ public:
 
         // Load our editor state into memory
 
-        std::fstream fin(
-            "save_load.bytes", std::ios_base::in | std::ios_base::binary);
+        std::fstream fin("save_load.bytes", std::ios_base::in | std::ios_base::binary);
 
         if (!fin.is_open())
         {
@@ -167,9 +162,7 @@ public:
 
         // copy nodes into memory
         size_t num_nodes;
-        fin.read(
-            reinterpret_cast<char*>(&num_nodes),
-            static_cast<std::streamsize>(sizeof(size_t)));
+        fin.read(reinterpret_cast<char*>(&num_nodes), static_cast<std::streamsize>(sizeof(size_t)));
         nodes_.resize(num_nodes);
         fin.read(
             reinterpret_cast<char*>(nodes_.data()),
@@ -177,18 +170,14 @@ public:
 
         // copy links into memory
         size_t num_links;
-        fin.read(
-            reinterpret_cast<char*>(&num_links),
-            static_cast<std::streamsize>(sizeof(size_t)));
+        fin.read(reinterpret_cast<char*>(&num_links), static_cast<std::streamsize>(sizeof(size_t)));
         links_.resize(num_links);
         fin.read(
             reinterpret_cast<char*>(links_.data()),
             static_cast<std::streamsize>(sizeof(Link) * num_links));
 
         // copy current_id into memory
-        fin.read(
-            reinterpret_cast<char*>(&current_id_),
-            static_cast<std::streamsize>(sizeof(int)));
+        fin.read(reinterpret_cast<char*>(&current_id_), static_cast<std::streamsize>(sizeof(int)));
     }
 
 private:
@@ -202,10 +191,8 @@ static SaveLoadEditor editor;
 
 void NodeEditorInitialize()
 {
-    imnodes::GetIO().link_detach_with_modifier_click.modifier =
-        &ImGui::GetIO().KeyCtrl;
-    imnodes::PushAttributeFlag(
-        imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
+    imnodes::GetIO().link_detach_with_modifier_click.modifier = &ImGui::GetIO().KeyCtrl;
+    imnodes::PushAttributeFlag(imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
     editor.load();
 }
 

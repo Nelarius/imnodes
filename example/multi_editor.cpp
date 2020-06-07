@@ -97,9 +97,7 @@ void show_editor(const char* editor_name, Editor& editor)
         if (imnodes::IsLinkDestroyed(&link_id))
         {
             auto iter = std::find_if(
-                editor.links.begin(),
-                editor.links.end(),
-                [link_id](const Link& link) -> bool {
+                editor.links.begin(), editor.links.end(), [link_id](const Link& link) -> bool {
                     return link.id == link_id;
                 });
             assert(iter != editor.links.end());
@@ -118,8 +116,7 @@ void NodeEditorInitialize()
 {
     editor1.context = imnodes::EditorContextCreate();
     editor2.context = imnodes::EditorContextCreate();
-    imnodes::PushAttributeFlag(
-        imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
+    imnodes::PushAttributeFlag(imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
 
     imnodes::IO& io = imnodes::GetIO();
     io.link_detach_with_modifier_click.modifier = &ImGui::GetIO().KeyCtrl;

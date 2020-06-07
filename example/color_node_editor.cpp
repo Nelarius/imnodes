@@ -16,7 +16,6 @@ namespace example
 {
 namespace
 {
-// TODO: these don't have to be here
 enum class NodeType
 {
     add,
