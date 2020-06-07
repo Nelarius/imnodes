@@ -469,6 +469,8 @@ public:
                     case UiNodeType::sine:
                         graph_.erase_node(iter->sine.input);
                         break;
+                    default:
+                        break;
                     }
                     nodes_.erase(iter);
                 }
