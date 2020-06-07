@@ -2,64 +2,197 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <stack>
 #include <stddef.h>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace example
 {
+template<typename ElementType>
+struct Span
+{
+    using iterator = ElementType*;
+
+    template<typename Container>
+    Span(Container& c) : begin_(c.data()), end_(begin_ + c.size())
+    {
+    }
+
+    iterator begin() const { return begin_; }
+    iterator end() const { return end_; }
+
+private:
+    iterator begin_;
+    iterator end_;
+};
+
+template<typename ElementType>
+class IdMap
+{
+public:
+    using iterator = typename std::vector<ElementType>::iterator;
+    using const_iterator = typename std::vector<ElementType>::const_iterator;
+
+    // Iterators
+
+    const_iterator begin() const { return elements_.begin(); }
+    const_iterator end() const { return elements_.end(); }
+
+    // Element access
+
+    Span<const ElementType> elements() const { return elements_; }
+
+    // Capacity
+
+    bool empty() const { return sorted_ids_.empty(); }
+    size_t size() const { return sorted_ids_.size(); }
+
+    // Modifiers
+
+    std::pair<iterator, bool> insert(int id, const ElementType& element);
+    std::pair<iterator, bool> insert(int id, ElementType&& element);
+    size_t erase(int id);
+    void clear();
+
+    // Lookup
+
+    iterator find(int id);
+    const_iterator find(int id) const;
+    bool contains(int id) const;
+
+private:
+    std::vector<ElementType> elements_;
+    std::vector<int> sorted_ids_;
+};
+
+template<typename ElementType>
+std::pair<typename IdMap<ElementType>::iterator, bool> IdMap<ElementType>::insert(
+    const int id,
+    const ElementType& element)
+{
+    auto lower_bound = std::lower_bound(sorted_ids_.begin(), sorted_ids_.end(), id);
+
+    if (lower_bound != sorted_ids_.end() && id == *lower_bound)
+    {
+        return std::make_pair(
+            std::next(elements_.begin(), std::distance(sorted_ids_.begin(), lower_bound)), false);
+    }
+
+    auto insert_element_at =
+        std::next(elements_.begin(), std::distance(sorted_ids_.begin(), lower_bound));
+
+    sorted_ids_.insert(lower_bound, id);
+    return std::make_pair(elements_.insert(insert_element_at, element), true);
+}
+
+template<typename ElementType>
+std::pair<typename IdMap<ElementType>::iterator, bool> IdMap<ElementType>::insert(
+    const int id,
+    ElementType&& element)
+{
+    auto lower_bound = std::lower_bound(sorted_ids_.begin(), sorted_ids_.end(), id);
+
+    if (lower_bound != sorted_ids_.end() && id == *lower_bound)
+    {
+        return std::make_pair(
+            std::next(elements_.begin(), std::distance(sorted_ids_.begin(), lower_bound)), false);
+    }
+
+    auto insert_element_at =
+        std::next(elements_.begin(), std::distance(sorted_ids_.begin(), lower_bound));
+
+    sorted_ids_.insert(lower_bound, id);
+    return std::make_pair(elements_.insert(insert_element_at, std::move(element)), true);
+}
+
+template<typename ElementType>
+size_t IdMap<ElementType>::erase(const int id)
+{
+    auto lower_bound = std::lower_bound(sorted_ids_.begin(), sorted_ids_.end(), id);
+
+    if (lower_bound == sorted_ids_.end() || id != *lower_bound)
+    {
+        return 0ull;
+    }
+
+    auto erase_element_at =
+        std::next(elements_.begin(), std::distance(sorted_ids_.begin(), lower_bound));
+
+    sorted_ids_.erase(lower_bound);
+    elements_.erase(erase_element_at);
+
+    return 1ull;
+}
+
+template<typename ElementType>
+void IdMap<ElementType>::clear()
+{
+    elements_.clear();
+    sorted_ids_.clear();
+}
+
+template<typename ElementType>
+typename IdMap<ElementType>::iterator IdMap<ElementType>::find(const int id)
+{
+    const auto lower_bound = std::lower_bound(sorted_ids_.cbegin(), sorted_ids_.cend(), id);
+    return (lower_bound == sorted_ids_.cend() || *lower_bound != id)
+               ? elements_.end()
+               : std::next(elements_.begin(), std::distance(sorted_ids_.cbegin(), lower_bound));
+}
+
+template<typename ElementType>
+typename IdMap<ElementType>::const_iterator IdMap<ElementType>::find(const int id) const
+{
+    const auto lower_bound = std::lower_bound(sorted_ids_.cbegin(), sorted_ids_.cend(), id);
+    return (lower_bound == sorted_ids_.cend() || *lower_bound != id)
+               ? elements_.cend()
+               : std::next(elements_.cbegin(), std::distance(sorted_ids_.cbegin(), lower_bound));
+}
+
+template<typename ElementType>
+bool IdMap<ElementType>::contains(const int id) const
+{
+    const auto lower_bound = std::lower_bound(sorted_ids_.cbegin(), sorted_ids_.cend(), id);
+
+    if (lower_bound == sorted_ids_.cend())
+    {
+        return false;
+    }
+
+    return *lower_bound == id;
+}
+
 // a very simple directional graph
 template<typename NodeType>
 class Graph
 {
 public:
-    Graph()
-        : current_id_(0), nodes_(), edges_from_node_(), edges_to_node_(),
-          edges_()
-    {
-    }
+    Graph() : current_id_(0), nodes_(), edges_from_node_(), node_neighbors_(), edges_() {}
 
     struct Edge
     {
+        int id;
         int from, to;
 
         Edge() = default;
-        Edge(const int f, const int t) : from(f), to(t) {}
+        Edge(const int id, const int f, const int t) : id(id), from(f), to(t) {}
 
         inline int opposite(const int n) const { return n == from ? to : from; }
-    };
-
-    using edge_iterator =
-        typename std::unordered_map<int, Edge>::const_iterator;
-
-    struct EdgeSpan
-    {
-        explicit EdgeSpan(edge_iterator begin, edge_iterator end)
-            : begin_(begin), end_(end)
-        {
-        }
-
-        edge_iterator begin() const { return begin_; }
-        edge_iterator end() const { return end_; }
-
-    private:
-        edge_iterator begin_;
-        edge_iterator end_;
+        inline bool contains(const int n) const { return n == from || n == to; }
     };
 
     // Element access
 
     NodeType& node(int node_id);
     const NodeType& node(int node_id) const;
-
-    EdgeSpan edges() const;
+    Span<const int> neighbors(int node_id) const;
+    Span<const Edge> edges() const;
 
     // Capacity
 
-    size_t num_adjacencies_from_node(int node_id) const;
-    size_t num_adjacencies_to_node(int node_id) const;
+    size_t num_edges_from_node(int node_id) const;
 
     // Modifiers
 
@@ -70,14 +203,14 @@ public:
     void erase_edge(int edge_id);
 
 private:
-    template<typename T, typename Visitor>
-    void dfs_traverse(const Graph<T>& graph, int start_node, Visitor visitor);
-
     int current_id_;
-    std::unordered_map<int, NodeType> nodes_;
-    std::unordered_map<int, std::vector<int>> edges_from_node_;
-    std::unordered_map<int, std::vector<int>> edges_to_node_;
-    std::unordered_map<int, Edge> edges_;
+    // These contains map to the node id
+    IdMap<NodeType> nodes_;
+    IdMap<int> edges_from_node_;
+    IdMap<std::vector<int>> node_neighbors_;
+
+    // This container maps to the edge id
+    IdMap<Edge> edges_;
 };
 
 template<typename NodeType>
@@ -89,105 +222,136 @@ NodeType& Graph<NodeType>::node(const int id)
 template<typename NodeType>
 const NodeType& Graph<NodeType>::node(const int id) const
 {
-    assert(nodes_.find(id) != nodes_.end());
-    return nodes_.at(id);
+    const auto iter = nodes_.find(id);
+    assert(iter != nodes_.end());
+    return *iter;
 }
 
 template<typename NodeType>
-typename Graph<NodeType>::EdgeSpan Graph<NodeType>::edges() const
+Span<const int> Graph<NodeType>::neighbors(int node_id) const
 {
-    return EdgeSpan(edges_.begin(), edges_.end());
+    const auto iter = node_neighbors_.find(node_id);
+    assert(iter != node_neighbors_.end());
+    return *iter;
 }
 
 template<typename NodeType>
-size_t Graph<NodeType>::num_adjacencies_from_node(const int id) const
+Span<const typename Graph<NodeType>::Edge> Graph<NodeType>::edges() const
+{
+    return edges_.elements();
+}
+
+template<typename NodeType>
+size_t Graph<NodeType>::num_edges_from_node(const int id) const
 {
     auto iter = edges_from_node_.find(id);
     assert(iter != edges_from_node_.end());
-    return iter->second.size();
-}
-
-template<typename NodeType>
-size_t Graph<NodeType>::num_adjacencies_to_node(const int id) const
-{
-    auto iter = edges_to_node_.find(id);
-    assert(iter != edges_to_node_.end());
-    return iter->second.size();
+    return *iter;
 }
 
 template<typename NodeType>
 int Graph<NodeType>::insert_node(const NodeType& node)
 {
     const int id = current_id_++;
-    nodes_.insert(std::make_pair(id, node));
-    edges_from_node_.insert(std::make_pair(id, std::vector<int>()));
-    edges_to_node_.insert(std::make_pair(id, std::vector<int>()));
+    assert(!nodes_.contains(id));
+    nodes_.insert(id, node);
+    edges_from_node_.insert(id, 0);
+    node_neighbors_.insert(id, std::vector<int>());
     return id;
 }
 
 template<typename NodeType>
 void Graph<NodeType>::erase_node(const int id)
 {
-    // first, collect all the edges from the adjacency lists
-    // since erasing an edge invalidates the adjacency list iterators
-    static std::vector<int> edges_to_erase;
-    for (const int edge : edges_from_node_[id])
+
+    // first, remove any potential dangling edges
     {
-        edges_to_erase.push_back(edge);
+        static std::vector<int> edges_to_erase;
+
+        for (const Edge& edge : edges_.elements())
+        {
+            if (edge.contains(id))
+            {
+                edges_to_erase.push_back(edge.id);
+            }
+        }
+
+        for (const int edge_id : edges_to_erase)
+        {
+            erase_edge(edge_id);
+        }
+
+        edges_to_erase.clear();
     }
-    for (const int edge : edges_to_node_[id])
-    {
-        edges_to_erase.push_back(edge);
-    }
-    for (const int edge : edges_to_erase)
-    {
-        erase_edge(edge);
-    }
-    edges_to_erase.clear();
+
     nodes_.erase(id);
     edges_from_node_.erase(id);
-    edges_to_node_.erase(id);
+    node_neighbors_.erase(id);
 }
 
 template<typename NodeType>
 int Graph<NodeType>::insert_edge(const int from, const int to)
 {
     const int id = current_id_++;
-    edges_.insert(std::make_pair(id, Edge(from, to)));
-    edges_from_node_[static_cast<size_t>(from)].push_back(id);
-    edges_to_node_[static_cast<size_t>(to)].push_back(id);
+    assert(!edges_.contains(id));
+    assert(nodes_.contains(from));
+    assert(nodes_.contains(to));
+    edges_.insert(id, Edge(id, from, to));
+
+    // update neighbor count
+    assert(edges_from_node_.contains(from));
+    *edges_from_node_.find(from) += 1;
+    // update neighbor list
+    assert(node_neighbors_.contains(from));
+    node_neighbors_.find(from)->push_back(to);
+
     return id;
 }
 
 template<typename NodeType>
 void Graph<NodeType>::erase_edge(const int edge_id)
 {
-    auto edge = edges_.find(edge_id);
-    assert(edge != edges_.end());
+    // This is a bit lazy, we find the pointer here, but we refind it when we erase the edge based
+    // on id key.
+    assert(edges_.contains(edge_id));
+    const Edge& edge = *edges_.find(edge_id);
 
+    // update neighbor count
+    assert(edges_from_node_.contains(edge.from));
+    int& edge_count = *edges_from_node_.find(edge.from);
+    assert(edge_count > 0);
+    edge_count -= 1;
+
+    // update neighbor list
     {
-        auto& edges_from = edges_from_node_[edge->second.from];
-        auto iter = std::find(edges_from.begin(), edges_from.end(), edge_id);
-        assert(iter != edges_from.end());
-        edges_from.erase(iter);
+        assert(node_neighbors_.contains(edge.from));
+        auto neighbors = node_neighbors_.find(edge.from);
+        auto iter = std::find(neighbors->begin(), neighbors->end(), edge.to);
+        assert(iter != neighbors->end());
+        neighbors->erase(iter);
     }
 
-    {
-        auto& edges_to = edges_to_node_[edge->second.to];
-        auto iter = std::find(edges_to.begin(), edges_to.end(), edge_id);
-        assert(iter != edges_to.end());
-        edges_to.erase(iter);
-    }
-
-    edges_.erase(edge);
+    edges_.erase(edge_id);
 }
 
 template<typename NodeType, typename Visitor>
-void dfs_traverse(
-    const Graph<NodeType>& /*graph*/,
-    const int /*start_node*/,
-    Visitor /*visitor*/)
+void dfs_traverse(const Graph<NodeType>& graph, const int start_node, Visitor visitor)
 {
-    // TODO
+    std::stack<int> stack;
+
+    stack.push(start_node);
+
+    while (!stack.empty())
+    {
+        const int current_node = stack.top();
+        stack.pop();
+
+        visitor(current_node);
+
+        for (const int neighbor : graph.neighbors(current_node))
+        {
+            stack.push(neighbor);
+        }
+    }
 }
 } // namespace example
