@@ -45,7 +45,7 @@ Here is a small overview of how the extension is used. For more information on e
 Before anything can be done, the library must be initialized. This can be done at the same time as `dear imgui` initialization.
 
 ```cpp
-ImGui::Initialize();
+ImGui::CreateContext();
 imnodes::Initialize();
 
 // elsewhere in the code...
