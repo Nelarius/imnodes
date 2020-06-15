@@ -155,7 +155,7 @@ if (num_selected_nodes > 0)
 {
   std::vector<int> selected_nodes;
   selected_nodes.resize(num_selected_nodes);
-  imnodes::GetSelectedNodes(num_selected_nodes.data());
+  imnodes::GetSelectedNodes(selected_nodes.data());
 }
 ```
 
