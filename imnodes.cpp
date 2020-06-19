@@ -952,7 +952,7 @@ void click_interaction_update(EditorContext& editor)
 
         // If we are within the hover radius of a receiving pin, snap the link
         // endpoint to it
-        const ImVec2 end_pos = g.hovered_pin_idx.has_value()
+        const ImVec2 end_pos = (g.hovered_pin_idx.has_value() && editor.pins.pool[g.hovered_pin_idx.value()].type != pin.type)
                                    ? get_screen_space_pin_coordinates(
                                          editor, editor.pins.pool[g.hovered_pin_idx.value()])
                                    : ImGui::GetIO().MousePos;
