@@ -301,12 +301,19 @@ enum ClickInteractionType
     ClickInteractionType_None
 };
 
+enum LinkCreationType
+{
+    LinkCreationType_Standard,
+    LinkCreationType_FromDetach
+};
+
 struct ClickInteractionState
 {
     struct
     {
         int start_pin_idx;
         int end_pin_idx;
+        LinkCreationType link_creation_type;
     } link_creation;
 
     struct
@@ -710,6 +717,7 @@ void begin_link_detach(EditorContext& editor, const int link_idx, const int deta
 {
     const LinkData& link = editor.links.pool[link_idx];
     ClickInteractionState& state = editor.click_interaction_state;
+    state.link_creation.link_creation_type = LinkCreationType_FromDetach;
     state.link_creation.start_pin_idx =
         detach_pin_idx == link.start_pin_idx ? link.end_pin_idx : link.start_pin_idx;
     g.deleted_link_idx = link_idx;
@@ -759,6 +767,7 @@ void begin_link_creation(EditorContext& editor, const int hovered_pin_idx)
 {
     editor.click_interaction_type = ClickInteractionType_LinkCreation;
     editor.click_interaction_state.link_creation.start_pin_idx = hovered_pin_idx;
+    editor.click_interaction_state.link_creation.link_creation_type = LinkCreationType_Standard;
     g.element_state_change |= ElementStateChange_LinkStarted;
 }
 
@@ -2036,12 +2045,23 @@ bool IsLinkStarted(int* const started_at_id)
     return is_started;
 }
 
-bool IsLinkDropped()
+bool IsLinkDropped(int* const started_at_id, const bool including_detached_links)
 {
     // Call this function after EndNodeEditor()!
     assert(g.current_scope == Scope_None);
 
-    return (g.element_state_change & ElementStateChange_LinkDropped) != 0;
+    const EditorContext& editor = editor_context_get();
+
+    const bool link_dropped = (g.element_state_change & ElementStateChange_LinkDropped) != 0 &&
+        (including_detached_links || editor.click_interaction_state.link_creation.link_creation_type != LinkCreationType_FromDetach);
+
+    if (link_dropped && started_at_id)
+    {
+        const int pin_idx = editor.click_interaction_state.link_creation.start_pin_idx;
+        *started_at_id = editor.pins.pool[pin_idx].id;
+    }
+
+    return link_dropped;
 }
 
 bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)

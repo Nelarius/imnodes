@@ -260,7 +260,7 @@ bool IsAnyAttributeActive(int* attribute_id = 0);
 // Did the user start dragging a new link from a pin?
 bool IsLinkStarted(int* started_at_attribute_id);
 // Did the user drop the dragged link before attaching it to a pin?
-bool IsLinkDropped();
+bool IsLinkDropped(int* started_at_id = nullptr, bool including_detached_links = true);
 // Did the user finish creating a new link?
 bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id);
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
