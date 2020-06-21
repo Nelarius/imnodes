@@ -1050,6 +1050,17 @@ inline ImVec2 get_node_content_origin(const NodeData& node)
     return node.origin + title_bar_height + node.layout_style.padding;
 }
 
+inline ImRect get_node_title_rect(const NodeData& node)
+{
+    ImRect expanded_title_rect = node.title_bar_content_rect;
+    expanded_title_rect.Expand(node.layout_style.padding);
+
+    return ImRect(
+        expanded_title_rect.Min,
+        expanded_title_rect.Min + ImVec2(node.rect.GetWidth(), 0.f) +
+            ImVec2(0.f, expanded_title_rect.GetHeight()));
+}
+
 void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
 {
     const ImVec2 offset = editor.panning;
@@ -1258,13 +1269,7 @@ void draw_node(EditorContext& editor, const int node_idx)
         // title bar:
         if (node.title_bar_content_rect.GetHeight() > 0.f)
         {
-            ImRect expanded_title_rect = node.title_bar_content_rect;
-            expanded_title_rect.Expand(node.layout_style.padding);
-
-            ImRect title_bar_rect = ImRect(
-                expanded_title_rect.Min,
-                expanded_title_rect.Min + ImVec2(node.rect.GetWidth(), 0.f) +
-                    ImVec2(0.f, expanded_title_rect.GetHeight()));
+            ImRect title_bar_rect = get_node_title_rect(node);
 
             g.canvas_draw_list->AddRectFilled(
                 title_bar_rect.Min,
@@ -1725,6 +1730,8 @@ void EndNodeTitleBar()
     EditorContext& editor = editor_context_get();
     NodeData& node = editor.nodes.pool[g.current_node_idx];
     node.title_bar_content_rect = get_item_rect();
+
+    ImGui::ItemAdd(get_node_title_rect(node), ImGui::GetID("title_bar"));
 
     ImGui::SetCursorPos(grid_space_to_editor_space(get_node_content_origin(node)));
 }
