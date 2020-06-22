@@ -312,7 +312,7 @@ struct ClickInteractionState
     struct
     {
         int start_pin_idx;
-        int end_pin_idx;
+        OptionalIndex end_pin_idx;
         LinkCreationType link_creation_type;
     } link_creation;
 
@@ -368,6 +368,7 @@ struct
     int hovered_pin_flags;
 
     OptionalIndex deleted_link_idx;
+    OptionalIndex snap_link_idx;
 
     int element_state_change;
 
@@ -717,7 +718,7 @@ void begin_link_detach(EditorContext& editor, const int link_idx, const int deta
 {
     const LinkData& link = editor.links.pool[link_idx];
     ClickInteractionState& state = editor.click_interaction_state;
-    state.link_creation.link_creation_type = LinkCreationType_FromDetach;
+    state.link_creation.end_pin_idx.reset();
     state.link_creation.start_pin_idx =
         detach_pin_idx == link.start_pin_idx ? link.end_pin_idx : link.start_pin_idx;
     g.deleted_link_idx = link_idx;
@@ -732,6 +733,8 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
         if ((g.hovered_pin_flags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
         {
             begin_link_detach(editor, link_idx, g.hovered_pin_idx.value());
+            editor.click_interaction_state.link_creation.link_creation_type =
+                LinkCreationType_FromDetach;
         }
     }
     // If we aren't near a pin, check if we are clicking the link with the
@@ -767,6 +770,7 @@ void begin_link_creation(EditorContext& editor, const int hovered_pin_idx)
 {
     editor.click_interaction_type = ClickInteractionType_LinkCreation;
     editor.click_interaction_state.link_creation.start_pin_idx = hovered_pin_idx;
+    editor.click_interaction_state.link_creation.end_pin_idx.reset();
     editor.click_interaction_state.link_creation.link_creation_type = LinkCreationType_Standard;
     g.element_state_change |= ElementStateChange_LinkStarted;
 }
@@ -959,9 +963,22 @@ void click_interaction_update(EditorContext& editor)
 
         const ImVec2 start_pos = get_screen_space_pin_coordinates(editor, pin);
 
+        const bool should_snap = g.hovered_pin_idx.has_value() &&
+                                 editor.pins.pool[g.hovered_pin_idx.value()].type != pin.type;
+
+        const bool snapping_pin_changed =
+            !(g.hovered_pin_idx == editor.click_interaction_state.link_creation.end_pin_idx);
+
+        // Detach the link that was created by this link event if it's no longer in snap range
+        if (snapping_pin_changed && g.snap_link_idx.has_value())
+        {
+            begin_link_detach(editor, g.snap_link_idx.value(),
+                editor.click_interaction_state.link_creation.end_pin_idx.value());
+        }
+
         // If we are within the hover radius of a receiving pin, snap the link
         // endpoint to it
-        const ImVec2 end_pos = (g.hovered_pin_idx.has_value() && editor.pins.pool[g.hovered_pin_idx.value()].type != pin.type)
+        const ImVec2 end_pos = should_snap
                                    ? get_screen_space_pin_coordinates(
                                          editor, editor.pins.pool[g.hovered_pin_idx.value()])
                                    : ImGui::GetIO().MousePos;
@@ -977,7 +994,9 @@ void click_interaction_update(EditorContext& editor)
             g.style.link_thickness,
             link_data.num_segments);
 
-        if (left_mouse_released)
+        if (left_mouse_released ||
+            (should_snap && editor.pins.pool[g.hovered_pin_idx.value()].flags &
+                                AttributeFlags_EnableLinkCreationOnSnap))
         {
             const bool link_created_succesfully =
                 finish_link_at_hovered_pin(editor, g.hovered_pin_idx);
@@ -986,7 +1005,10 @@ void click_interaction_update(EditorContext& editor)
             {
                 g.element_state_change |= ElementStateChange_LinkCreated;
             }
+        }
 
+        if (left_mouse_released)
+        {
             editor.click_interaction_type = ClickInteractionType_None;
         }
     }
@@ -1577,6 +1599,7 @@ void BeginNodeEditor()
     g.hovered_pin_idx.reset();
     g.hovered_pin_flags = AttributeFlags_None;
     g.deleted_link_idx.reset();
+    g.snap_link_idx.reset();
 
     g.element_state_change = ElementStateChange_None;
 
@@ -1834,6 +1857,17 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
     link.color_style.base = g.style.colors[ColorStyle_Link];
     link.color_style.hovered = g.style.colors[ColorStyle_LinkHovered];
     link.color_style.selected = g.style.colors[ColorStyle_LinkSelected];
+
+    // Check if this link was created by the current link event
+    if (editor.click_interaction_type == ClickInteractionType_LinkCreation &&
+        editor.pins.pool[link.end_pin_idx].flags & AttributeFlags_EnableLinkCreationOnSnap &&
+       (editor.click_interaction_state.link_creation.start_pin_idx == link.start_pin_idx &&
+        editor.click_interaction_state.link_creation.end_pin_idx == link.end_pin_idx) ||
+       (editor.click_interaction_state.link_creation.start_pin_idx == link.end_pin_idx &&
+        editor.click_interaction_state.link_creation.end_pin_idx == link.start_pin_idx))
+    {
+        g.snap_link_idx = editor.links.find_or_create_index_for(id);
+    }
 }
 
 void PushColorStyle(ColorStyle item, unsigned int color)
@@ -2060,7 +2094,9 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     const EditorContext& editor = editor_context_get();
 
     const bool link_dropped = (g.element_state_change & ElementStateChange_LinkDropped) != 0 &&
-        (including_detached_links || editor.click_interaction_state.link_creation.link_creation_type != LinkCreationType_FromDetach);
+                              (including_detached_links ||
+                               editor.click_interaction_state.link_creation.link_creation_type !=
+                                   LinkCreationType_FromDetach);
 
     if (link_dropped && started_at_id)
     {
@@ -2071,7 +2107,10 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     return link_dropped;
 }
 
-bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)
+bool IsLinkCreated(
+    int* const started_at_pin_id,
+    int* const ended_at_pin_id,
+    bool* const created_from_snap)
 {
     assert(g.current_scope == Scope_None);
     assert(started_at_pin_id != NULL);
@@ -2083,9 +2122,14 @@ bool IsLinkCreated(int* const started_at_pin_id, int* const ended_at_pin_id)
     {
         const EditorContext& editor = editor_context_get();
         const int start_idx = editor.click_interaction_state.link_creation.start_pin_idx;
-        const int end_idx = editor.click_interaction_state.link_creation.end_pin_idx;
+        const int end_idx = editor.click_interaction_state.link_creation.end_pin_idx.value();
         *started_at_pin_id = editor.pins.pool[start_idx].id;
         *ended_at_pin_id = editor.pins.pool[end_idx].id;
+
+        if (created_from_snap)
+        {
+            *created_from_snap = editor.click_interaction_type == ClickInteractionType_LinkCreation;
+        }
     }
 
     return is_created;
