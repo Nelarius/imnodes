@@ -994,10 +994,24 @@ void click_interaction_update(EditorContext& editor)
             g.style.link_thickness,
             link_data.num_segments);
 
-        if (left_mouse_released ||
-            (should_snap && editor.pins.pool[g.hovered_pin_idx.value()].flags &
-                                AttributeFlags_EnableLinkCreationOnSnap))
+        const bool link_creation_on_snap = 
+            (editor.pins.pool[g.hovered_pin_idx.value()].flags & AttributeFlags_EnableLinkCreationOnSnap);
+
+        if (!should_snap)
         {
+            editor.click_interaction_state.link_creation.end_pin_idx.reset();
+        }
+
+        if (left_mouse_released || (link_creation_on_snap && should_snap))
+        {
+            // Avoid send OnLinkCreated() events every frame if the snap link is not saved
+            // (only applies for EnableLinkCreationOnSnap)
+            if (!left_mouse_released &&
+                editor.click_interaction_state.link_creation.end_pin_idx == g.hovered_pin_idx)
+            {
+                break;
+            }
+
             const bool link_created_succesfully =
                 finish_link_at_hovered_pin(editor, g.hovered_pin_idx);
 
