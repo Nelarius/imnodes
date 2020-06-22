@@ -266,6 +266,11 @@ bool IsAnyAttributeActive(int* attribute_id = 0);
 // Did the user start dragging a new link from a pin?
 bool IsLinkStarted(int* started_at_attribute_id);
 // Did the user drop the dragged link before attaching it to a pin?
+// There are two different kinds of situations to consider when handling this event:
+// 1) a link which is created at a pin and then dropped
+// 2) an existing link which is detached from a pin and then dropped
+// Use the including_detached_links flag to control whether this function triggers when the user
+// detaches a link and drops it.
 bool IsLinkDropped(int* started_at_attribute_id = 0, bool including_detached_links = true);
 // Did the user finish creating a new link?
 bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id, bool* created_from_snap = 0);

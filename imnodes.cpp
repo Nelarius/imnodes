@@ -2094,9 +2094,7 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     const EditorContext& editor = editor_context_get();
 
     const bool link_dropped = (g.element_state_change & ElementStateChange_LinkDropped) != 0 &&
-                              (including_detached_links ||
-                               editor.click_interaction_state.link_creation.link_creation_type !=
-                                   LinkCreationType_FromDetach);
+        (including_detached_links || editor.click_interaction_state.link_creation.link_creation_type != LinkCreationType_FromDetach);
 
     if (link_dropped && started_at_id)
     {
