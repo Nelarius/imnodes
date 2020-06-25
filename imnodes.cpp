@@ -994,7 +994,7 @@ void click_interaction_update(EditorContext& editor)
             g.style.link_thickness,
             link_data.num_segments);
 
-        const bool link_creation_on_snap = 
+        const bool link_creation_on_snap = g.hovered_pin_idx.has_value() &&
             (editor.pins.pool[g.hovered_pin_idx.value()].flags & AttributeFlags_EnableLinkCreationOnSnap);
 
         if (!should_snap)
@@ -1875,10 +1875,10 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
     // Check if this link was created by the current link event
     if (editor.click_interaction_type == ClickInteractionType_LinkCreation &&
         editor.pins.pool[link.end_pin_idx].flags & AttributeFlags_EnableLinkCreationOnSnap &&
-       (editor.click_interaction_state.link_creation.start_pin_idx == link.start_pin_idx &&
-        editor.click_interaction_state.link_creation.end_pin_idx == link.end_pin_idx) ||
+      ((editor.click_interaction_state.link_creation.start_pin_idx == link.start_pin_idx &&
+        editor.click_interaction_state.link_creation.end_pin_idx   == link.end_pin_idx) ||
        (editor.click_interaction_state.link_creation.start_pin_idx == link.end_pin_idx &&
-        editor.click_interaction_state.link_creation.end_pin_idx == link.start_pin_idx))
+        editor.click_interaction_state.link_creation.end_pin_idx   == link.start_pin_idx)))
     {
         g.snap_link_idx = editor.links.find_or_create_index_for(id);
     }
