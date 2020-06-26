@@ -972,7 +972,9 @@ void click_interaction_update(EditorContext& editor)
         // Detach the link that was created by this link event if it's no longer in snap range
         if (snapping_pin_changed && g.snap_link_idx.has_value())
         {
-            begin_link_detach(editor, g.snap_link_idx.value(),
+            begin_link_detach(
+                editor,
+                g.snap_link_idx.value(),
                 editor.click_interaction_state.link_creation.end_pin_idx.value());
         }
 
@@ -994,8 +996,9 @@ void click_interaction_update(EditorContext& editor)
             g.style.link_thickness,
             link_data.num_segments);
 
-        const bool link_creation_on_snap = g.hovered_pin_idx.has_value() &&
-            (editor.pins.pool[g.hovered_pin_idx.value()].flags & AttributeFlags_EnableLinkCreationOnSnap);
+        const bool link_creation_on_snap =
+            g.hovered_pin_idx.has_value() && (editor.pins.pool[g.hovered_pin_idx.value()].flags &
+                                              AttributeFlags_EnableLinkCreationOnSnap);
 
         if (!should_snap)
         {
@@ -1873,12 +1876,12 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
     link.color_style.selected = g.style.colors[ColorStyle_LinkSelected];
 
     // Check if this link was created by the current link event
-    if (editor.click_interaction_type == ClickInteractionType_LinkCreation &&
-        editor.pins.pool[link.end_pin_idx].flags & AttributeFlags_EnableLinkCreationOnSnap &&
-      ((editor.click_interaction_state.link_creation.start_pin_idx == link.start_pin_idx &&
-        editor.click_interaction_state.link_creation.end_pin_idx   == link.end_pin_idx) ||
-       (editor.click_interaction_state.link_creation.start_pin_idx == link.end_pin_idx &&
-        editor.click_interaction_state.link_creation.end_pin_idx   == link.start_pin_idx)))
+    if ((editor.click_interaction_type == ClickInteractionType_LinkCreation &&
+         editor.pins.pool[link.end_pin_idx].flags & AttributeFlags_EnableLinkCreationOnSnap &&
+         editor.click_interaction_state.link_creation.start_pin_idx == link.start_pin_idx &&
+         editor.click_interaction_state.link_creation.end_pin_idx == link.end_pin_idx) ||
+        (editor.click_interaction_state.link_creation.start_pin_idx == link.end_pin_idx &&
+         editor.click_interaction_state.link_creation.end_pin_idx == link.start_pin_idx))
     {
         g.snap_link_idx = editor.links.find_or_create_index_for(id);
     }
@@ -2108,7 +2111,9 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     const EditorContext& editor = editor_context_get();
 
     const bool link_dropped = (g.element_state_change & ElementStateChange_LinkDropped) != 0 &&
-        (including_detached_links || editor.click_interaction_state.link_creation.link_creation_type != LinkCreationType_FromDetach);
+                              (including_detached_links ||
+                               editor.click_interaction_state.link_creation.link_creation_type !=
+                                   LinkCreationType_FromDetach);
 
     if (link_dropped && started_at_id)
     {

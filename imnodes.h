@@ -70,11 +70,11 @@ enum AttributeFlags
     // NOTE: the user has to actually delete the link for this to work. A deleted link can be
     // detected by calling IsLinkDestroyed() after EndNodeEditor().
     AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0,
-    // Visual snapping of an in progress link will trigger IsLink Created/Destroyed events.
-    // Allows for previewing the creation of a link while dragging it across attributes.
-    // See here for demo: https://github.com/Nelarius/imnodes/issues/41#issuecomment-647132113
-    // NOTE: the user has to actually delete the link for this to work. A deleted link can be
-    // detected by calling IsLinkDestroyed() after EndNodeEditor().
+    // Visual snapping of an in progress link will trigger IsLink Created/Destroyed events. Allows
+    // for previewing the creation of a link while dragging it across attributes. See here for demo:
+    // https://github.com/Nelarius/imnodes/issues/41#issuecomment-647132113 NOTE: the user has to
+    // actually delete the link for this to work. A deleted link can be detected by calling
+    // IsLinkDestroyed() after EndNodeEditor().
     AttributeFlags_EnableLinkCreationOnSnap = 1 << 1
 };
 
@@ -273,7 +273,10 @@ bool IsLinkStarted(int* started_at_attribute_id);
 // detaches a link and drops it.
 bool IsLinkDropped(int* started_at_attribute_id = 0, bool including_detached_links = true);
 // Did the user finish creating a new link?
-bool IsLinkCreated(int* started_at_attribute_id, int* ended_at_attribute_id, bool* created_from_snap = 0);
+bool IsLinkCreated(
+    int* started_at_attribute_id,
+    int* ended_at_attribute_id,
+    bool* created_from_snap = 0);
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
 // output argument link_id.
 bool IsLinkDestroyed(int* link_id);
