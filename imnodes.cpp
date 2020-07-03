@@ -374,6 +374,12 @@ struct
 
     int active_attribute_id;
     bool active_attribute;
+
+    bool left_mouse_clicked;
+    bool left_mouse_released;
+    bool middle_mouse_clicked;
+    bool left_mouse_dragging;
+    bool middle_mouse_dragging;
 } g;
 
 EditorContext& editor_context_get()
@@ -789,13 +795,10 @@ void begin_canvas_interaction(EditorContext& editor)
         return;
     }
 
-    const bool left_mouse_clicked = ImGui::IsMouseClicked(0);
-    const bool middle_mouse_clicked = ImGui::IsMouseClicked(2);
-
     const bool started_panning =
         g.io.emulate_three_button_mouse.enabled
-            ? (left_mouse_clicked && *g.io.emulate_three_button_mouse.modifier)
-            : middle_mouse_clicked;
+            ? (g.left_mouse_clicked && *g.io.emulate_three_button_mouse.modifier)
+            : g.middle_mouse_clicked;
 
     editor.click_interaction_type =
         started_panning ? ClickInteractionType_Panning : ClickInteractionType_BoxSelection;
@@ -871,7 +874,7 @@ void box_selector_update_selection(EditorContext& editor, ImRect box_rect)
 
 void translate_selected_nodes(EditorContext& editor)
 {
-    if (ImGui::IsMouseDragging(0))
+    if (g.left_mouse_dragging)
     {
         const ImGuiIO& io = ImGui::GetIO();
         for (int i = 0; i < editor.selected_node_indices.size(); ++i)
@@ -916,8 +919,6 @@ bool finish_link_at_hovered_pin(EditorContext& editor, const OptionalIndex maybe
 
 void click_interaction_update(EditorContext& editor)
 {
-    const bool left_mouse_released = ImGui::IsMouseReleased(0);
-
     switch (editor.click_interaction_type)
     {
     case ClickInteractionType_BoxSelection:
@@ -932,7 +933,7 @@ void click_interaction_update(EditorContext& editor)
         g.canvas_draw_list->AddRectFilled(box_rect.Min, box_rect.Max, box_selector_color);
         g.canvas_draw_list->AddRect(box_rect.Min, box_rect.Max, box_selector_outline);
 
-        if (left_mouse_released)
+        if (g.left_mouse_released)
         {
             editor.click_interaction_type = ClickInteractionType_None;
         }
@@ -942,7 +943,7 @@ void click_interaction_update(EditorContext& editor)
     {
         translate_selected_nodes(editor);
 
-        if (left_mouse_released)
+        if (g.left_mouse_released)
         {
             editor.click_interaction_type = ClickInteractionType_None;
         }
@@ -950,7 +951,7 @@ void click_interaction_update(EditorContext& editor)
     break;
     case ClickInteractionType_Link:
     {
-        if (left_mouse_released)
+        if (g.left_mouse_released)
         {
             editor.click_interaction_type = ClickInteractionType_None;
         }
@@ -1005,11 +1006,11 @@ void click_interaction_update(EditorContext& editor)
             editor.click_interaction_state.link_creation.end_pin_idx.reset();
         }
 
-        if (left_mouse_released || (link_creation_on_snap && should_snap))
+        if (g.left_mouse_released || (link_creation_on_snap && should_snap))
         {
             // Avoid send OnLinkCreated() events every frame if the snap link is not saved
             // (only applies for EnableLinkCreationOnSnap)
-            if (!left_mouse_released &&
+            if (!g.left_mouse_released &&
                 editor.click_interaction_state.link_creation.end_pin_idx == g.hovered_pin_idx)
             {
                 break;
@@ -1024,7 +1025,7 @@ void click_interaction_update(EditorContext& editor)
             }
         }
 
-        if (left_mouse_released)
+        if (g.left_mouse_released)
         {
             editor.click_interaction_type = ClickInteractionType_None;
         }
@@ -1034,8 +1035,8 @@ void click_interaction_update(EditorContext& editor)
     {
         const bool dragging =
             g.io.emulate_three_button_mouse.enabled
-                ? (ImGui::IsMouseDragging(0, 0.f) && (*g.io.emulate_three_button_mouse.modifier))
-                : ImGui::IsMouseDragging(2, 0.f);
+                ? (g.left_mouse_dragging && (*g.io.emulate_three_button_mouse.modifier))
+                : g.middle_mouse_dragging;
 
         if (dragging)
         {
@@ -1328,19 +1329,15 @@ void draw_node(EditorContext& editor, const int node_idx)
         }
     }
 
-    // TODO: this could be done at the beginning of BeginNodeEditor and the
-    // value could be stored in the global struct.
-    const bool left_mouse_clicked = ImGui::IsMouseClicked(0);
-
     for (int i = 0; i < node.pin_indices.size(); ++i)
     {
-        draw_pin(editor, node.pin_indices[i], left_mouse_clicked);
+        draw_pin(editor, node.pin_indices[i], g.left_mouse_clicked);
     }
 
     if (item_hovered)
     {
         g.hovered_node_idx = node_idx;
-        if (left_mouse_clicked)
+        if (g.left_mouse_clicked)
         {
             begin_node_selection(editor, node_idx);
         }
@@ -1360,7 +1357,7 @@ void draw_link(EditorContext& editor, const int link_idx)
     if (is_hovered)
     {
         g.hovered_link_idx = link_idx;
-        if (ImGui::IsMouseClicked(0))
+        if (g.left_mouse_clicked)
         {
             begin_link_interaction(editor, link_idx);
         }
@@ -1620,6 +1617,12 @@ void BeginNodeEditor()
 
     g.element_state_change = ElementStateChange_None;
 
+    g.left_mouse_clicked = ImGui::IsMouseClicked(0);
+    g.left_mouse_released = ImGui::IsMouseReleased(0);
+    g.middle_mouse_clicked = ImGui::IsMouseClicked(2);
+    g.left_mouse_dragging = ImGui::IsMouseDragging(0, 0.0f);
+    g.middle_mouse_dragging = ImGui::IsMouseDragging(2, 0.0f);
+
     g.active_attribute = false;
 
     // reset ui content for the current editor
@@ -1667,9 +1670,6 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
-    const bool is_left_mouse_clicked = ImGui::IsMouseClicked(0);
-    const bool is_middle_mouse_clicked = ImGui::IsMouseClicked(2);
-
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
     {
         if (editor.links.in_use[link_idx])
@@ -1678,7 +1678,7 @@ void EndNodeEditor()
         }
     }
 
-    if (is_left_mouse_clicked || is_middle_mouse_clicked)
+    if (g.left_mouse_clicked || g.middle_mouse_clicked)
     {
         begin_canvas_interaction(editor);
     }
