@@ -657,6 +657,13 @@ struct EditorContext
           click_interaction_state()
     {
     }
+
+    bool is_pins_in_same_node(const LinkData& link)
+    {
+        const int start_node_idx = pins.pool[link.start_pin_idx].parent_node_idx;
+        const int end_node_idx = pins.pool[link.end_pin_idx].parent_node_idx;
+        return start_node_idx == end_node_idx;
+    }
 };
 
 namespace
@@ -908,6 +915,10 @@ bool finish_link_at_hovered_pin(EditorContext& editor, const OptionalIndex maybe
     test_link.start_pin_idx = editor.click_interaction_state.link_creation.start_pin_idx;
     test_link.end_pin_idx = end_pin_idx;
     if (editor.links.contains(test_link, LinkPredicate()))
+    {
+        return false;
+    }
+    if (editor.is_pins_in_same_node(test_link))
     {
         return false;
     }
