@@ -657,13 +657,6 @@ struct EditorContext
           click_interaction_state()
     {
     }
-
-    bool is_pins_in_same_node(const LinkData& link)
-    {
-        const int start_node_idx = pins.pool[link.start_pin_idx].parent_node_idx;
-        const int end_node_idx = pins.pool[link.end_pin_idx].parent_node_idx;
-        return start_node_idx == end_node_idx;
-    }
 };
 
 namespace
@@ -896,34 +889,53 @@ void translate_selected_nodes(EditorContext& editor)
     }
 }
 
-bool finish_link_at_hovered_pin(EditorContext& editor, const OptionalIndex maybe_hovered_pin_idx)
+OptionalIndex find_duplicate_link(
+    const EditorContext& editor,
+    const int start_pin_idx,
+    const int end_pin_idx)
 {
-    if (!maybe_hovered_pin_idx.has_value())
-    {
-        g.element_state_change |= ElementStateChange_LinkDropped;
-        return false;
-    }
-
-    if (maybe_hovered_pin_idx == editor.click_interaction_state.link_creation.start_pin_idx)
-    {
-        return false;
-    }
-
-    const int end_pin_idx = maybe_hovered_pin_idx.value();
-
     LinkData test_link;
-    test_link.start_pin_idx = editor.click_interaction_state.link_creation.start_pin_idx;
+    test_link.start_pin_idx = start_pin_idx;
     test_link.end_pin_idx = end_pin_idx;
-    if (editor.links.contains(test_link, LinkPredicate()))
+    for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
     {
-        return false;
+        const LinkData& link = editor.links.pool[link_idx];
+        if (LinkPredicate()(test_link, link) && editor.links.in_use[link_idx])
+        {
+            return OptionalIndex(link_idx);
+        }
     }
-    if (editor.is_pins_in_same_node(test_link))
+
+    return OptionalIndex();
+}
+
+bool should_link_snap_to_pin(
+    const EditorContext& editor,
+    const PinData& start_pin,
+    const int hovered_pin_idx,
+    const OptionalIndex duplicate_link)
+{
+    const PinData& end_pin = editor.pins.pool[hovered_pin_idx];
+
+    // The end pin must be in a different node
+    if (start_pin.parent_node_idx == end_pin.parent_node_idx)
     {
         return false;
     }
 
-    editor.click_interaction_state.link_creation.end_pin_idx = end_pin_idx;
+    // The end pin must be of a different type
+    if (start_pin.type == end_pin.type)
+    {
+        return false;
+    }
+
+    // The link to be created must not be a duplicate, unless it is the link which was created on
+    // snap. In that case we want to snap, since we want it to appear visually as if the created
+    // link remains snapped to the pin.
+    if (duplicate_link.has_value() && !(duplicate_link == g.snap_link_idx))
+    {
+        return false;
+    }
 
     return true;
 }
@@ -970,13 +982,21 @@ void click_interaction_update(EditorContext& editor)
     break;
     case ClickInteractionType_LinkCreation:
     {
-        const PinData& pin =
+        const PinData& start_pin =
             editor.pins.pool[editor.click_interaction_state.link_creation.start_pin_idx];
 
-        const ImVec2 start_pos = get_screen_space_pin_coordinates(editor, pin);
+        const OptionalIndex maybe_duplicate_link_idx =
+            g.hovered_pin_idx.has_value()
+                ? find_duplicate_link(
+                      editor,
+                      editor.click_interaction_state.link_creation.start_pin_idx,
+                      g.hovered_pin_idx.value())
+                : OptionalIndex();
 
-        const bool should_snap = g.hovered_pin_idx.has_value() &&
-                                 editor.pins.pool[g.hovered_pin_idx.value()].type != pin.type;
+        const bool should_snap =
+            g.hovered_pin_idx.has_value() &&
+            should_link_snap_to_pin(
+                editor, start_pin, g.hovered_pin_idx.value(), maybe_duplicate_link_idx);
 
         const bool snapping_pin_changed =
             !(g.hovered_pin_idx == editor.click_interaction_state.link_creation.end_pin_idx);
@@ -990,6 +1010,7 @@ void click_interaction_update(EditorContext& editor)
                 editor.click_interaction_state.link_creation.end_pin_idx.value());
         }
 
+        const ImVec2 start_pos = get_screen_space_pin_coordinates(editor, start_pin);
         // If we are within the hover radius of a receiving pin, snap the link
         // endpoint to it
         const ImVec2 end_pos = should_snap
@@ -998,7 +1019,7 @@ void click_interaction_update(EditorContext& editor)
                                    : ImGui::GetIO().MousePos;
 
         const LinkBezierData link_data = get_link_renderable(
-            start_pos, end_pos, pin.type, g.style.link_line_segments_per_length);
+            start_pos, end_pos, start_pin.type, g.style.link_line_segments_per_length);
         g.canvas_draw_list->AddBezierCurve(
             link_data.bezier.p0,
             link_data.bezier.p1,
@@ -1017,7 +1038,10 @@ void click_interaction_update(EditorContext& editor)
             editor.click_interaction_state.link_creation.end_pin_idx.reset();
         }
 
-        if (g.left_mouse_released || (link_creation_on_snap && should_snap))
+        const bool create_link = should_snap && !maybe_duplicate_link_idx.has_value() &&
+                                 (g.left_mouse_released || link_creation_on_snap);
+
+        if (create_link)
         {
             // Avoid send OnLinkCreated() events every frame if the snap link is not saved
             // (only applies for EnableLinkCreationOnSnap)
@@ -1027,18 +1051,17 @@ void click_interaction_update(EditorContext& editor)
                 break;
             }
 
-            const bool link_created_succesfully =
-                finish_link_at_hovered_pin(editor, g.hovered_pin_idx);
-
-            if (link_created_succesfully)
-            {
-                g.element_state_change |= ElementStateChange_LinkCreated;
-            }
+            g.element_state_change |= ElementStateChange_LinkCreated;
+            editor.click_interaction_state.link_creation.end_pin_idx = g.hovered_pin_idx.value();
         }
 
         if (g.left_mouse_released)
         {
             editor.click_interaction_type = ClickInteractionType_None;
+            if (!create_link)
+            {
+                g.element_state_change |= ElementStateChange_LinkDropped;
+            }
         }
     }
     break;
