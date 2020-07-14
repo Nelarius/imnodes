@@ -126,27 +126,6 @@ struct ObjectPool
         const int index = find_or_create_index_for(id);
         return pool[index];
     }
-
-    // Predicate must define operator()(const T& lhs, const T& operator) ->
-    // bool.
-    template<typename Predicate>
-    inline bool contains(const T& v, Predicate predicate) const
-    {
-        for (int i = 0; i < pool.size(); ++i)
-        {
-            if (!in_use[i])
-            {
-                continue;
-            }
-
-            if (predicate(v, pool[i]))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 };
 
 // Emulates std::optional<int> using the sentinel value `invalid_index`.
