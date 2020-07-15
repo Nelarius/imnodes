@@ -42,13 +42,6 @@ enum ScopeFlags
     Scope_Attribute = 1 << 3
 };
 
-enum Channels
-{
-    Channels_NodeBackground = 0,
-    Channels_ImGui,
-    Channels_Count
-};
-
 enum AttributeType
 {
     AttributeType_None,
@@ -317,13 +310,100 @@ struct StyleElement
     StyleElement(const float value, const StyleVar variable) : item(variable), value(value) {}
 };
 
+struct CanvasDrawList
+{
+    CanvasDrawList(ImDrawList* window_draw_list) : m_draw_list(window_draw_list)
+    {
+        assert(m_draw_list->_Splitter._Count == 1);
+    }
+
+    // TODO: the only reason this constructor exists is so that it can be construced in global
+    // state. If we did deferred construction, this would not be required.
+    CanvasDrawList() : m_draw_list(NULL) {}
+
+    CanvasDrawList& operator=(const CanvasDrawList& other)
+    {
+        if (this != &other)
+        {
+            m_draw_list = other.m_draw_list;
+        }
+
+        return *this;
+    }
+
+    void add_node() { grow(2); }
+
+    void activate_node_foreground()
+    {
+        const int top = m_draw_list->_Splitter._Count - 1;
+        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, top);
+    }
+
+    void activate_node_background()
+    {
+        const int top = m_draw_list->_Splitter._Count - 1;
+        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, top - 1);
+    }
+
+    void merge()
+    {
+        m_draw_list->ChannelsSetCurrent(0);
+        m_draw_list->ChannelsMerge();
+    }
+
+    ImDrawList* operator->() { return m_draw_list; }
+
+private:
+    void grow(const int num_channels)
+    {
+        ImDrawListSplitter& splitter = m_draw_list->_Splitter;
+        if (splitter._Count == 1)
+        {
+            splitter.Split(m_draw_list, num_channels);
+            return;
+        }
+
+        // NOTE: this logic has been lifted from ImDrawListSplitter::Split with slight modifications
+        // to allow nested splits. The main modification is that we only create new ImDrawChannel
+        // instances after splitter._Count, instead of over the whole splitter._Channels array like
+        // the regular ImDrawListSplitter::Split method does.
+
+        const int old_channel_capacity = splitter._Channels.Size;
+        // NOTE: _Channels is not resized down, and therefore _Count <= _Channels.size()!
+        const int old_channel_count = splitter._Count;
+        const int requested_channel_count = old_channel_count + num_channels;
+        if (old_channel_capacity < old_channel_count + num_channels)
+        {
+            splitter._Channels.resize(requested_channel_count);
+        }
+
+        splitter._Count = requested_channel_count;
+
+        for (int i = old_channel_count; i < requested_channel_count; ++i)
+        {
+            ImDrawChannel& channel = splitter._Channels[i];
+
+            IM_PLACEMENT_NEW(&channel) ImDrawChannel();
+
+            {
+                ImDrawCmd draw_cmd;
+                draw_cmd.ClipRect = m_draw_list->_ClipRectStack.back();
+                draw_cmd.TextureId = m_draw_list->_TextureIdStack.back();
+                channel._CmdBuffer.push_back(draw_cmd);
+            }
+        }
+    }
+
+    ImDrawList* m_draw_list;
+};
+
 // [SECTION] global struct
 // this stores data which only lives for one frame
 struct
 {
     EditorContext* default_editor_ctx;
     EditorContext* editor_ctx;
-    ImDrawList* canvas_draw_list;
+    CanvasDrawList canvas_draw_list;
     ImVec2 canvas_origin_screen_space;
     ImRect canvas_rect_screen_space;
     ScopeFlags current_scope;
@@ -1660,7 +1740,7 @@ void BeginNodeEditor()
         // NOTE: we have to fetch the canvas draw list *after* we call
         // BeginChild(), otherwise the ImGui UI elements are going to be
         // rendered into the parent window draw list.
-        g.canvas_draw_list = ImGui::GetWindowDrawList();
+        g.canvas_draw_list = CanvasDrawList(ImGui::GetWindowDrawList());
 
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
@@ -1680,6 +1760,9 @@ void EndNodeEditor()
 {
     assert(g.current_scope == Scope_Editor);
     g.current_scope = Scope_None;
+
+    // Merge the node draw commands
+    g.canvas_draw_list.merge();
 
     EditorContext& editor = editor_context_get();
 
@@ -1741,8 +1824,8 @@ void BeginNode(const int node_id)
     // ImGui::SetCursorScreenPos to set the screen space coordinates directly.
     ImGui::SetCursorPos(grid_space_to_editor_space(get_node_title_bar_origin(node)));
 
-    g.canvas_draw_list->ChannelsSplit(Channels_Count);
-    g.canvas_draw_list->ChannelsSetCurrent(Channels_ImGui);
+    g.canvas_draw_list.add_node();
+    g.canvas_draw_list.activate_node_foreground();
 
     ImGui::PushID(node.id);
     ImGui::BeginGroup();
@@ -1764,9 +1847,8 @@ void EndNode()
         node.rect.Expand(node.layout_style.padding);
     }
 
-    g.canvas_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
+    g.canvas_draw_list.activate_node_background();
     draw_node(editor, g.current_node_idx);
-    g.canvas_draw_list->ChannelsMerge();
 }
 
 void BeginNodeTitleBar()
