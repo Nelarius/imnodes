@@ -340,22 +340,11 @@ struct CanvasDrawList
         m_draw_list->ChannelsMerge();
     }
 
-    void swap_channels(int left, int right)
+    void swap(const int lhs_idx, const int rhs_idx)
     {
-        ImDrawListSplitter& splitter = m_draw_list->_Splitter;
-
-        IM_ASSERT(left < splitter._Count && right < splitter._Count);
-        if (left == right)
-            return;
-
-        splitter._Channels[left]._CmdBuffer.swap(splitter._Channels[right]._CmdBuffer);
-        splitter._Channels[left]._IdxBuffer.swap(splitter._Channels[right]._IdxBuffer);
-
-        int channel = splitter._Current;
-        if (channel == left)
-            splitter._Current = right;
-        else if (channel == right)
-            splitter._Current = left;
+    	for (int i = 0; i < Channel_COUNT; i++) {
+			swap_channels(lhs_idx + i, rhs_idx + i);
+		}
     }
 
     ImDrawList* operator->() { return m_draw_list; }
@@ -398,6 +387,35 @@ private:
                 draw_cmd.TextureId = m_draw_list->_TextureIdStack.back();
                 channel._CmdBuffer.push_back(draw_cmd);
             }
+        }
+    }
+
+    void swap_channels(const int lhs_idx, const int rhs_idx)
+    {
+        if (lhs_idx == rhs_idx)
+        {
+            return;
+        }
+
+        ImDrawListSplitter& splitter = m_draw_list->_Splitter;
+
+        assert(lhs_idx >= 0 && lhs_idx < splitter._Count);
+        assert(rhs_idx >= 0 && rhs_idx < splitter._Count);
+
+        ImDrawChannel& lhs_channel = splitter._Channels[lhs_idx];
+        ImDrawChannel& rhs_channel = splitter._Channels[rhs_idx];
+        lhs_channel._CmdBuffer.swap(rhs_channel._CmdBuffer);
+        lhs_channel._IdxBuffer.swap(rhs_channel._IdxBuffer);
+
+        const int current_channel = m_draw_list->_Splitter._Current;
+
+        if (current_channel == lhs_idx)
+        {
+            splitter._Current = rhs_idx;
+        }
+        else if (current_channel == rhs_idx)
+        {
+            splitter._Current = lhs_idx;
         }
     }
 
@@ -1820,9 +1838,7 @@ void EndNodeEditor()
 
         if (node.channel > channel) break;
 
-        for (int i = 0; i < Channel_COUNT; i++) {
-            g.canvas_draw_list.swap_channels(node.channel + i, channel + i);
-        }
+        g.canvas_draw_list.swap(node.channel, channel);
     }
 
     // Merge the node draw commands
