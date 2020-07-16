@@ -378,7 +378,7 @@ private:
         ImDrawListSplitter& splitter = m_draw_list->_Splitter;
         if (splitter._Count == 1)
         {
-            splitter.Split(m_draw_list, num_channels);
+            splitter.Split(m_draw_list, num_channels + 1);
             return;
         }
 
