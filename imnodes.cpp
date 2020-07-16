@@ -312,37 +312,56 @@ struct StyleElement
 
 struct CanvasDrawList
 {
-    CanvasDrawList(ImDrawList* window_draw_list) : m_draw_list(window_draw_list)
+    CanvasDrawList()
+        : m_draw_list(NULL), m_node_idx_to_node_channel_idx(), m_current_node_channel_idx(-1)
     {
-        assert(m_draw_list->_Splitter._Count == 1);
     }
 
-    // TODO: the only reason this constructor exists is so that it can be construced in global
-    // state. If we did deferred construction, this would not be required.
-    CanvasDrawList() : m_draw_list(NULL) {}
-
-    CanvasDrawList& operator=(const CanvasDrawList& other)
+    void set_draw_list(ImDrawList* window_draw_list)
     {
-        if (this != &other)
-        {
-            m_draw_list = other.m_draw_list;
-        }
-
-        return *this;
+        m_draw_list = window_draw_list;
+        m_node_idx_to_node_channel_idx.Clear();
     }
 
-    void add_node() { grow(2); }
+    void add_node(const int node_idx)
+    {
+        m_current_node_channel_idx = m_draw_list->_Splitter._Count;
+        m_node_idx_to_node_channel_idx.SetInt(
+            static_cast<ImGuiID>(node_idx), m_current_node_channel_idx);
+        grow_channels(2);
+    }
 
     void activate_node_foreground()
     {
-        const int top = m_draw_list->_Splitter._Count - 1;
-        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, top);
+        const int foreground_channel_idx = m_current_node_channel_idx + 1;
+        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, foreground_channel_idx);
     }
 
     void activate_node_background()
     {
-        const int top = m_draw_list->_Splitter._Count - 1;
-        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, top - 1);
+        const int background_channel_idx = m_current_node_channel_idx;
+        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, background_channel_idx);
+    }
+
+    void swap_nodes(const int lhs_node_idx, const int rhs_node_idx)
+    {
+        const ImGuiID lhs_node_id = static_cast<ImGuiID>(lhs_node_idx);
+        const ImGuiID rhs_node_id = static_cast<ImGuiID>(rhs_node_idx);
+        // NOTE: the background channel idx is equal to the node channel idx, so we just use that
+        // fact here directly.
+        const int lhs_background_channel_idx =
+            m_node_idx_to_node_channel_idx.GetInt(lhs_node_id, -1);
+        const int rhs_background_channel_idx =
+            m_node_idx_to_node_channel_idx.GetInt(rhs_node_id, -1);
+
+        m_node_idx_to_node_channel_idx.SetInt(lhs_node_id, rhs_background_channel_idx);
+        m_node_idx_to_node_channel_idx.SetInt(rhs_node_id, lhs_background_channel_idx);
+
+        const int lhs_foreground_channel_idx = lhs_background_channel_idx + 1;
+        const int rhs_foreground_channel_idx = rhs_background_channel_idx + 1;
+
+        swap_channels(lhs_background_channel_idx, rhs_background_channel_idx);
+        swap_channels(lhs_foreground_channel_idx, rhs_foreground_channel_idx);
     }
 
     void merge()
@@ -354,7 +373,7 @@ struct CanvasDrawList
     ImDrawList* operator->() { return m_draw_list; }
 
 private:
-    void grow(const int num_channels)
+    void grow_channels(const int num_channels)
     {
         ImDrawListSplitter& splitter = m_draw_list->_Splitter;
         if (splitter._Count == 1)
@@ -394,7 +413,42 @@ private:
         }
     }
 
+    void swap_channels(const int lhs_idx, const int rhs_idx)
+    {
+        if (lhs_idx == rhs_idx)
+        {
+            return;
+        }
+
+        ImDrawListSplitter& splitter = m_draw_list->_Splitter;
+
+        assert(lhs_idx >= 0 && lhs_idx < splitter._Count);
+        assert(rhs_idx >= 0 && rhs_idx < splitter._Count);
+
+        ImDrawChannel& lhs_channel = splitter._Channels[lhs_idx];
+        ImDrawChannel& rhs_channel = splitter._Channels[rhs_idx];
+        lhs_channel._CmdBuffer.swap(rhs_channel._CmdBuffer);
+        lhs_channel._IdxBuffer.swap(rhs_channel._IdxBuffer);
+
+        const int current_channel = m_draw_list->_Splitter._Current;
+
+        if (current_channel == lhs_idx)
+        {
+            splitter._Current = rhs_idx;
+        }
+        else if (current_channel == rhs_idx)
+        {
+            splitter._Current = lhs_idx;
+        }
+    }
+
     ImDrawList* m_draw_list;
+    // A node channel index is the index of the start of a node's draw channel list.
+    // A node has a background and foreground channel. This means that
+    // 1) node's background draw channel idx == node channel idx
+    // 2) node's foreground draw channel idx == node channel idx + 1
+    ImGuiStorage m_node_idx_to_node_channel_idx;
+    int m_current_node_channel_idx;
 };
 
 // [SECTION] global struct
@@ -1740,7 +1794,7 @@ void BeginNodeEditor()
         // NOTE: we have to fetch the canvas draw list *after* we call
         // BeginChild(), otherwise the ImGui UI elements are going to be
         // rendered into the parent window draw list.
-        g.canvas_draw_list = CanvasDrawList(ImGui::GetWindowDrawList());
+        g.canvas_draw_list.set_draw_list(ImGui::GetWindowDrawList());
 
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
@@ -1824,7 +1878,7 @@ void BeginNode(const int node_id)
     // ImGui::SetCursorScreenPos to set the screen space coordinates directly.
     ImGui::SetCursorPos(grid_space_to_editor_space(get_node_title_bar_origin(node)));
 
-    g.canvas_draw_list.add_node();
+    g.canvas_draw_list.add_node(node_idx);
     g.canvas_draw_list.activate_node_foreground();
 
     ImGui::PushID(node.id);
