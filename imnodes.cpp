@@ -160,6 +160,7 @@ private:
 struct NodeData
 {
     int id;
+    int channel;
     ImVec2 origin; // The node origin is in editor space
     ImRect title_bar_content_rect;
     ImRect rect;
@@ -310,39 +311,27 @@ struct StyleElement
     StyleElement(const float value, const StyleVar variable) : item(variable), value(value) {}
 };
 
+enum {
+    Channel_Background,
+    Channel_Content,
+    Channel_COUNT
+};
+
 struct CanvasDrawList
 {
-    CanvasDrawList(ImDrawList* window_draw_list) : m_draw_list(window_draw_list)
-    {
-        assert(m_draw_list->_Splitter._Count == 1);
-    }
-
-    // TODO: the only reason this constructor exists is so that it can be construced in global
-    // state. If we did deferred construction, this would not be required.
     CanvasDrawList() : m_draw_list(NULL) {}
 
-    CanvasDrawList& operator=(const CanvasDrawList& other)
+    void set_draw_list(ImDrawList* window_draw_list)
     {
-        if (this != &other)
-        {
-            m_draw_list = other.m_draw_list;
-        }
-
-        return *this;
+        m_draw_list = window_draw_list;
     }
 
-    void add_node() { grow(2); }
-
-    void activate_node_foreground()
-    {
-        const int top = m_draw_list->_Splitter._Count - 1;
-        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, top);
+    void add_node() {
+        grow_channels(Channel_COUNT);
     }
 
-    void activate_node_background()
-    {
-        const int top = m_draw_list->_Splitter._Count - 1;
-        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, top - 1);
+    void set_channel(int channel) {
+        m_draw_list->_Splitter.SetCurrentChannel(m_draw_list, channel);
     }
 
     void merge()
@@ -351,15 +340,33 @@ struct CanvasDrawList
         m_draw_list->ChannelsMerge();
     }
 
+    void swap_channels(int left, int right)
+    {
+        ImDrawListSplitter& splitter = m_draw_list->_Splitter;
+
+        IM_ASSERT(left < splitter._Count && right < splitter._Count);
+        if (left == right)
+            return;
+
+        splitter._Channels[left]._CmdBuffer.swap(splitter._Channels[right]._CmdBuffer);
+        splitter._Channels[left]._IdxBuffer.swap(splitter._Channels[right]._IdxBuffer);
+
+        int channel = splitter._Current;
+        if (channel == left)
+            splitter._Current = right;
+        else if (channel == right)
+            splitter._Current = left;
+    }
+
     ImDrawList* operator->() { return m_draw_list; }
 
 private:
-    void grow(const int num_channels)
+    void grow_channels(const int num_channels)
     {
         ImDrawListSplitter& splitter = m_draw_list->_Splitter;
         if (splitter._Count == 1)
         {
-            splitter.Split(m_draw_list, num_channels);
+            splitter.Split(m_draw_list, num_channels + 1);
             return;
         }
 
@@ -368,8 +375,8 @@ private:
         // instances after splitter._Count, instead of over the whole splitter._Channels array like
         // the regular ImDrawListSplitter::Split method does.
 
-        const int old_channel_capacity = splitter._Channels.Size;
         // NOTE: _Channels is not resized down, and therefore _Count <= _Channels.size()!
+        const int old_channel_capacity = splitter._Channels.Size;
         const int old_channel_count = splitter._Count;
         const int requested_channel_count = old_channel_count + num_channels;
         if (old_channel_capacity < old_channel_count + num_channels)
@@ -1371,6 +1378,9 @@ void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_cl
 void draw_node(EditorContext& editor, const int node_idx)
 {
     const NodeData& node = editor.nodes.pool[node_idx];
+
+    g.canvas_draw_list.set_channel(node.channel + Channel_Background);
+
     ImGui::SetCursorPos(node.origin + editor.panning);
     // InvisibleButton's str_id can be left empty if we push our own
     // id on the stack.
@@ -1396,8 +1406,7 @@ void draw_node(EditorContext& editor, const int node_idx)
 
     {
         // node base
-        g.canvas_draw_list->AddRectFilled(
-            node.rect.Min, node.rect.Max, node_background, node.layout_style.corner_rounding);
+        g.canvas_draw_list->AddRectFilled(node.rect.Min, node.rect.Max, node_background, node.layout_style.corner_rounding);
 
         // title bar:
         if (node.title_bar_content_rect.GetHeight() > 0.f)
@@ -1740,7 +1749,7 @@ void BeginNodeEditor()
         // NOTE: we have to fetch the canvas draw list *after* we call
         // BeginChild(), otherwise the ImGui UI elements are going to be
         // rendered into the parent window draw list.
-        g.canvas_draw_list = CanvasDrawList(ImGui::GetWindowDrawList());
+        g.canvas_draw_list.set_draw_list(ImGui::GetWindowDrawList());
 
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
@@ -1756,15 +1765,68 @@ void BeginNodeEditor()
     }
 }
 
+
 void EndNodeEditor()
 {
+    static ImVector<NodeData> sorted_nodes;
+
     assert(g.current_scope == Scope_Editor);
     g.current_scope = Scope_None;
 
+    EditorContext& editor = editor_context_get();
+
+    for (int idx = 0; idx < editor.nodes.pool.size(); idx++) {
+        draw_node(editor, idx);
+    }
+
+    // Sort nodes
+    if (editor.selected_node_indices.size() > 0) {
+        sorted_nodes.resize(0);
+
+        ImGuiStorage& id_map = editor.nodes.id_map;
+        for (int i = 0; i < editor.selected_node_indices.size(); i++) {
+            int idx = editor.selected_node_indices[i];
+            NodeData &node = editor.nodes.pool[idx];
+
+            id_map.SetInt(node.id, i);
+            sorted_nodes.push_back(node);
+        }
+
+        int last_idx = editor.selected_node_indices.size();
+        for (int idx = 0; idx < editor.nodes.pool.size(); idx++) {
+            if (!editor.selected_node_indices.contains(idx)) {
+                NodeData &node = editor.nodes.pool[idx];
+
+                id_map.SetInt(node.id, last_idx);
+                sorted_nodes.push_back(node);
+                last_idx++;
+            }
+        }
+
+        // Fix selected indices
+        for (int i = 0; i < editor.selected_node_indices.size(); i++) {
+            editor.selected_node_indices[i] = i;
+        }
+
+        editor.nodes.pool.swap(sorted_nodes);
+    }
+
+    int channel = g.canvas_draw_list->_Splitter._Count;
+    for (int idx = 0; idx < editor.nodes.pool.size(); ++idx)
+    {
+        channel -= Channel_COUNT;
+
+        NodeData& node = editor.nodes.pool[idx];
+
+        if (node.channel > channel) break;
+
+        for (int i = 0; i < Channel_COUNT; i++) {
+            g.canvas_draw_list.swap_channels(node.channel + i, channel + i);
+        }
+    }
+
     // Merge the node draw commands
     g.canvas_draw_list.merge();
-
-    EditorContext& editor = editor_context_get();
 
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
     {
@@ -1808,6 +1870,7 @@ void BeginNode(const int node_id)
 
     NodeData& node = editor.nodes.pool[node_idx];
     node.id = node_id;
+    node.channel = g.canvas_draw_list->_Splitter._Count;
     node.color_style.background = g.style.colors[ColorStyle_NodeBackground];
     node.color_style.background_hovered = g.style.colors[ColorStyle_NodeBackgroundHovered];
     node.color_style.background_selected = g.style.colors[ColorStyle_NodeBackgroundSelected];
@@ -1819,13 +1882,14 @@ void BeginNode(const int node_id)
     node.layout_style.padding =
         ImVec2(g.style.node_padding_horizontal, g.style.node_padding_vertical);
 
+
     // ImGui::SetCursorPos sets the cursor position, local to the current widget
     // (in this case, the child object started in BeginNodeEditor). Use
     // ImGui::SetCursorScreenPos to set the screen space coordinates directly.
     ImGui::SetCursorPos(grid_space_to_editor_space(get_node_title_bar_origin(node)));
 
     g.canvas_draw_list.add_node();
-    g.canvas_draw_list.activate_node_foreground();
+    g.canvas_draw_list.set_channel(node.channel + Channel_Content);
 
     ImGui::PushID(node.id);
     ImGui::BeginGroup();
@@ -1846,9 +1910,7 @@ void EndNode()
         node.rect = get_item_rect();
         node.rect.Expand(node.layout_style.padding);
     }
-
-    g.canvas_draw_list.activate_node_background();
-    draw_node(editor, g.current_node_idx);
+//    draw_node(editor, g.current_node_idx);
 }
 
 void BeginNodeTitleBar()
