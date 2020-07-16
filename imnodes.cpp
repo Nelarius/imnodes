@@ -1830,9 +1830,12 @@ void EndNodeEditor()
     sorted_splitter.Clear();
 
     ImDrawList* draw_list = g.canvas_draw_list.get_draw_list();
-    sorted_splitter.Split(draw_list, g.canvas_draw_list->_Splitter._Count);
+    sorted_splitter.Split(draw_list, draw_list->_Splitter._Count);
 
-    int sorted_channel = g.canvas_draw_list->_Splitter._Count;
+    ImDrawListSplitter& lhs_splitter = sorted_splitter;
+    ImDrawListSplitter& rhs_splitter = draw_list->_Splitter;
+
+    int sorted_channel = draw_list->_Splitter._Count;
     for (int idx = 0; idx < editor.nodes.pool.size(); ++idx) {
         sorted_channel -= Channel_COUNT;
 
@@ -1841,9 +1844,6 @@ void EndNodeEditor()
         for (int i = 0; i < Channel_COUNT; i++) {
             const int lhs_idx = sorted_channel + i;
             const int rhs_idx = node.channel + i;
-
-            ImDrawListSplitter& lhs_splitter = sorted_splitter;
-            ImDrawListSplitter& rhs_splitter = g.canvas_draw_list->_Splitter;
 
             assert(lhs_idx >= 0 && lhs_idx < lhs_splitter._Count);
             assert(rhs_idx >= 0 && rhs_idx < rhs_splitter._Count);
