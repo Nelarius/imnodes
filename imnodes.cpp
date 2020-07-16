@@ -326,6 +326,11 @@ struct CanvasDrawList
         m_draw_list = window_draw_list;
     }
 
+    ImDrawList* get_draw_list()
+    {
+        return m_draw_list;
+    }
+
     void add_node() {
         grow_channels(Channel_COUNT);
     }
@@ -338,13 +343,6 @@ struct CanvasDrawList
     {
         m_draw_list->ChannelsSetCurrent(0);
         m_draw_list->ChannelsMerge();
-    }
-
-    void swap(const int lhs_idx, const int rhs_idx)
-    {
-    	for (int i = 0; i < Channel_COUNT; i++) {
-			swap_channels(lhs_idx + i, rhs_idx + i);
-		}
     }
 
     ImDrawList* operator->() { return m_draw_list; }
@@ -1783,10 +1781,10 @@ void BeginNodeEditor()
     }
 }
 
-
 void EndNodeEditor()
 {
     static ImVector<NodeData> sorted_nodes;
+    static ImDrawListSplitter sorted_splitter;
 
     assert(g.current_scope == Scope_Editor);
     g.current_scope = Scope_None;
@@ -1805,7 +1803,6 @@ void EndNodeEditor()
         for (int i = 0; i < editor.selected_node_indices.size(); i++) {
             int idx = editor.selected_node_indices[i];
             NodeData &node = editor.nodes.pool[idx];
-
             id_map.SetInt(node.id, i);
             sorted_nodes.push_back(node);
         }
@@ -1814,7 +1811,6 @@ void EndNodeEditor()
         for (int idx = 0; idx < editor.nodes.pool.size(); idx++) {
             if (!editor.selected_node_indices.contains(idx)) {
                 NodeData &node = editor.nodes.pool[idx];
-
                 id_map.SetInt(node.id, last_idx);
                 sorted_nodes.push_back(node);
                 last_idx++;
@@ -1829,17 +1825,37 @@ void EndNodeEditor()
         editor.nodes.pool.swap(sorted_nodes);
     }
 
-    int channel = g.canvas_draw_list->_Splitter._Count;
-    for (int idx = 0; idx < editor.nodes.pool.size(); ++idx)
-    {
-        channel -= Channel_COUNT;
+    g.canvas_draw_list.set_channel(0);
 
-        NodeData& node = editor.nodes.pool[idx];
+    sorted_splitter.Clear();
 
-        if (node.channel > channel) break;
+    ImDrawList* draw_list = g.canvas_draw_list.get_draw_list();
+    sorted_splitter.Split(draw_list, g.canvas_draw_list->_Splitter._Count);
 
-        g.canvas_draw_list.swap(node.channel, channel);
+    int sorted_channel = g.canvas_draw_list->_Splitter._Count;
+    for (int idx = 0; idx < editor.nodes.pool.size(); ++idx) {
+        sorted_channel -= Channel_COUNT;
+
+        NodeData &node = editor.nodes.pool[idx];
+
+        for (int i = 0; i < Channel_COUNT; i++) {
+            const int lhs_idx = sorted_channel + i;
+            const int rhs_idx = node.channel + i;
+
+            ImDrawListSplitter& lhs_splitter = sorted_splitter;
+            ImDrawListSplitter& rhs_splitter = g.canvas_draw_list->_Splitter;
+
+            assert(lhs_idx >= 0 && lhs_idx < lhs_splitter._Count);
+            assert(rhs_idx >= 0 && rhs_idx < rhs_splitter._Count);
+
+            ImDrawChannel &lhs_channel = lhs_splitter._Channels[lhs_idx];
+            ImDrawChannel &rhs_channel = rhs_splitter._Channels[rhs_idx];
+
+            lhs_channel._CmdBuffer.swap(rhs_channel._CmdBuffer);
+            lhs_channel._IdxBuffer.swap(rhs_channel._IdxBuffer);
+        }
     }
+    sorted_splitter._Channels.swap(draw_list->_Splitter._Channels);
 
     // Merge the node draw commands
     g.canvas_draw_list.merge();
