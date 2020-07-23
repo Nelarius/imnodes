@@ -2185,7 +2185,7 @@ namespace
 void node_line_handler(EditorContext& editor, const char* line)
 {
     int id;
-    float x, y;
+    int x, y;
     if (sscanf(line, "[node.%i", &id) == 1)
     {
         const int node_idx = editor.nodes.find_or_create_index_for(id);
@@ -2193,10 +2193,10 @@ void node_line_handler(EditorContext& editor, const char* line)
         NodeData& node = editor.nodes.pool[node_idx];
         node.id = id;
     }
-    else if (sscanf(line, "origin=%f,%f", &x, &y) == 2)
+    else if (sscanf(line, "origin=%i,%i", &x, &y) == 2)
     {
         NodeData& node = editor.nodes.pool[g.current_node_idx];
-        node.origin = ImVec2(x, y);
+        node.origin = ImVec2((float)x, (float)y);
     }
 }
 
