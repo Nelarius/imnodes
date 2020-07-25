@@ -977,7 +977,10 @@ void click_interaction_update(EditorContext& editor)
             should_link_snap_to_pin(
                 editor, start_pin, g.hovered_pin_idx.value(), maybe_duplicate_link_idx);
 
+        // If we created on snap and the hovered pin is empty or changed, then we need signal that
+        // the link's state has changed.
         const bool snapping_pin_changed =
+            editor.click_interaction_state.link_creation.end_pin_idx.has_value() &&
             !(g.hovered_pin_idx == editor.click_interaction_state.link_creation.end_pin_idx);
 
         // Detach the link that was created by this link event if it's no longer in snap range
