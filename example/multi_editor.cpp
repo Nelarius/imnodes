@@ -51,19 +51,19 @@ void show_editor(const char* editor_name, Editor& editor)
 
         imnodes::BeginInputAttribute(node.id << 8);
         ImGui::TextUnformatted("input");
-        imnodes::EndAttribute();
+        imnodes::EndInputAttribute();
 
         imnodes::BeginStaticAttribute(node.id << 16);
         ImGui::PushItemWidth(120.0f);
         ImGui::DragFloat("value", &node.value, 0.01f);
         ImGui::PopItemWidth();
-        imnodes::EndAttribute();
+        imnodes::EndStaticAttribute();
 
         imnodes::BeginOutputAttribute(node.id << 24);
         const float text_width = ImGui::CalcTextSize("output").x;
         ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
         ImGui::TextUnformatted("output");
-        imnodes::EndAttribute();
+        imnodes::EndOutputAttribute();
 
         imnodes::EndNode();
     }
