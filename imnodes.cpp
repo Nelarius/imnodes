@@ -744,9 +744,12 @@ void draw_list_sort_channels_by_depth(const ImVector<int>& node_idx_depth_order)
         return;
     }
 
-    // There is a discrepancy in the submitted node count! Did you call
-    // SetNodeScreenSpacePos/SetNodeGridSpacePos/SetNodeDraggable after all the BeginNode/EndNode
-    // function calls?
+    // There is a discrepancy in the submitted node count! Did you call one of these functions
+    // * EditorContextMoveToNode
+    // * SetNodeScreenSpacePos
+    // * SetNodeGridSpacePos
+    // * SetNodeDraggable
+    // after all the BeginNode/EndNode function calls?
     assert(node_idx_depth_order.Size == g.node_idx_submission_order.Size);
 
     int start_idx = node_idx_depth_order.Size - 1;
