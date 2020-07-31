@@ -178,6 +178,8 @@ void PopStyleVar();
 void BeginNode(int id);
 void EndNode();
 
+ImVec2 GetNodeDimensions(int id);
+
 // Place your node title bar content (such as the node title, using ImGui::Text) between the
 // following function calls. These functions have to be called before adding any attributes, or the
 // layout of the node will be incorrect.
