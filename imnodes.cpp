@@ -805,8 +805,33 @@ void object_pool_update(ObjectPool<T>& objects)
     memset(objects.in_use.Data, 0, objects.in_use.size_in_bytes());
 }
 
-// TODO: object_pool_update needs a specialization for NodeData in order to update the depth stack
-// when node not in use!
+template<>
+void object_pool_update(ObjectPool<NodeData>& nodes)
+{
+    nodes.free_list.clear();
+    for (int i = 0; i < nodes.in_use.size(); ++i)
+    {
+        if (!nodes.in_use[i])
+        {
+            const int previous_id = nodes.pool[i].id;
+            const int previous_idx = nodes.id_map.GetInt(previous_id, -1);
+            if (previous_idx != -1)
+            {
+                // Remove node idx form depth stack the first time we detect that this idx slot is
+                // unused
+                ImVector<int>& depth_stack = editor_context_get().node_depth_order;
+                const int* const elem = depth_stack.find(i);
+                assert(elem != depth_stack.end());
+                depth_stack.erase(elem);
+            }
+
+            nodes.id_map.SetInt(previous_id, -1);
+            nodes.free_list.push_back(i);
+        }
+    }
+    // set all values to false
+    memset(nodes.in_use.Data, 0, nodes.in_use.size_in_bytes());
+}
 
 template<typename T>
 int object_pool_find_or_create_index(ObjectPool<T>& objects, const int id)
@@ -1873,12 +1898,6 @@ void BeginNodeEditor()
 
     g.active_attribute = false;
 
-    // reset ui content for the current editor
-    EditorContext& editor = editor_context_get();
-    object_pool_update(editor.nodes);
-    object_pool_update(editor.pins);
-    object_pool_update(editor.links);
-
     ImGui::BeginGroup();
     {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
@@ -1905,6 +1924,7 @@ void BeginNodeEditor()
 
             if (g.style.flags & StyleFlags_GridLines)
             {
+                EditorContext& editor = editor_context_get();
                 draw_grid(editor, canvas_size);
             }
         }
@@ -1916,7 +1936,12 @@ void EndNodeEditor()
     assert(g.current_scope == Scope_Editor);
     g.current_scope = Scope_None;
 
+    // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
+    // to detect unused node slots and remove those indices from the depth stack before sorting the
+    // node draw commands by depth.
     EditorContext& editor = editor_context_get();
+    object_pool_update(editor.nodes);
+    object_pool_update(editor.pins);
 
     draw_list_sort_channels_by_depth(editor.node_depth_order);
     draw_list_merge_channels();
@@ -1928,6 +1953,9 @@ void EndNodeEditor()
             draw_link(editor, link_idx);
         }
     }
+
+    // After the links have been rendered, the link pool can be updated as well.
+    object_pool_update(editor.links);
 
     if (g.left_mouse_clicked || g.middle_mouse_clicked)
     {
