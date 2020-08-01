@@ -1936,10 +1936,18 @@ void EndNodeEditor()
     assert(g.current_scope == Scope_Editor);
     g.current_scope = Scope_None;
 
+    EditorContext& editor = editor_context_get();
+
+    if (g.left_mouse_clicked || g.middle_mouse_clicked)
+    {
+        begin_canvas_interaction(editor);
+    }
+
+    click_interaction_update(editor);
+
     // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
     // to detect unused node slots and remove those indices from the depth stack before sorting the
     // node draw commands by depth.
-    EditorContext& editor = editor_context_get();
     object_pool_update(editor.nodes);
     object_pool_update(editor.pins);
 
@@ -1956,13 +1964,6 @@ void EndNodeEditor()
 
     // After the links have been rendered, the link pool can be updated as well.
     object_pool_update(editor.links);
-
-    if (g.left_mouse_clicked || g.middle_mouse_clicked)
-    {
-        begin_canvas_interaction(editor);
-    }
-
-    click_interaction_update(editor);
 
     // pop style
     ImGui::EndChild();      // end scrolling region
