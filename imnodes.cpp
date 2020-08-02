@@ -1782,9 +1782,9 @@ ImVec2 GetNodeDimensions(int node_id)
 {
     EditorContext& editor = editor_context_get();
 	const int node_idx = editor.nodes.find(node_id);
-    assert(node_id != -1); //invalid node_id
+    assert(node_idx != -1); //invalid node_id
 	const NodeData& node = editor.nodes.pool[node_idx];
-    return ImVec2(node.rect.GetWidth(), node.rect.GetHeight());
+    return node.rect.GetSize();
 }
 
 void BeginNodeTitleBar()
