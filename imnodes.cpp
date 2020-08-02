@@ -98,6 +98,12 @@ struct ObjectPool
         // set all values to false
         memset(in_use.Data, 0, sizeof(bool) * in_use.size());
     }
+	
+	inline int find(const int id) const
+    {
+		const int index = id_map.GetInt(static_cast<ImGuiID>(id), -1);
+        return index;
+    }
 
     inline int find_or_create_index_for(const int id)
     {
@@ -1770,6 +1776,15 @@ void EndNode()
     g.canvas_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
     draw_node(editor, g.current_node_idx);
     g.canvas_draw_list->ChannelsMerge();
+}
+
+ImVec2 GetNodeDimensions(int node_id)
+{
+    EditorContext& editor = editor_context_get();
+	const int node_idx = editor.nodes.find(node_id);
+    assert(node_idx != -1); //invalid node_id
+	const NodeData& node = editor.nodes.pool[node_idx];
+    return node.rect.GetSize();
 }
 
 void BeginNodeTitleBar()
