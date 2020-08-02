@@ -747,6 +747,7 @@ void draw_list_activate_current_node_foreground()
         draw_list_submission_idx_to_foreground_channel_idx(g.node_idx_submission_order.Size - 1);
     g.canvas_draw_list->_Splitter.SetCurrentChannel(g.canvas_draw_list, foreground_channel_idx);
 }
+
 void draw_list_activate_node_background(const int node_idx)
 {
     const int submission_idx =
@@ -802,20 +803,34 @@ void draw_list_sort_channels_by_depth(const ImVector<int>& node_idx_depth_order)
         }
     }
 
-    for (int i = start_idx; i > 0; --i)
-    {
-        const int submission_idx =
-            g.node_idx_to_submission_idx.GetInt(static_cast<ImGuiID>(node_idx_depth_order[i]), -1);
-        assert(submission_idx != -1);
+    // TODO: this is an O(N^2) algorithm. It might be worthwhile revisiting this to see if the time
+    // complexity can be reduced.
 
-        if (submission_idx == i)
+    for (int depth_idx = start_idx; depth_idx > 0; --depth_idx)
+    {
+        const int node_idx = node_idx_depth_order[depth_idx];
+
+        // Find the current index of the node_idx in the submission order array
+        int submission_idx = -1;
+        for (int i = 0; i < g.node_idx_submission_order.Size; ++i)
+        {
+            if (g.node_idx_submission_order[i] == node_idx)
+            {
+                submission_idx = i;
+                break;
+            }
+        }
+        assert(submission_idx >= 0);
+
+        if (submission_idx == depth_idx)
         {
             continue;
         }
 
-        for (int j = submission_idx; j < i; ++j)
+        for (int j = submission_idx; j < depth_idx; ++j)
         {
             draw_list_swap_submission_indices(j, j + 1);
+            ImSwap(g.node_idx_submission_order[j], g.node_idx_submission_order[j + 1]);
         }
     }
 }
@@ -1424,7 +1439,6 @@ inline ImVec2 get_node_title_bar_origin(const NodeData& node)
 
 inline ImVec2 get_node_content_origin(const NodeData& node)
 {
-
     const ImVec2 title_bar_height =
         ImVec2(0.f, node.title_bar_content_rect.GetHeight() + 2.0f * node.layout_style.padding.y);
     return node.origin + title_bar_height + node.layout_style.padding;
