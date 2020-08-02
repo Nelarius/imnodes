@@ -280,6 +280,7 @@ struct
     ImDrawList* canvas_draw_list;
     ImGuiStorage node_idx_to_submission_idx;
     ImVector<int> node_idx_submission_order;
+    ImVector<int> node_indices_overlapping_with_mouse;
 
     // Canvas extents
     ImVec2 canvas_origin_screen_space;
@@ -317,6 +318,10 @@ struct
     int active_attribute_id;
     bool active_attribute;
 
+    // ImGui::IO cache
+
+    ImVec2 mouse_pos;
+
     bool left_mouse_clicked;
     bool left_mouse_released;
     bool middle_mouse_clicked;
@@ -332,7 +337,7 @@ EditorContext& editor_context_get()
 
 inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
 {
-    ImVec2 delta = ImGui::GetIO().MousePos - point;
+    ImVec2 delta = g.mouse_pos - point;
     return (delta.x * delta.x + delta.y * delta.y) < (radius * radius);
 }
 
@@ -423,7 +428,7 @@ inline LinkBezierData get_link_renderable(
 
 inline bool is_mouse_hovering_near_link(const BezierCurve& bezier, const int num_segments)
 {
-    const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
+    const ImVec2 mouse_pos = g.mouse_pos;
 
     // First, do a simple bounding box test against the box containing the link
     // to see whether calculating the distance to the link is worth doing.
@@ -685,12 +690,38 @@ void draw_list_set(ImDrawList* window_draw_list)
     g.node_idx_submission_order.clear();
 }
 
+// The draw list channels are structured as follows. First we have our base channel, the canvas grid
+// on which we render the grid lines in BeginNodeEditor(). The base channel is the reason
+// draw_list_submission_idx_to_background_channel_idx offsets the index by one. Each BeginNode()
+// call appends two new draw channels, for the node background and foreground. The node foreground
+// is the channel into which the node's ImGui content is rendered. Finally, in EndNodeEditor() we
+// append one last draw channel for rendering the selection box and the incomplete link on top of
+// everything else.
+//
+// +----------+----------+----------+----------+----------+----------+
+// |          |          |          |          |          |          |
+// |canvas    |node      |node      |...       |...       |click     |
+// |grid      |background|foreground|          |          |interaction
+// |          |          |          |          |          |          |
+// +----------+----------+----------+----------+----------+----------+
+//            |                     |
+//            |   submission idx    |
+//            |                     |
+//            -----------------------
+
 void draw_list_add_node(const int node_idx)
 {
     g.node_idx_to_submission_idx.SetInt(
         static_cast<ImGuiID>(node_idx), g.node_idx_submission_order.Size);
     g.node_idx_submission_order.push_back(node_idx);
     ImDrawList_grow_channels(g.canvas_draw_list, 2);
+}
+
+void draw_list_append_click_interaction_channel()
+{
+    // NOTE: don't use this function outside of EndNodeEditor. Using this before all nodes have been
+    // added will screw up the node draw order.
+    ImDrawList_grow_channels(g.canvas_draw_list, 1);
 }
 
 int draw_list_submission_idx_to_background_channel_idx(const int submission_idx)
@@ -704,17 +735,25 @@ int draw_list_submission_idx_to_foreground_channel_idx(const int submission_idx)
     return draw_list_submission_idx_to_background_channel_idx(submission_idx) + 1;
 }
 
-void draw_list_activate_node_foreground()
+void draw_list_activate_click_interaction_channel()
+{
+    g.canvas_draw_list->_Splitter.SetCurrentChannel(
+        g.canvas_draw_list, g.canvas_draw_list->_Splitter._Count - 1);
+}
+
+void draw_list_activate_current_node_foreground()
 {
     const int foreground_channel_idx =
         draw_list_submission_idx_to_foreground_channel_idx(g.node_idx_submission_order.Size - 1);
     g.canvas_draw_list->_Splitter.SetCurrentChannel(g.canvas_draw_list, foreground_channel_idx);
 }
-
-void draw_list_activate_node_background()
+void draw_list_activate_node_background(const int node_idx)
 {
+    const int submission_idx =
+        g.node_idx_to_submission_idx.GetInt(static_cast<ImGuiID>(node_idx), -1);
+    assert(submission_idx != -1);
     const int background_channel_idx =
-        draw_list_submission_idx_to_background_channel_idx(g.node_idx_submission_order.Size - 1);
+        draw_list_submission_idx_to_background_channel_idx(submission_idx);
     g.canvas_draw_list->_Splitter.SetCurrentChannel(g.canvas_draw_list, background_channel_idx);
 }
 
@@ -992,7 +1031,7 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
             const LinkData& link = editor.links.pool[link_idx];
             const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
             const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
-            const ImVec2& mouse_pos = ImGui::GetIO().MousePos;
+            const ImVec2& mouse_pos = g.mouse_pos;
             const float dist_to_start = ImLengthSqr(start_pin.pos - mouse_pos);
             const float dist_to_end = ImLengthSqr(end_pin.pos - mouse_pos);
             const int closest_pin_idx =
@@ -1041,7 +1080,7 @@ void begin_canvas_interaction(EditorContext& editor)
 
     if (editor.click_interaction_type == ClickInteractionType_BoxSelection)
     {
-        editor.click_interaction_state.box_selector.rect.Min = ImGui::GetIO().MousePos;
+        editor.click_interaction_state.box_selector.rect.Min = g.mouse_pos;
     }
 }
 
@@ -1183,7 +1222,7 @@ void click_interaction_update(EditorContext& editor)
     case ClickInteractionType_BoxSelection:
     {
         ImRect& box_rect = editor.click_interaction_state.box_selector.rect;
-        box_rect.Max = ImGui::GetIO().MousePos;
+        box_rect.Max = g.mouse_pos;
 
         box_selector_update_selection(editor, box_rect);
 
@@ -1255,7 +1294,7 @@ void click_interaction_update(EditorContext& editor)
         const ImVec2 end_pos = should_snap
                                    ? get_screen_space_pin_coordinates(
                                          editor, editor.pins.pool[g.hovered_pin_idx.value()])
-                                   : ImGui::GetIO().MousePos;
+                                   : g.mouse_pos;
 
         const LinkBezierData link_data = get_link_renderable(
             start_pos, end_pos, start_pin.type, g.style.link_line_segments_per_length);
@@ -1327,6 +1366,34 @@ void click_interaction_update(EditorContext& editor)
         assert(!"Unreachable code!");
         break;
     }
+}
+
+OptionalIndex resolve_hovered_node(const EditorContext& editor)
+{
+    if (g.node_indices_overlapping_with_mouse.Size == 0)
+    {
+        return OptionalIndex();
+    }
+
+    int largest_depth_idx = -1;
+    int node_idx_on_top = -1;
+
+    const ImVector<int>& depth_stack = editor.node_depth_order;
+    for (int i = 0; i < g.node_indices_overlapping_with_mouse.Size; ++i)
+    {
+        const int node_idx = g.node_indices_overlapping_with_mouse[i];
+        for (int depth_idx = 0; depth_idx < depth_stack.Size; ++depth_idx)
+        {
+            if (depth_stack[depth_idx] == node_idx && (depth_idx > largest_depth_idx))
+            {
+                largest_depth_idx = depth_idx;
+                node_idx_on_top = node_idx;
+            }
+        }
+    }
+
+    assert(node_idx_on_top != -1);
+    return OptionalIndex(node_idx_on_top);
 }
 
 // [SECTION] render helpers
@@ -1552,13 +1619,9 @@ void draw_node(EditorContext& editor, const int node_idx)
 {
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
-    // InvisibleButton's str_id can be left empty if we push our own
-    // id on the stack.
-    ImGui::PushID(node.id);
-    ImGui::InvisibleButton("", node.rect.GetSize());
-    ImGui::PopID();
 
-    const bool item_hovered = ImGui::IsItemHovered();
+    const bool item_hovered =
+        g.hovered_node_idx.has_value() && node_idx == g.hovered_node_idx.value();
 
     ImU32 node_background = node.color_style.background;
     ImU32 titlebar_background = node.color_style.titlebar;
@@ -1888,8 +1951,11 @@ void BeginNodeEditor()
     g.deleted_link_idx.reset();
     g.snap_link_idx.reset();
 
+    g.node_indices_overlapping_with_mouse.clear();
+
     g.element_state_change = ElementStateChange_None;
 
+    g.mouse_pos = ImGui::GetIO().MousePos;
     g.left_mouse_clicked = ImGui::IsMouseClicked(0);
     g.left_mouse_released = ImGui::IsMouseReleased(0);
     g.middle_mouse_clicked = ImGui::IsMouseClicked(2);
@@ -1938,12 +2004,28 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
+    // Resolve which node is actually on top and being hovered
+
+    g.hovered_node_idx = resolve_hovered_node(editor);
+
+    draw_list_append_click_interaction_channel();
+    draw_list_activate_click_interaction_channel();
+
     if (g.left_mouse_clicked || g.middle_mouse_clicked)
     {
         begin_canvas_interaction(editor);
     }
 
     click_interaction_update(editor);
+
+    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
+    {
+        if (editor.nodes.in_use[node_idx])
+        {
+            draw_list_activate_node_background(node_idx);
+            draw_node(editor, node_idx);
+        }
+    }
 
     // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
     // to detect unused node slots and remove those indices from the depth stack before sorting the
@@ -2009,7 +2091,7 @@ void BeginNode(const int node_id)
     ImGui::SetCursorPos(grid_space_to_editor_space(get_node_title_bar_origin(node)));
 
     draw_list_add_node(node_idx);
-    draw_list_activate_node_foreground();
+    draw_list_activate_current_node_foreground();
 
     ImGui::PushID(node.id);
     ImGui::BeginGroup();
@@ -2025,14 +2107,15 @@ void EndNode()
     // The node's rectangle depends on the ImGui UI group size.
     ImGui::EndGroup();
     ImGui::PopID();
-    {
-        NodeData& node = editor.nodes.pool[g.current_node_idx];
-        node.rect = get_item_rect();
-        node.rect.Expand(node.layout_style.padding);
-    }
 
-    draw_list_activate_node_background();
-    draw_node(editor, g.current_node_idx);
+    NodeData& node = editor.nodes.pool[g.current_node_idx];
+    node.rect = get_item_rect();
+    node.rect.Expand(node.layout_style.padding);
+
+    if (node.rect.Contains(g.mouse_pos))
+    {
+        g.node_indices_overlapping_with_mouse.push_back(g.current_node_idx);
+    }
 }
 
 void BeginNodeTitleBar()
