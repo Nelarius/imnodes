@@ -1248,6 +1248,33 @@ void click_interaction_update(EditorContext& editor)
 
         if (g.left_mouse_released)
         {
+            ImVector<int>& depth_stack = editor.node_depth_order;
+            const ImVector<int>& selected_idxs = editor.selected_node_indices;
+
+            // Bump the selected node indices, in order, to the top of the depth stack.
+            // NOTE: this algorithm has worst case time complexity of O(N^2), if the node selection
+            // is ~ N (due to selected_idxs.contains()).
+
+            if ((selected_idxs.Size > 0) && (selected_idxs.Size < depth_stack.Size))
+            {
+                int num_moved = 0; // The number of indices moved. Stop after selected_idxs.Size
+                for (int i = 0; i < depth_stack.Size - selected_idxs.Size; ++i)
+                {
+                    for (int node_idx = depth_stack[i]; selected_idxs.contains(node_idx);
+                         node_idx = depth_stack[i])
+                    {
+                        depth_stack.erase(depth_stack.begin() + static_cast<size_t>(i));
+                        depth_stack.push_back(node_idx);
+                        ++num_moved;
+                    }
+
+                    if (num_moved == selected_idxs.Size)
+                    {
+                        break;
+                    }
+                }
+            }
+
             editor.click_interaction_type = ClickInteractionType_None;
         }
     }
