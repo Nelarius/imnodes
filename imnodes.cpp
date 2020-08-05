@@ -2045,9 +2045,25 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
-    // Resolve which node is actually on top and being hovered
+    // Resolve which node is actually on top and being hovered. This needs to be done before any of
+    // the nodes can be rendered.
 
     g.hovered_node_idx = resolve_hovered_node(editor);
+
+    // Render the nodes and resolve which pin the mouse is hovering over. The hovered pin is needed
+    // for handling click interactions.
+
+    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
+    {
+        if (editor.nodes.in_use[node_idx])
+        {
+            draw_list_activate_node_background(node_idx);
+            draw_node(editor, node_idx);
+        }
+    }
+
+    // Render the click interaction UI elements (partial links, box selector) on top of everything
+    // else.
 
     draw_list_append_click_interaction_channel();
     draw_list_activate_click_interaction_channel();
@@ -2058,15 +2074,6 @@ void EndNodeEditor()
     }
 
     click_interaction_update(editor);
-
-    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
-    {
-        if (editor.nodes.in_use[node_idx])
-        {
-            draw_list_activate_node_background(node_idx);
-            draw_node(editor, node_idx);
-        }
-    }
 
     // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
     // to detect unused node slots and remove those indices from the depth stack before sorting the
