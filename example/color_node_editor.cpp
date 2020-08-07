@@ -142,6 +142,111 @@ public:
 
         imnodes::BeginNodeEditor();
 
+        // Handle new nodes
+        // These are driven by the user, so we place this code before rendering the nodes
+        {
+            const bool open_popup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+                                    imnodes::IsEditorHovered() &&
+                                    ImGui::IsKeyReleased(SDL_SCANCODE_A);
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
+            if (!ImGui::IsAnyItemHovered() && open_popup)
+            {
+                ImGui::OpenPopup("add node");
+            }
+
+            if (ImGui::BeginPopup("add node"))
+            {
+                const ImVec2 click_pos = ImGui::GetMousePosOnOpeningCurrentPopup();
+
+                if (ImGui::MenuItem("add"))
+                {
+                    const Node value(NodeType::value, 0.f);
+                    const Node op(NodeType::add);
+
+                    UiNode ui_node;
+                    ui_node.type = UiNodeType::add;
+                    ui_node.add.lhs = graph_.insert_node(value);
+                    ui_node.add.rhs = graph_.insert_node(value);
+                    ui_node.id = graph_.insert_node(op);
+
+                    graph_.insert_edge(ui_node.id, ui_node.add.lhs);
+                    graph_.insert_edge(ui_node.id, ui_node.add.rhs);
+
+                    nodes_.push_back(ui_node);
+                    imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
+                }
+
+                if (ImGui::MenuItem("multiply"))
+                {
+                    const Node value(NodeType::value, 0.f);
+                    const Node op(NodeType::multiply);
+
+                    UiNode ui_node;
+                    ui_node.type = UiNodeType::multiply;
+                    ui_node.multiply.lhs = graph_.insert_node(value);
+                    ui_node.multiply.rhs = graph_.insert_node(value);
+                    ui_node.id = graph_.insert_node(op);
+
+                    graph_.insert_edge(ui_node.id, ui_node.multiply.lhs);
+                    graph_.insert_edge(ui_node.id, ui_node.multiply.rhs);
+
+                    nodes_.push_back(ui_node);
+                    imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
+                }
+
+                if (ImGui::MenuItem("output") && root_node_id_ == -1)
+                {
+                    const Node value(NodeType::value, 0.f);
+                    const Node out(NodeType::output);
+
+                    UiNode ui_node;
+                    ui_node.type = UiNodeType::output;
+                    ui_node.output.r = graph_.insert_node(value);
+                    ui_node.output.g = graph_.insert_node(value);
+                    ui_node.output.b = graph_.insert_node(value);
+                    ui_node.id = graph_.insert_node(out);
+
+                    graph_.insert_edge(ui_node.id, ui_node.output.r);
+                    graph_.insert_edge(ui_node.id, ui_node.output.g);
+                    graph_.insert_edge(ui_node.id, ui_node.output.b);
+
+                    nodes_.push_back(ui_node);
+                    imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
+                    root_node_id_ = ui_node.id;
+                }
+
+                if (ImGui::MenuItem("sine"))
+                {
+                    const Node value(NodeType::value, 0.f);
+                    const Node op(NodeType::sine);
+
+                    UiNode ui_node;
+                    ui_node.type = UiNodeType::sine;
+                    ui_node.sine.input = graph_.insert_node(value);
+                    ui_node.id = graph_.insert_node(op);
+
+                    graph_.insert_edge(ui_node.id, ui_node.sine.input);
+
+                    nodes_.push_back(ui_node);
+                    imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
+                }
+
+                if (ImGui::MenuItem("time"))
+                {
+                    UiNode ui_node;
+                    ui_node.type = UiNodeType::time;
+                    ui_node.id = graph_.insert_node(Node(NodeType::time));
+
+                    nodes_.push_back(ui_node);
+                    imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
+                }
+
+                ImGui::EndPopup();
+            }
+            ImGui::PopStyleVar();
+        }
+
         for (const UiNode& node : nodes_)
         {
             switch (node.type)
@@ -382,12 +487,10 @@ public:
             imnodes::Link(edge.id, edge.from, edge.to);
         }
 
-        const bool open_popup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-                                imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A);
-
         imnodes::EndNodeEditor();
 
         // Handle new links
+        // These are driven by Imnodes, so we place the code after EndNodeEditor().
 
         {
             int start_attr, end_attr;
@@ -476,102 +579,6 @@ public:
             }
         }
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
-        if (!ImGui::IsAnyItemHovered() && open_popup)
-        {
-            ImGui::OpenPopup("add node");
-        }
-
-        if (ImGui::BeginPopup("add node"))
-        {
-            const ImVec2 click_pos = ImGui::GetMousePosOnOpeningCurrentPopup();
-
-            if (ImGui::MenuItem("add"))
-            {
-                const Node value(NodeType::value, 0.f);
-                const Node op(NodeType::add);
-
-                UiNode ui_node;
-                ui_node.type = UiNodeType::add;
-                ui_node.add.lhs = graph_.insert_node(value);
-                ui_node.add.rhs = graph_.insert_node(value);
-                ui_node.id = graph_.insert_node(op);
-
-                graph_.insert_edge(ui_node.id, ui_node.add.lhs);
-                graph_.insert_edge(ui_node.id, ui_node.add.rhs);
-
-                nodes_.push_back(ui_node);
-                imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
-            }
-
-            if (ImGui::MenuItem("multiply"))
-            {
-                const Node value(NodeType::value, 0.f);
-                const Node op(NodeType::multiply);
-
-                UiNode ui_node;
-                ui_node.type = UiNodeType::multiply;
-                ui_node.multiply.lhs = graph_.insert_node(value);
-                ui_node.multiply.rhs = graph_.insert_node(value);
-                ui_node.id = graph_.insert_node(op);
-
-                graph_.insert_edge(ui_node.id, ui_node.multiply.lhs);
-                graph_.insert_edge(ui_node.id, ui_node.multiply.rhs);
-
-                nodes_.push_back(ui_node);
-                imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
-            }
-
-            if (ImGui::MenuItem("output") && root_node_id_ == -1)
-            {
-                const Node value(NodeType::value, 0.f);
-                const Node out(NodeType::output);
-
-                UiNode ui_node;
-                ui_node.type = UiNodeType::output;
-                ui_node.output.r = graph_.insert_node(value);
-                ui_node.output.g = graph_.insert_node(value);
-                ui_node.output.b = graph_.insert_node(value);
-                ui_node.id = graph_.insert_node(out);
-
-                graph_.insert_edge(ui_node.id, ui_node.output.r);
-                graph_.insert_edge(ui_node.id, ui_node.output.g);
-                graph_.insert_edge(ui_node.id, ui_node.output.b);
-
-                nodes_.push_back(ui_node);
-                imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
-                root_node_id_ = ui_node.id;
-            }
-
-            if (ImGui::MenuItem("sine"))
-            {
-                const Node value(NodeType::value, 0.f);
-                const Node op(NodeType::sine);
-
-                UiNode ui_node;
-                ui_node.type = UiNodeType::sine;
-                ui_node.sine.input = graph_.insert_node(value);
-                ui_node.id = graph_.insert_node(op);
-
-                graph_.insert_edge(ui_node.id, ui_node.sine.input);
-
-                nodes_.push_back(ui_node);
-                imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
-            }
-
-            if (ImGui::MenuItem("time"))
-            {
-                UiNode ui_node;
-                ui_node.type = UiNodeType::time;
-                ui_node.id = graph_.insert_node(Node(NodeType::time));
-
-                nodes_.push_back(ui_node);
-                imnodes::SetNodeScreenSpacePos(ui_node.id, click_pos);
-            }
-
-            ImGui::EndPopup();
-        }
-        ImGui::PopStyleVar();
         ImGui::End();
 
         // The color output window

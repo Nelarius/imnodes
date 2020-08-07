@@ -3,6 +3,8 @@
 // [SECTION] internal data structures
 // [SECTION] global struct
 // [SECTION] editor context definition
+// [SECTION] draw list helper
+// [SECTION] ObjectPool implementation
 // [SECTION] ui state logic
 // [SECTION] render helpers
 // [SECTION] API implementation
@@ -42,13 +44,6 @@ enum ScopeFlags
     Scope_Attribute = 1 << 3
 };
 
-enum Channels
-{
-    Channels_NodeBackground = 0,
-    Channels_ImGui,
-    Channels_Count
-};
-
 enum AttributeType
 {
     AttributeType_None,
@@ -83,55 +78,6 @@ struct ObjectPool
     ImGuiStorage id_map;
 
     ObjectPool() : pool(), in_use(), free_list(), id_map() {}
-
-    inline void update()
-    {
-        free_list.clear();
-        for (int i = 0; i < in_use.size(); ++i)
-        {
-            if (!in_use[i])
-            {
-                id_map.SetInt(pool[i].id, -1);
-                free_list.push_back(i);
-            }
-        }
-        // set all values to false
-        memset(in_use.Data, 0, sizeof(bool) * in_use.size());
-    }
-
-    inline int find(const int id) const
-    {
-        const int index = id_map.GetInt(static_cast<ImGuiID>(id), -1);
-        return index;
-    }
-
-    inline int find_or_create_index_for(const int id)
-    {
-        int index = id_map.GetInt(static_cast<ImGuiID>(id), -1);
-        if (index == -1)
-        {
-            if (free_list.empty())
-            {
-                index = pool.size();
-                pool.push_back(T());
-                in_use.push_back(true);
-            }
-            else
-            {
-                index = free_list.back();
-                free_list.pop_back();
-            }
-            id_map.SetInt(static_cast<ImGuiID>(id), index);
-        }
-        in_use[index] = true;
-        return index;
-    }
-
-    inline T& find_or_create_new(const int id)
-    {
-        const int index = find_or_create_index_for(id);
-        return pool[index];
-    }
 };
 
 // Emulates std::optional<int> using the sentinel value `invalid_index`.
@@ -329,11 +275,21 @@ struct
 {
     EditorContext* default_editor_ctx;
     EditorContext* editor_ctx;
+
+    // Canvas draw list and helper state
     ImDrawList* canvas_draw_list;
+    ImGuiStorage node_idx_to_submission_idx;
+    ImVector<int> node_idx_submission_order;
+    ImVector<int> node_indices_overlapping_with_mouse;
+
+    // Canvas extents
     ImVec2 canvas_origin_screen_space;
     ImRect canvas_rect_screen_space;
+
+    // Debug helpers
     ScopeFlags current_scope;
 
+    // Configuration state
     IO io;
     Style style;
     ImVector<ColorStyleElement> color_modifier_stack;
@@ -343,6 +299,7 @@ struct
     int current_attribute_flags;
     ImVector<int> attribute_flag_stack;
 
+    // UI element state
     int current_node_idx;
     int current_pin_idx;
     int current_attribute_id;
@@ -355,10 +312,15 @@ struct
     OptionalIndex deleted_link_idx;
     OptionalIndex snap_link_idx;
 
+    // Event helper state
     int element_state_change;
 
     int active_attribute_id;
     bool active_attribute;
+
+    // ImGui::IO cache
+
+    ImVec2 mouse_pos;
 
     bool left_mouse_clicked;
     bool left_mouse_released;
@@ -375,7 +337,7 @@ EditorContext& editor_context_get()
 
 inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
 {
-    ImVec2 delta = ImGui::GetIO().MousePos - point;
+    ImVec2 delta = g.mouse_pos - point;
     return (delta.x * delta.x + delta.y * delta.y) < (radius * radius);
 }
 
@@ -466,7 +428,7 @@ inline LinkBezierData get_link_renderable(
 
 inline bool is_mouse_hovering_near_link(const BezierCurve& bezier, const int num_segments)
 {
-    const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
+    const ImVec2 mouse_pos = g.mouse_pos;
 
     // First, do a simple bounding box test against the box containing the link
     // to see whether calculating the distance to the link is worth doing.
@@ -627,6 +589,8 @@ struct EditorContext
     ObjectPool<PinData> pins;
     ObjectPool<LinkData> links;
 
+    ImVector<int> node_depth_order;
+
     // ui related fields
     ImVec2 panning;
 
@@ -646,6 +610,347 @@ struct EditorContext
 
 namespace
 {
+// [SECTION] draw list helper
+
+void ImDrawList_grow_channels(ImDrawList* draw_list, const int num_channels)
+{
+    ImDrawListSplitter& splitter = draw_list->_Splitter;
+
+    if (splitter._Count == 1)
+    {
+        splitter.Split(draw_list, num_channels + 1);
+        return;
+    }
+
+    // NOTE: this logic has been lifted from ImDrawListSplitter::Split with slight modifications
+    // to allow nested splits. The main modification is that we only create new ImDrawChannel
+    // instances after splitter._Count, instead of over the whole splitter._Channels array like
+    // the regular ImDrawListSplitter::Split method does.
+
+    const int old_channel_capacity = splitter._Channels.Size;
+    // NOTE: _Channels is not resized down, and therefore _Count <= _Channels.size()!
+    const int old_channel_count = splitter._Count;
+    const int requested_channel_count = old_channel_count + num_channels;
+    if (old_channel_capacity < old_channel_count + num_channels)
+    {
+        splitter._Channels.resize(requested_channel_count);
+    }
+
+    splitter._Count = requested_channel_count;
+
+    for (int i = old_channel_count; i < requested_channel_count; ++i)
+    {
+        ImDrawChannel& channel = splitter._Channels[i];
+
+        IM_PLACEMENT_NEW(&channel) ImDrawChannel();
+
+        {
+            ImDrawCmd draw_cmd;
+            draw_cmd.ClipRect = draw_list->_ClipRectStack.back();
+            draw_cmd.TextureId = draw_list->_TextureIdStack.back();
+            channel._CmdBuffer.push_back(draw_cmd);
+        }
+    }
+}
+
+void ImDrawListSplitter_swap_channels(
+    ImDrawListSplitter& splitter,
+    const int lhs_idx,
+    const int rhs_idx)
+{
+    if (lhs_idx == rhs_idx)
+    {
+        return;
+    }
+
+    assert(lhs_idx >= 0 && lhs_idx < splitter._Count);
+    assert(rhs_idx >= 0 && rhs_idx < splitter._Count);
+
+    ImDrawChannel& lhs_channel = splitter._Channels[lhs_idx];
+    ImDrawChannel& rhs_channel = splitter._Channels[rhs_idx];
+    lhs_channel._CmdBuffer.swap(rhs_channel._CmdBuffer);
+    lhs_channel._IdxBuffer.swap(rhs_channel._IdxBuffer);
+
+    const int current_channel = splitter._Current;
+
+    if (current_channel == lhs_idx)
+    {
+        splitter._Current = rhs_idx;
+    }
+    else if (current_channel == rhs_idx)
+    {
+        splitter._Current = lhs_idx;
+    }
+}
+
+void draw_list_set(ImDrawList* window_draw_list)
+{
+    g.canvas_draw_list = window_draw_list;
+    g.node_idx_to_submission_idx.Clear();
+    g.node_idx_submission_order.clear();
+}
+
+// The draw list channels are structured as follows. First we have our base channel, the canvas grid
+// on which we render the grid lines in BeginNodeEditor(). The base channel is the reason
+// draw_list_submission_idx_to_background_channel_idx offsets the index by one. Each BeginNode()
+// call appends two new draw channels, for the node background and foreground. The node foreground
+// is the channel into which the node's ImGui content is rendered. Finally, in EndNodeEditor() we
+// append one last draw channel for rendering the selection box and the incomplete link on top of
+// everything else.
+//
+// +----------+----------+----------+----------+----------+----------+
+// |          |          |          |          |          |          |
+// |canvas    |node      |node      |...       |...       |click     |
+// |grid      |background|foreground|          |          |interaction
+// |          |          |          |          |          |          |
+// +----------+----------+----------+----------+----------+----------+
+//            |                     |
+//            |   submission idx    |
+//            |                     |
+//            -----------------------
+
+void draw_list_add_node(const int node_idx)
+{
+    g.node_idx_to_submission_idx.SetInt(
+        static_cast<ImGuiID>(node_idx), g.node_idx_submission_order.Size);
+    g.node_idx_submission_order.push_back(node_idx);
+    ImDrawList_grow_channels(g.canvas_draw_list, 2);
+}
+
+void draw_list_append_click_interaction_channel()
+{
+    // NOTE: don't use this function outside of EndNodeEditor. Using this before all nodes have been
+    // added will screw up the node draw order.
+    ImDrawList_grow_channels(g.canvas_draw_list, 1);
+}
+
+int draw_list_submission_idx_to_background_channel_idx(const int submission_idx)
+{
+    // NOTE: the first channel is the canvas background, i.e. the grid
+    return 1 + 2 * submission_idx;
+}
+
+int draw_list_submission_idx_to_foreground_channel_idx(const int submission_idx)
+{
+    return draw_list_submission_idx_to_background_channel_idx(submission_idx) + 1;
+}
+
+void draw_list_activate_click_interaction_channel()
+{
+    g.canvas_draw_list->_Splitter.SetCurrentChannel(
+        g.canvas_draw_list, g.canvas_draw_list->_Splitter._Count - 1);
+}
+
+void draw_list_activate_current_node_foreground()
+{
+    const int foreground_channel_idx =
+        draw_list_submission_idx_to_foreground_channel_idx(g.node_idx_submission_order.Size - 1);
+    g.canvas_draw_list->_Splitter.SetCurrentChannel(g.canvas_draw_list, foreground_channel_idx);
+}
+
+void draw_list_activate_node_background(const int node_idx)
+{
+    const int submission_idx =
+        g.node_idx_to_submission_idx.GetInt(static_cast<ImGuiID>(node_idx), -1);
+    assert(submission_idx != -1);
+    const int background_channel_idx =
+        draw_list_submission_idx_to_background_channel_idx(submission_idx);
+    g.canvas_draw_list->_Splitter.SetCurrentChannel(g.canvas_draw_list, background_channel_idx);
+}
+
+void draw_list_swap_submission_indices(const int lhs_idx, const int rhs_idx)
+{
+    assert(lhs_idx != rhs_idx);
+
+    const int lhs_foreground_channel_idx =
+        draw_list_submission_idx_to_foreground_channel_idx(lhs_idx);
+    const int lhs_background_channel_idx =
+        draw_list_submission_idx_to_background_channel_idx(lhs_idx);
+    const int rhs_foreground_channel_idx =
+        draw_list_submission_idx_to_foreground_channel_idx(rhs_idx);
+    const int rhs_background_channel_idx =
+        draw_list_submission_idx_to_background_channel_idx(rhs_idx);
+
+    ImDrawListSplitter_swap_channels(
+        g.canvas_draw_list->_Splitter, lhs_background_channel_idx, rhs_background_channel_idx);
+    ImDrawListSplitter_swap_channels(
+        g.canvas_draw_list->_Splitter, lhs_foreground_channel_idx, rhs_foreground_channel_idx);
+}
+
+void draw_list_sort_channels_by_depth(const ImVector<int>& node_idx_depth_order)
+{
+    if (g.node_idx_to_submission_idx.Data.Size < 2)
+    {
+        return;
+    }
+
+    // There is a discrepancy in the submitted node count! Did you call one of these functions
+    // * EditorContextMoveToNode
+    // * SetNodeScreenSpacePos
+    // * SetNodeGridSpacePos
+    // * SetNodeDraggable
+    // after all the BeginNode/EndNode function calls?
+    assert(node_idx_depth_order.Size == g.node_idx_submission_order.Size);
+
+    int start_idx = node_idx_depth_order.Size - 1;
+
+    while (node_idx_depth_order[start_idx] == g.node_idx_submission_order[start_idx])
+    {
+        if (--start_idx == 0)
+        {
+            // early out if submission order and depth order are the same
+            return;
+        }
+    }
+
+    // TODO: this is an O(N^2) algorithm. It might be worthwhile revisiting this to see if the time
+    // complexity can be reduced.
+
+    for (int depth_idx = start_idx; depth_idx > 0; --depth_idx)
+    {
+        const int node_idx = node_idx_depth_order[depth_idx];
+
+        // Find the current index of the node_idx in the submission order array
+        int submission_idx = -1;
+        for (int i = 0; i < g.node_idx_submission_order.Size; ++i)
+        {
+            if (g.node_idx_submission_order[i] == node_idx)
+            {
+                submission_idx = i;
+                break;
+            }
+        }
+        assert(submission_idx >= 0);
+
+        if (submission_idx == depth_idx)
+        {
+            continue;
+        }
+
+        for (int j = submission_idx; j < depth_idx; ++j)
+        {
+            draw_list_swap_submission_indices(j, j + 1);
+            ImSwap(g.node_idx_submission_order[j], g.node_idx_submission_order[j + 1]);
+        }
+    }
+}
+
+void draw_list_merge_channels()
+{
+    g.canvas_draw_list->ChannelsSetCurrent(0);
+    g.canvas_draw_list->ChannelsMerge();
+}
+
+// [SECTION] ObjectPool implementation
+
+template<typename T>
+int object_pool_find(ObjectPool<T>& objects, const int id)
+{
+    const int index = objects.id_map.GetInt(static_cast<ImGuiID>(id), -1);
+    return index;
+}
+
+template<typename T>
+void object_pool_update(ObjectPool<T>& objects)
+{
+    objects.free_list.clear();
+    for (int i = 0; i < objects.in_use.size(); ++i)
+    {
+        if (!objects.in_use[i])
+        {
+            objects.id_map.SetInt(objects.pool[i].id, -1);
+            objects.free_list.push_back(i);
+        }
+    }
+    // set all values to false
+    memset(objects.in_use.Data, 0, objects.in_use.size_in_bytes());
+}
+
+template<>
+void object_pool_update(ObjectPool<NodeData>& nodes)
+{
+    nodes.free_list.clear();
+    for (int i = 0; i < nodes.in_use.size(); ++i)
+    {
+        if (!nodes.in_use[i])
+        {
+            const int previous_id = nodes.pool[i].id;
+            const int previous_idx = nodes.id_map.GetInt(previous_id, -1);
+            if (previous_idx != -1)
+            {
+                // Remove node idx form depth stack the first time we detect that this idx slot is
+                // unused
+                ImVector<int>& depth_stack = editor_context_get().node_depth_order;
+                const int* const elem = depth_stack.find(i);
+                assert(elem != depth_stack.end());
+                depth_stack.erase(elem);
+            }
+
+            nodes.id_map.SetInt(previous_id, -1);
+            nodes.free_list.push_back(i);
+        }
+    }
+    // set all values to false
+    memset(nodes.in_use.Data, 0, nodes.in_use.size_in_bytes());
+}
+
+template<typename T>
+int object_pool_find_or_create_index(ObjectPool<T>& objects, const int id)
+{
+    int index = objects.id_map.GetInt(static_cast<ImGuiID>(id), -1);
+    if (index == -1)
+    {
+        if (objects.free_list.empty())
+        {
+            index = objects.pool.size();
+            objects.pool.push_back(T());
+            objects.in_use.push_back(true);
+        }
+        else
+        {
+            index = objects.free_list.back();
+            objects.free_list.pop_back();
+        }
+        objects.id_map.SetInt(static_cast<ImGuiID>(id), index);
+    }
+    objects.in_use[index] = true;
+    return index;
+}
+
+template<>
+int object_pool_find_or_create_index(ObjectPool<NodeData>& nodes, const int node_id)
+{
+    int node_idx = nodes.id_map.GetInt(static_cast<ImGuiID>(node_id), -1);
+    if (node_idx == -1)
+    {
+        if (nodes.free_list.empty())
+        {
+            node_idx = nodes.pool.size();
+            nodes.pool.push_back(NodeData());
+            nodes.in_use.push_back(true);
+        }
+        else
+        {
+            node_idx = nodes.free_list.back();
+            nodes.free_list.pop_back();
+        }
+        nodes.id_map.SetInt(static_cast<ImGuiID>(node_id), node_idx);
+
+        EditorContext& editor = editor_context_get();
+        editor.node_depth_order.push_back(node_idx);
+    }
+    nodes.in_use[node_idx] = true;
+
+    return node_idx;
+}
+
+template<typename T>
+T& object_pool_find_or_create_object(ObjectPool<T>& objects, const int id)
+{
+    const int index = object_pool_find_or_create_index(objects, id);
+    return objects.pool[index];
+}
+
 // [SECTION] ui state logic
 
 ImVec2 get_screen_space_pin_coordinates(
@@ -692,6 +997,13 @@ void begin_node_selection(EditorContext& editor, const int node_idx)
         editor.selected_node_indices.clear();
         editor.selected_link_indices.clear();
         editor.selected_node_indices.push_back(node_idx);
+
+        // Ensure that individually selected nodes get rendered on top
+        ImVector<int>& depth_stack = editor.node_depth_order;
+        const int* const elem = depth_stack.find(node_idx);
+        assert(elem != depth_stack.end());
+        depth_stack.erase(elem);
+        depth_stack.push_back(node_idx);
     }
 }
 
@@ -741,7 +1053,7 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
             const LinkData& link = editor.links.pool[link_idx];
             const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
             const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
-            const ImVec2& mouse_pos = ImGui::GetIO().MousePos;
+            const ImVec2& mouse_pos = g.mouse_pos;
             const float dist_to_start = ImLengthSqr(start_pin.pos - mouse_pos);
             const float dist_to_end = ImLengthSqr(end_pin.pos - mouse_pos);
             const int closest_pin_idx =
@@ -790,7 +1102,7 @@ void begin_canvas_interaction(EditorContext& editor)
 
     if (editor.click_interaction_type == ClickInteractionType_BoxSelection)
     {
-        editor.click_interaction_state.box_selector.rect.Min = ImGui::GetIO().MousePos;
+        editor.click_interaction_state.box_selector.rect.Min = g.mouse_pos;
     }
 }
 
@@ -932,7 +1244,7 @@ void click_interaction_update(EditorContext& editor)
     case ClickInteractionType_BoxSelection:
     {
         ImRect& box_rect = editor.click_interaction_state.box_selector.rect;
-        box_rect.Max = ImGui::GetIO().MousePos;
+        box_rect.Max = g.mouse_pos;
 
         box_selector_update_selection(editor, box_rect);
 
@@ -943,6 +1255,33 @@ void click_interaction_update(EditorContext& editor)
 
         if (g.left_mouse_released)
         {
+            ImVector<int>& depth_stack = editor.node_depth_order;
+            const ImVector<int>& selected_idxs = editor.selected_node_indices;
+
+            // Bump the selected node indices, in order, to the top of the depth stack.
+            // NOTE: this algorithm has worst case time complexity of O(N^2), if the node selection
+            // is ~ N (due to selected_idxs.contains()).
+
+            if ((selected_idxs.Size > 0) && (selected_idxs.Size < depth_stack.Size))
+            {
+                int num_moved = 0; // The number of indices moved. Stop after selected_idxs.Size
+                for (int i = 0; i < depth_stack.Size - selected_idxs.Size; ++i)
+                {
+                    for (int node_idx = depth_stack[i]; selected_idxs.contains(node_idx);
+                         node_idx = depth_stack[i])
+                    {
+                        depth_stack.erase(depth_stack.begin() + static_cast<size_t>(i));
+                        depth_stack.push_back(node_idx);
+                        ++num_moved;
+                    }
+
+                    if (num_moved == selected_idxs.Size)
+                    {
+                        break;
+                    }
+                }
+            }
+
             editor.click_interaction_type = ClickInteractionType_None;
         }
     }
@@ -1004,7 +1343,7 @@ void click_interaction_update(EditorContext& editor)
         const ImVec2 end_pos = should_snap
                                    ? get_screen_space_pin_coordinates(
                                          editor, editor.pins.pool[g.hovered_pin_idx.value()])
-                                   : ImGui::GetIO().MousePos;
+                                   : g.mouse_pos;
 
         const LinkBezierData link_data = get_link_renderable(
             start_pos, end_pos, start_pin.type, g.style.link_line_segments_per_length);
@@ -1078,6 +1417,34 @@ void click_interaction_update(EditorContext& editor)
     }
 }
 
+OptionalIndex resolve_hovered_node(const EditorContext& editor)
+{
+    if (g.node_indices_overlapping_with_mouse.Size == 0)
+    {
+        return OptionalIndex();
+    }
+
+    int largest_depth_idx = -1;
+    int node_idx_on_top = -1;
+
+    const ImVector<int>& depth_stack = editor.node_depth_order;
+    for (int i = 0; i < g.node_indices_overlapping_with_mouse.Size; ++i)
+    {
+        const int node_idx = g.node_indices_overlapping_with_mouse[i];
+        for (int depth_idx = 0; depth_idx < depth_stack.Size; ++depth_idx)
+        {
+            if (depth_stack[depth_idx] == node_idx && (depth_idx > largest_depth_idx))
+            {
+                largest_depth_idx = depth_idx;
+                node_idx_on_top = node_idx;
+            }
+        }
+    }
+
+    assert(node_idx_on_top != -1);
+    return OptionalIndex(node_idx_on_top);
+}
+
 // [SECTION] render helpers
 
 inline ImVec2 screen_space_to_grid_space(const ImVec2& v)
@@ -1106,7 +1473,6 @@ inline ImVec2 get_node_title_bar_origin(const NodeData& node)
 
 inline ImVec2 get_node_content_origin(const NodeData& node)
 {
-
     const ImVec2 title_bar_height =
         ImVec2(0.f, node.title_bar_content_rect.GetHeight() + 2.0f * node.layout_style.padding.y);
     return node.origin + title_bar_height + node.layout_style.padding;
@@ -1301,13 +1667,9 @@ void draw_node(EditorContext& editor, const int node_idx)
 {
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
-    // InvisibleButton's str_id can be left empty if we push our own
-    // id on the stack.
-    ImGui::PushID(node.id);
-    ImGui::InvisibleButton("", node.rect.GetSize());
-    ImGui::PopID();
 
-    const bool item_hovered = ImGui::IsItemHovered();
+    const bool item_hovered =
+        g.hovered_node_idx.has_value() && node_idx == g.hovered_node_idx.value();
 
     ImU32 node_background = node.color_style.background;
     ImU32 titlebar_background = node.color_style.titlebar;
@@ -1433,7 +1795,7 @@ void begin_pin_attribute(
 
     g.current_attribute_id = id;
 
-    const int pin_idx = editor.pins.find_or_create_index_for(id);
+    const int pin_idx = object_pool_find_or_create_index(editor.pins, id);
     g.current_pin_idx = pin_idx;
     PinData& pin = editor.pins.pool[pin_idx];
     pin.id = id;
@@ -1514,7 +1876,7 @@ void EditorContextResetPanning(const ImVec2& pos)
 void EditorContextMoveToNode(const int node_id)
 {
     EditorContext& editor = editor_context_get();
-    NodeData& node = editor.nodes.find_or_create_new(node_id);
+    NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
 
     editor.panning.x = -node.origin.x;
     editor.panning.y = -node.origin.y;
@@ -1637,8 +1999,11 @@ void BeginNodeEditor()
     g.deleted_link_idx.reset();
     g.snap_link_idx.reset();
 
+    g.node_indices_overlapping_with_mouse.clear();
+
     g.element_state_change = ElementStateChange_None;
 
+    g.mouse_pos = ImGui::GetIO().MousePos;
     g.left_mouse_clicked = ImGui::IsMouseClicked(0);
     g.left_mouse_released = ImGui::IsMouseReleased(0);
     g.middle_mouse_clicked = ImGui::IsMouseClicked(2);
@@ -1646,12 +2011,6 @@ void BeginNodeEditor()
     g.middle_mouse_dragging = ImGui::IsMouseDragging(2, 0.0f);
 
     g.active_attribute = false;
-
-    // reset ui content for the current editor
-    EditorContext& editor = editor_context_get();
-    editor.nodes.update();
-    editor.pins.update();
-    editor.links.update();
 
     ImGui::BeginGroup();
     {
@@ -1669,7 +2028,7 @@ void BeginNodeEditor()
         // NOTE: we have to fetch the canvas draw list *after* we call
         // BeginChild(), otherwise the ImGui UI elements are going to be
         // rendered into the parent window draw list.
-        g.canvas_draw_list = ImGui::GetWindowDrawList();
+        draw_list_set(ImGui::GetWindowDrawList());
 
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
@@ -1679,6 +2038,7 @@ void BeginNodeEditor()
 
             if (g.style.flags & StyleFlags_GridLines)
             {
+                EditorContext& editor = editor_context_get();
                 draw_grid(editor, canvas_size);
             }
         }
@@ -1692,6 +2052,45 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
+    // Resolve which node is actually on top and being hovered. This needs to be done before any of
+    // the nodes can be rendered.
+
+    g.hovered_node_idx = resolve_hovered_node(editor);
+
+    // Render the nodes and resolve which pin the mouse is hovering over. The hovered pin is needed
+    // for handling click interactions.
+
+    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
+    {
+        if (editor.nodes.in_use[node_idx])
+        {
+            draw_list_activate_node_background(node_idx);
+            draw_node(editor, node_idx);
+        }
+    }
+
+    // Render the click interaction UI elements (partial links, box selector) on top of everything
+    // else.
+
+    draw_list_append_click_interaction_channel();
+    draw_list_activate_click_interaction_channel();
+
+    if (g.left_mouse_clicked || g.middle_mouse_clicked)
+    {
+        begin_canvas_interaction(editor);
+    }
+
+    click_interaction_update(editor);
+
+    // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
+    // to detect unused node slots and remove those indices from the depth stack before sorting the
+    // node draw commands by depth.
+    object_pool_update(editor.nodes);
+    object_pool_update(editor.pins);
+
+    draw_list_sort_channels_by_depth(editor.node_depth_order);
+    draw_list_merge_channels();
+
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
     {
         if (editor.links.in_use[link_idx])
@@ -1700,12 +2099,8 @@ void EndNodeEditor()
         }
     }
 
-    if (g.left_mouse_clicked || g.middle_mouse_clicked)
-    {
-        begin_canvas_interaction(editor);
-    }
-
-    click_interaction_update(editor);
+    // After the links have been rendered, the link pool can be updated as well.
+    object_pool_update(editor.links);
 
     // pop style
     ImGui::EndChild();      // end scrolling region
@@ -1729,7 +2124,7 @@ void BeginNode(const int node_id)
 
     EditorContext& editor = editor_context_get();
 
-    const int node_idx = editor.nodes.find_or_create_index_for(node_id);
+    const int node_idx = object_pool_find_or_create_index(editor.nodes, node_id);
     g.current_node_idx = node_idx;
 
     NodeData& node = editor.nodes.pool[node_idx];
@@ -1750,8 +2145,8 @@ void BeginNode(const int node_id)
     // ImGui::SetCursorScreenPos to set the screen space coordinates directly.
     ImGui::SetCursorPos(grid_space_to_editor_space(get_node_title_bar_origin(node)));
 
-    g.canvas_draw_list->ChannelsSplit(Channels_Count);
-    g.canvas_draw_list->ChannelsSetCurrent(Channels_ImGui);
+    draw_list_add_node(node_idx);
+    draw_list_activate_current_node_foreground();
 
     ImGui::PushID(node.id);
     ImGui::BeginGroup();
@@ -1767,21 +2162,21 @@ void EndNode()
     // The node's rectangle depends on the ImGui UI group size.
     ImGui::EndGroup();
     ImGui::PopID();
-    {
-        NodeData& node = editor.nodes.pool[g.current_node_idx];
-        node.rect = get_item_rect();
-        node.rect.Expand(node.layout_style.padding);
-    }
 
-    g.canvas_draw_list->ChannelsSetCurrent(Channels_NodeBackground);
-    draw_node(editor, g.current_node_idx);
-    g.canvas_draw_list->ChannelsMerge();
+    NodeData& node = editor.nodes.pool[g.current_node_idx];
+    node.rect = get_item_rect();
+    node.rect.Expand(node.layout_style.padding);
+
+    if (node.rect.Contains(g.mouse_pos))
+    {
+        g.node_indices_overlapping_with_mouse.push_back(g.current_node_idx);
+    }
 }
 
 ImVec2 GetNodeDimensions(int node_id)
 {
     EditorContext& editor = editor_context_get();
-    const int node_idx = editor.nodes.find(node_id);
+    const int node_idx = object_pool_find(editor.nodes, node_id);
     assert(node_idx != -1); // invalid node_id
     const NodeData& node = editor.nodes.pool[node_idx];
     return node.rect.GetSize();
@@ -1898,10 +2293,10 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
     assert(g.current_scope == Scope_Editor);
 
     EditorContext& editor = editor_context_get();
-    LinkData& link = editor.links.find_or_create_new(id);
+    LinkData& link = object_pool_find_or_create_object(editor.links, id);
     link.id = id;
-    link.start_pin_idx = editor.pins.find_or_create_index_for(start_attr_id);
-    link.end_pin_idx = editor.pins.find_or_create_index_for(end_attr_id);
+    link.start_pin_idx = object_pool_find_or_create_index(editor.pins, start_attr_id);
+    link.end_pin_idx = object_pool_find_or_create_index(editor.pins, end_attr_id);
     link.color_style.base = g.style.colors[ColorStyle_Link];
     link.color_style.hovered = g.style.colors[ColorStyle_LinkHovered];
     link.color_style.selected = g.style.colors[ColorStyle_LinkSelected];
@@ -1914,7 +2309,7 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
         (editor.click_interaction_state.link_creation.start_pin_idx == link.end_pin_idx &&
          editor.click_interaction_state.link_creation.end_pin_idx == link.start_pin_idx))
     {
-        g.snap_link_idx = editor.links.find_or_create_index_for(id);
+        g.snap_link_idx = object_pool_find_or_create_index(editor.links, id);
     }
 }
 
@@ -1982,7 +2377,7 @@ void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos)
     // Remember to call Initialize() before using any other functions!
     assert(initialized);
     EditorContext& editor = editor_context_get();
-    NodeData& node = editor.nodes.find_or_create_new(node_id);
+    NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
     node.origin = screen_space_to_grid_space(screen_space_pos);
 }
 
@@ -1991,7 +2386,7 @@ void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos)
     // Remember to call Initialize() before using any other functions!
     assert(initialized);
     EditorContext& editor = editor_context_get();
-    NodeData& node = editor.nodes.find_or_create_new(node_id);
+    NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
     node.origin = grid_pos;
 }
 
@@ -1999,7 +2394,7 @@ void SetNodeDraggable(int node_id, const bool draggable)
 {
     assert(initialized);
     EditorContext& editor = editor_context_get();
-    NodeData& node = editor.nodes.find_or_create_new(node_id);
+    NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
     node.draggable = draggable;
 }
 
@@ -2206,7 +2601,7 @@ void node_line_handler(EditorContext& editor, const char* line)
     int x, y;
     if (sscanf(line, "[node.%i", &id) == 1)
     {
-        const int node_idx = editor.nodes.find_or_create_index_for(id);
+        const int node_idx = object_pool_find_or_create_index(editor.nodes, id);
         g.current_node_idx = node_idx;
         NodeData& node = editor.nodes.pool[node_idx];
         node.id = id;

@@ -41,6 +41,14 @@ void show_editor(const char* editor_name, Editor& editor)
 
     imnodes::BeginNodeEditor();
 
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+        imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A))
+    {
+        const int node_id = ++editor.current_id;
+        imnodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
+        editor.nodes.push_back(Node(node_id, 0.f));
+    }
+
     for (Node& node : editor.nodes)
     {
         imnodes::BeginNode(node.id);
@@ -71,14 +79,6 @@ void show_editor(const char* editor_name, Editor& editor)
     for (const Link& link : editor.links)
     {
         imnodes::Link(link.id, link.start_attr, link.end_attr);
-    }
-
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-        imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A))
-    {
-        const int node_id = ++editor.current_id;
-        imnodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
-        editor.nodes.push_back(Node(node_id, 0.f));
     }
 
     imnodes::EndNodeEditor();
