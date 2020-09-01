@@ -862,8 +862,6 @@ void object_pool_update(ObjectPool<T>& objects)
             objects.free_list.push_back(i);
         }
     }
-    // set all values to false
-    memset(objects.in_use.Data, 0, objects.in_use.size_in_bytes());
 }
 
 template<>
@@ -890,8 +888,15 @@ void object_pool_update(ObjectPool<NodeData>& nodes)
             nodes.free_list.push_back(i);
         }
     }
-    // set all values to false
-    memset(nodes.in_use.Data, 0, nodes.in_use.size_in_bytes());
+}
+
+template<typename T>
+void object_pool_reset(ObjectPool<T>& objects)
+{
+    if (!objects.in_use.empty())
+    {
+        memset(objects.in_use.Data, 0, objects.in_use.size_in_bytes());
+    }
 }
 
 template<typename T>
@@ -1991,6 +1996,11 @@ void BeginNodeEditor()
     g.current_scope = Scope_Editor;
 
     // Reset state from previous pass
+
+    EditorContext& editor = editor_context_get();
+    object_pool_reset(editor.nodes);
+    object_pool_reset(editor.pins);
+    object_pool_reset(editor.links);
 
     g.hovered_node_idx.reset();
     g.hovered_link_idx.reset();
