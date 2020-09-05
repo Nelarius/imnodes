@@ -2048,7 +2048,6 @@ void BeginNodeEditor()
 
             if (g.style.flags & StyleFlags_GridLines)
             {
-                EditorContext& editor = editor_context_get();
                 draw_grid(editor, canvas_size);
             }
         }
