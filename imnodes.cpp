@@ -642,7 +642,18 @@ void ImDrawList_grow_channels(ImDrawList* draw_list, const int num_channels)
     {
         ImDrawChannel& channel = splitter._Channels[i];
 
-        IM_PLACEMENT_NEW(&channel) ImDrawChannel();
+        // If we're inside the old capacity region of the array, we need to reuse the existing
+        // memory of the command and index buffers.
+        if (i < old_channel_capacity)
+        {
+            channel._CmdBuffer.resize(0);
+            channel._IdxBuffer.resize(0);
+        }
+        // Else, we need to construct new draw channels.
+        else
+        {
+            IM_PLACEMENT_NEW(&channel) ImDrawChannel();
+        }
 
         {
             ImDrawCmd draw_cmd;
