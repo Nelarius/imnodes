@@ -763,6 +763,13 @@ void draw_list_activate_node_background(const int node_idx)
 {
     const int submission_idx =
         g.node_idx_to_submission_idx.GetInt(static_cast<ImGuiID>(node_idx), -1);
+    // There is a discrepancy in the submitted node count and the rendered node count! Did you call
+    // one of the following functions
+    // * EditorContextMoveToNode
+    // * SetNodeScreenSpacePos
+    // * SetNodeGridSpacePos
+    // * SetNodeDraggable
+    // after the BeginNode/EndNode function calls?
     assert(submission_idx != -1);
     const int background_channel_idx =
         draw_list_submission_idx_to_background_channel_idx(submission_idx);
@@ -795,12 +802,6 @@ void draw_list_sort_channels_by_depth(const ImVector<int>& node_idx_depth_order)
         return;
     }
 
-    // There is a discrepancy in the submitted node count! Did you call one of these functions
-    // * EditorContextMoveToNode
-    // * SetNodeScreenSpacePos
-    // * SetNodeGridSpacePos
-    // * SetNodeDraggable
-    // after all the BeginNode/EndNode function calls?
     assert(node_idx_depth_order.Size == g.node_idx_submission_order.Size);
 
     int start_idx = node_idx_depth_order.Size - 1;
