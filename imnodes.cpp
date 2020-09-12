@@ -34,8 +34,6 @@ namespace imnodes
 {
 namespace
 {
-bool initialized = false;
-
 enum ScopeFlags
 {
     Scope_None = 1,
@@ -331,6 +329,7 @@ struct
 
 EditorContext& editor_context_get()
 {
+    // No editor context was set! Did you forget to call imnodes::Initialize?
     assert(g.editor_ctx != NULL);
     return *g.editor_ctx;
 }
@@ -1901,11 +1900,6 @@ void EditorContextMoveToNode(const int node_id)
 
 void Initialize()
 {
-    assert(initialized == false);
-    initialized = true;
-
-    g.default_editor_ctx = NULL;
-    g.editor_ctx = NULL;
     g.canvas_origin_screen_space = ImVec2(0.0f, 0.0f);
     g.canvas_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
     g.current_scope = Scope_None;
@@ -1925,7 +1919,12 @@ void Initialize()
     StyleColorsDark();
 }
 
-void Shutdown() { EditorContextFree(g.default_editor_ctx); }
+void Shutdown()
+{
+    EditorContextFree(g.default_editor_ctx);
+    g.editor_ctx = NULL;
+    g.default_editor_ctx = NULL;
+}
 
 IO& GetIO() { return g.io; }
 
@@ -2002,8 +2001,6 @@ void StyleColorsLight()
 
 void BeginNodeEditor()
 {
-    // Remember to call Initialize() before calling BeginNodeEditor()
-    assert(initialized);
     assert(g.current_scope == Scope_None);
     g.current_scope = Scope_Editor;
 
@@ -2336,8 +2333,6 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
 
 void PushColorStyle(ColorStyle item, unsigned int color)
 {
-    // Remember to call Initialize() before using any other functions!
-    assert(initialized);
     g.color_modifier_stack.push_back(ColorStyleElement(g.style.colors[item], item));
     g.style.colors[item] = color;
 }
@@ -2395,8 +2390,6 @@ void PopStyleVar()
 
 void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos)
 {
-    // Remember to call Initialize() before using any other functions!
-    assert(initialized);
     EditorContext& editor = editor_context_get();
     NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
     node.origin = screen_space_to_grid_space(screen_space_pos);
@@ -2404,8 +2397,6 @@ void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos)
 
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos)
 {
-    // Remember to call Initialize() before using any other functions!
-    assert(initialized);
     EditorContext& editor = editor_context_get();
     NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
     node.origin = grid_pos;
@@ -2413,7 +2404,6 @@ void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos)
 
 void SetNodeDraggable(int node_id, const bool draggable)
 {
-    assert(initialized);
     EditorContext& editor = editor_context_get();
     NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
     node.draggable = draggable;
