@@ -2262,34 +2262,6 @@ void EndStaticAttribute()
     }
 }
 
-void EndAttribute()
-{
-    assert(g.current_scope == Scope_Attribute);
-    g.current_scope = Scope_Node;
-
-    ImGui::PopID();
-    ImGui::EndGroup();
-
-    if (ImGui::IsItemActive())
-    {
-        g.active_attribute = true;
-        g.active_attribute_id = g.current_attribute_id;
-    }
-
-    EditorContext& editor = editor_context_get();
-
-    // This is a terrible hack to accommodate this function to be used with
-    // BeginStaticAttribute:
-    if (g.current_pin_idx < editor.pins.pool.size() &&
-        editor.pins.pool[g.current_pin_idx].id == g.current_attribute_id)
-    {
-        PinData& pin = editor.pins.pool[g.current_pin_idx];
-        NodeData& node = editor.nodes.pool[g.current_node_idx];
-        pin.attribute_rect = get_item_rect();
-        node.pin_indices.push_back(g.current_pin_idx);
-    }
-}
-
 void PushAttributeFlag(AttributeFlags flag)
 {
     g.current_attribute_flags |= static_cast<int>(flag);
