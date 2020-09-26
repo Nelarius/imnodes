@@ -303,6 +303,7 @@ struct
     int current_attribute_id;
 
     OptionalIndex hovered_node_idx;
+    OptionalIndex interactive_node_idx;
     OptionalIndex hovered_link_idx;
     OptionalIndex hovered_pin_idx;
     int hovered_pin_flags;
@@ -1684,7 +1685,7 @@ void draw_node(EditorContext& editor, const int node_idx)
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
 
-    const bool item_hovered =
+    const bool node_hovered =
         g.hovered_node_idx.has_value() && node_idx == g.hovered_node_idx.value();
 
     ImU32 node_background = node.color_style.background;
@@ -1695,7 +1696,7 @@ void draw_node(EditorContext& editor, const int node_idx)
         node_background = node.color_style.background_selected;
         titlebar_background = node.color_style.titlebar_selected;
     }
-    else if (item_hovered)
+    else if (node_hovered)
     {
         node_background = node.color_style.background_hovered;
         titlebar_background = node.color_style.titlebar_hovered;
@@ -1734,10 +1735,11 @@ void draw_node(EditorContext& editor, const int node_idx)
         draw_pin(editor, node.pin_indices[i], g.left_mouse_clicked);
     }
 
-    if (item_hovered)
+    if (node_hovered)
     {
         g.hovered_node_idx = node_idx;
-        if (g.left_mouse_clicked)
+        const bool node_ui_interaction = g.interactive_node_idx == node_idx;
+        if (g.left_mouse_clicked && !node_ui_interaction)
         {
             begin_node_selection(editor, node_idx);
         }
@@ -1835,6 +1837,7 @@ void end_pin_attribute()
     {
         g.active_attribute = true;
         g.active_attribute_id = g.current_attribute_id;
+        g.interactive_node_idx = g.current_node_idx;
     }
 
     EditorContext& editor = editor_context_get();
@@ -2012,6 +2015,7 @@ void BeginNodeEditor()
     object_pool_reset(editor.links);
 
     g.hovered_node_idx.reset();
+    g.interactive_node_idx.reset();
     g.hovered_link_idx.reset();
     g.hovered_pin_idx.reset();
     g.hovered_pin_flags = AttributeFlags_None;
@@ -2259,6 +2263,7 @@ void EndStaticAttribute()
     {
         g.active_attribute = true;
         g.active_attribute_id = g.current_attribute_id;
+        g.interactive_node_idx = g.current_node_idx;
     }
 }
 
