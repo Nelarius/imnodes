@@ -847,12 +847,6 @@ void draw_list_sort_channels_by_depth(const ImVector<int>& node_idx_depth_order)
     }
 }
 
-void draw_list_merge_channels()
-{
-    g.canvas_draw_list->ChannelsSetCurrent(0);
-    g.canvas_draw_list->ChannelsMerge();
-}
-
 // [SECTION] ObjectPool implementation
 
 template<typename T>
@@ -1746,6 +1740,18 @@ void draw_node(EditorContext& editor, const int node_idx)
     }
 }
 
+bool is_link_hovered(const LinkBezierData& link_data)
+{
+    // We render nodes on top of links. In order to prevent link interaction when a node is on top
+    // of a link, we just early out here if a node is hovered.
+    if (g.hovered_node_idx.has_value())
+    {
+        return false;
+    }
+
+    return is_mouse_hovering_near_link(link_data.bezier, link_data.num_segments);
+}
+
 void draw_link(EditorContext& editor, const int link_idx)
 {
     const LinkData& link = editor.links.pool[link_idx];
@@ -1755,8 +1761,8 @@ void draw_link(EditorContext& editor, const int link_idx)
     const LinkBezierData link_data = get_link_renderable(
         start_pin.pos, end_pin.pos, start_pin.type, g.style.link_line_segments_per_length);
 
-    const bool is_hovered = is_mouse_hovering_near_link(link_data.bezier, link_data.num_segments);
-    if (is_hovered)
+    const bool link_hovered = is_link_hovered(link_data);
+    if (link_hovered)
     {
         g.hovered_link_idx = link_idx;
         if (g.left_mouse_clicked)
@@ -1780,7 +1786,7 @@ void draw_link(EditorContext& editor, const int link_idx)
     {
         link_color = link.color_style.selected;
     }
-    else if (is_hovered)
+    else if (link_hovered)
     {
         link_color = link.color_style.hovered;
     }
@@ -2111,7 +2117,10 @@ void EndNodeEditor()
     object_pool_update(editor.pins);
 
     draw_list_sort_channels_by_depth(editor.node_depth_order);
-    draw_list_merge_channels();
+
+    // In order to render the links underneath the nodes, we want to first select the bottom draw
+    // channel.
+    g.canvas_draw_list->ChannelsSetCurrent(0);
 
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
     {
@@ -2123,6 +2132,9 @@ void EndNodeEditor()
 
     // After the links have been rendered, the link pool can be updated as well.
     object_pool_update(editor.links);
+
+    // Finally, merge the draw channels
+    g.canvas_draw_list->ChannelsMerge();
 
     // pop style
     ImGui::EndChild();      // end scrolling region
