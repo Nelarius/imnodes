@@ -2644,7 +2644,7 @@ bool IsLinkCreated(
             *started_at_pin_id = end_pin.id;
             *started_at_node_id = end_node.id;
             *ended_at_pin_id = start_pin.id;
-            *ended_at_node_id = start_pin.id;
+            *ended_at_node_id = start_node.id;
         }
 
         if (created_from_snap)
