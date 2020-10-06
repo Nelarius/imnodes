@@ -245,6 +245,10 @@ int NumSelectedLinks();
 void GetSelectedNodes(int* node_ids);
 void GetSelectedLinks(int* link_ids);
 
+// Clears the list of selected nodes/links. Useful if you want to delete a selected node or link.
+void ClearNodeSelection();
+void ClearLinkSelection();
+
 // Was the previous attribute active? This will continuously return true while the left mouse button
 // is being pressed over the UI content of the attribute.
 bool IsAttributeActive();

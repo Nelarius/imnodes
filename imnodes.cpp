@@ -2483,6 +2483,18 @@ void GetSelectedLinks(int* link_ids)
     }
 }
 
+void ClearNodeSelection()
+{
+    EditorContext& editor = editor_context_get();
+    editor.selected_node_indices.clear();
+}
+
+void ClearLinkSelection()
+{
+    EditorContext& editor = editor_context_get();
+    editor.selected_link_indices.clear();
+}
+
 bool IsAttributeActive()
 {
     assert((g.current_scope & Scope_Node) != 0);
