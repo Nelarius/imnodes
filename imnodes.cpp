@@ -136,8 +136,8 @@ struct NodeData
     ImVector<int> pin_indices;
     bool draggable;
 
-    NodeData()
-        : id(0), origin(100.0f, 100.0f), title_bar_content_rect(),
+    NodeData(const int node_id)
+        : id(node_id), origin(100.0f, 100.0f), title_bar_content_rect(),
           rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(), layout_style(),
           pin_indices(), draggable(true)
     {
@@ -937,7 +937,7 @@ int object_pool_find_or_create_index(ObjectPool<NodeData>& nodes, const int node
         if (nodes.free_list.empty())
         {
             node_idx = nodes.pool.size();
-            nodes.pool.push_back(NodeData());
+            nodes.pool.push_back(NodeData(node_id));
             nodes.in_use.push_back(true);
         }
         else
@@ -2162,7 +2162,6 @@ void BeginNode(const int node_id)
     g.current_node_idx = node_idx;
 
     NodeData& node = editor.nodes.pool[node_idx];
-    node.id = node_id;
     node.color_style.background = g.style.colors[ColorStyle_NodeBackground];
     node.color_style.background_hovered = g.style.colors[ColorStyle_NodeBackgroundHovered];
     node.color_style.background_selected = g.style.colors[ColorStyle_NodeBackgroundSelected];
