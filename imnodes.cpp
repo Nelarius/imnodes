@@ -159,8 +159,8 @@ struct PinData
         ImU32 background, hovered;
     } color_style;
 
-    PinData()
-        : id(), parent_node_idx(), attribute_rect(), type(AttributeType_None),
+    PinData(const int pin_id)
+        : id(pin_id), parent_node_idx(), attribute_rect(), type(AttributeType_None),
           shape(PinShape_CircleFilled), pos(), flags(AttributeFlags_None), color_style()
     {
     }
@@ -176,7 +176,7 @@ struct LinkData
         ImU32 base, hovered, selected;
     } color_style;
 
-    LinkData() : id(), start_pin_idx(), end_pin_idx(), color_style() {}
+    LinkData(const int link_id) : id(link_id), start_pin_idx(), end_pin_idx(), color_style() {}
 };
 
 struct LinkPredicate
@@ -914,7 +914,7 @@ int object_pool_find_or_create_index(ObjectPool<T>& objects, const int id)
         if (objects.free_list.empty())
         {
             index = objects.pool.size();
-            objects.pool.push_back(T());
+            objects.pool.push_back(T(id));
             objects.in_use.push_back(true);
         }
         else
@@ -1202,7 +1202,7 @@ OptionalIndex find_duplicate_link(
     const int start_pin_idx,
     const int end_pin_idx)
 {
-    LinkData test_link;
+    LinkData test_link(0);
     test_link.start_pin_idx = start_pin_idx;
     test_link.end_pin_idx = end_pin_idx;
     for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
