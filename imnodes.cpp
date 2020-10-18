@@ -1458,27 +1458,23 @@ OptionalIndex resolve_hovered_node(const EditorContext& editor)
 
 // [SECTION] render helpers
 
-inline ImVec2 screen_space_to_grid_space(const ImVec2& v)
+inline ImVec2 screen_space_to_grid_space(const EditorContext& editor, const ImVec2& v)
 {
-    const EditorContext& editor = editor_context_get();
     return v - g.canvas_origin_screen_space - editor.panning;
 }
 
-inline ImVec2 grid_space_to_screen_space(const ImVec2& v)
+inline ImVec2 grid_space_to_screen_space(const EditorContext& editor, const ImVec2& v)
 {
-    const EditorContext& editor = editor_context_get();
     return v + g.canvas_origin_screen_space + editor.panning;
 }
 
-inline ImVec2 grid_space_to_editor_space(const ImVec2& v)
+inline ImVec2 grid_space_to_editor_space(const EditorContext& editor, const ImVec2& v)
 {
-    const EditorContext& editor = editor_context_get();
     return v + editor.panning;
 }
 
-inline ImVec2 editor_space_to_grid_space(const ImVec2& v)
+inline ImVec2 editor_space_to_grid_space(const EditorContext& editor, const ImVec2& v)
 {
-    const EditorContext& editor = editor_context_get();
     return v - editor.panning;
 }
 
@@ -2188,7 +2184,7 @@ void BeginNode(const int node_id)
     // ImGui::SetCursorPos sets the cursor position, local to the current widget
     // (in this case, the child object started in BeginNodeEditor). Use
     // ImGui::SetCursorScreenPos to set the screen space coordinates directly.
-    ImGui::SetCursorPos(grid_space_to_editor_space(get_node_title_bar_origin(node)));
+    ImGui::SetCursorPos(grid_space_to_editor_space(editor, get_node_title_bar_origin(node)));
 
     draw_list_add_node(node_idx);
     draw_list_activate_current_node_foreground();
@@ -2244,7 +2240,7 @@ void EndNodeTitleBar()
 
     ImGui::ItemAdd(get_node_title_rect(node), ImGui::GetID("title_bar"));
 
-    ImGui::SetCursorPos(grid_space_to_editor_space(get_node_content_origin(node)));
+    ImGui::SetCursorPos(grid_space_to_editor_space(editor, get_node_content_origin(node)));
 }
 
 void BeginInputAttribute(const int id, const PinShape shape)
@@ -2392,14 +2388,14 @@ void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos)
 {
     EditorContext& editor = editor_context_get();
     NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
-    node.origin = screen_space_to_grid_space(screen_space_pos);
+    node.origin = screen_space_to_grid_space(editor, screen_space_pos);
 }
 
 void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos)
 {
     EditorContext& editor = editor_context_get();
     NodeData& node = object_pool_find_or_create_object(editor.nodes, node_id);
-    node.origin = editor_space_to_grid_space(editor_space_pos);
+    node.origin = editor_space_to_grid_space(editor, editor_space_pos);
 }
 
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos)
@@ -2422,7 +2418,7 @@ ImVec2 GetNodeScreenSpacePos(const int node_id)
     const int node_idx = object_pool_find(editor.nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.nodes.pool[node_idx];
-    return grid_space_to_screen_space(node.origin);
+    return grid_space_to_screen_space(editor, node.origin);
 }
 
 ImVec2 GetNodeEditorSpacePos(const int node_id)
@@ -2431,7 +2427,7 @@ ImVec2 GetNodeEditorSpacePos(const int node_id)
     const int node_idx = object_pool_find(editor.nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.nodes.pool[node_idx];
-    return grid_space_to_editor_space(node.origin);
+    return grid_space_to_editor_space(editor, node.origin);
 }
 
 ImVec2 GetNodeGridSpacePos(int node_id)
