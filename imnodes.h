@@ -225,6 +225,11 @@ void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 // Enable or disable the ability to click and drag a specific node.
 void SetNodeDraggable(int node_id, const bool draggable);
 
+// Use the following  two functions to query a node's position. Use after calling BeginNode for the
+// corresponding node at least once.
+ImVec2 GetNodeGridSpacePos(const int node_id);
+ImVec2 GetNodeScreenSpacePos(const int node_id);
+
 // Returns true if the current node editor canvas is being hovered over by the mouse, and is not
 // blocked by any other windows.
 bool IsEditorHovered();
@@ -268,6 +273,13 @@ bool IsLinkCreated(
     int* started_at_attribute_id,
     int* ended_at_attribute_id,
     bool* created_from_snap = 0);
+bool IsLinkCreated(
+    int* started_at_node_id,
+    int* started_at_attribute_id,
+    int* ended_at_node_id,
+    int* ended_at_attribute_id,
+    bool* created_from_snap = 0);
+
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
 // output argument link_id.
 bool IsLinkDestroyed(int* link_id);

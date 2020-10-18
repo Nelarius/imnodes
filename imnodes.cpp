@@ -2397,6 +2397,24 @@ void SetNodeDraggable(int node_id, const bool draggable)
     node.draggable = draggable;
 }
 
+ImVec2 GetNodeGridSpacePos(int node_id)
+{
+    EditorContext& editor = editor_context_get();
+    const int node_idx = object_pool_find(editor.nodes, node_id);
+    assert(node_idx != -1);
+    NodeData& node = editor.nodes.pool[node_idx];
+    return node.origin;
+}
+
+ImVec2 GetNodeScreenSpacePos(const int node_id)
+{
+    EditorContext& editor = editor_context_get();
+    const int node_idx = object_pool_find(editor.nodes, node_id);
+    assert(node_idx != -1);
+    NodeData& node = editor.nodes.pool[node_idx];
+    return grid_space_to_editor_space(node.origin);
+}
+
 bool IsEditorHovered()
 {
     return g.canvas_rect_screen_space.Contains(ImGui::GetMousePos()) && ImGui::IsWindowHovered();
@@ -2565,8 +2583,68 @@ bool IsLinkCreated(
         const EditorContext& editor = editor_context_get();
         const int start_idx = editor.click_interaction_state.link_creation.start_pin_idx;
         const int end_idx = editor.click_interaction_state.link_creation.end_pin_idx.value();
-        *started_at_pin_id = editor.pins.pool[start_idx].id;
-        *ended_at_pin_id = editor.pins.pool[end_idx].id;
+        const PinData& start_pin = editor.pins.pool[start_idx];
+        const PinData& end_pin = editor.pins.pool[end_idx];
+
+        if (start_pin.type == AttributeType_Output)
+        {
+            *started_at_pin_id = start_pin.id;
+            *ended_at_pin_id = end_pin.id;
+        }
+        else
+        {
+            *started_at_pin_id = end_pin.id;
+            *ended_at_pin_id = start_pin.id;
+        }
+
+        if (created_from_snap)
+        {
+            *created_from_snap = editor.click_interaction_type == ClickInteractionType_LinkCreation;
+        }
+    }
+
+    return is_created;
+}
+
+bool IsLinkCreated(
+    int* started_at_node_id,
+    int* started_at_pin_id,
+    int* ended_at_node_id,
+    int* ended_at_pin_id,
+    bool* created_from_snap)
+{
+    assert(g.current_scope == Scope_None);
+    assert(started_at_node_id != NULL);
+    assert(started_at_pin_id != NULL);
+    assert(ended_at_node_id != NULL);
+    assert(ended_at_pin_id != NULL);
+
+    const bool is_created = (g.element_state_change & ElementStateChange_LinkCreated) != 0;
+
+    if (is_created)
+    {
+        const EditorContext& editor = editor_context_get();
+        const int start_idx = editor.click_interaction_state.link_creation.start_pin_idx;
+        const int end_idx = editor.click_interaction_state.link_creation.end_pin_idx.value();
+        const PinData& start_pin = editor.pins.pool[start_idx];
+        const NodeData& start_node = editor.nodes.pool[start_pin.parent_node_idx];
+        const PinData& end_pin = editor.pins.pool[end_idx];
+        const NodeData& end_node = editor.nodes.pool[end_pin.parent_node_idx];
+
+        if (start_pin.type == AttributeType_Output)
+        {
+            *started_at_pin_id = start_pin.id;
+            *started_at_node_id = start_node.id;
+            *ended_at_pin_id = end_pin.id;
+            *ended_at_node_id = end_node.id;
+        }
+        else
+        {
+            *started_at_pin_id = end_pin.id;
+            *started_at_node_id = end_node.id;
+            *ended_at_pin_id = start_pin.id;
+            *ended_at_node_id = start_node.id;
+        }
 
         if (created_from_snap)
         {
