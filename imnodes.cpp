@@ -1464,6 +1464,12 @@ inline ImVec2 screen_space_to_grid_space(const ImVec2& v)
     return v - g.canvas_origin_screen_space - editor.panning;
 }
 
+inline ImVec2 grid_space_to_screen_space(const ImVec2& v)
+{
+    const EditorContext& editor = editor_context_get();
+    return v + g.canvas_origin_screen_space + editor.panning;
+}
+
 inline ImVec2 grid_space_to_editor_space(const ImVec2& v)
 {
     const EditorContext& editor = editor_context_get();
@@ -2412,7 +2418,7 @@ ImVec2 GetNodeScreenSpacePos(const int node_id)
     const int node_idx = object_pool_find(editor.nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.nodes.pool[node_idx];
-    return grid_space_to_editor_space(node.origin);
+    return grid_space_to_screen_space(node.origin);
 }
 
 bool IsEditorHovered()
