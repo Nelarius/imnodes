@@ -221,14 +221,16 @@ void Link(int id, int start_attribute_id, int end_attribute_id);
 // BeginNode().
 
 void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
+void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 // Enable or disable the ability to click and drag a specific node.
 void SetNodeDraggable(int node_id, const bool draggable);
 
 // Use the following  two functions to query a node's position. Use after calling BeginNode for the
 // corresponding node at least once.
-ImVec2 GetNodeGridSpacePos(const int node_id);
 ImVec2 GetNodeScreenSpacePos(const int node_id);
+ImVec2 GetNodeEditorSpacePos(const int node_id);
+ImVec2 GetNodeGridSpacePos(const int node_id);
 
 // Returns true if the current node editor canvas is being hovered over by the mouse, and is not
 // blocked by any other windows.
