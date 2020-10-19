@@ -256,7 +256,7 @@ void GetSelectedLinks(int* link_ids);
 // is being pressed over the UI content of the attribute.
 bool IsAttributeActive();
 // Was any attribute active? If so, sets the active attribute id to the output function argument.
-bool IsAnyAttributeActive(int* attribute_id = 0);
+bool IsAnyAttributeActive(int* attribute_id = NULL);
 
 // Use the following functions to query a change of state for an existing link, or new link. Call
 // these after EndNodeEditor().
@@ -269,18 +269,18 @@ bool IsLinkStarted(int* started_at_attribute_id);
 // 2) an existing link which is detached from a pin and then dropped
 // Use the including_detached_links flag to control whether this function triggers when the user
 // detaches a link and drops it.
-bool IsLinkDropped(int* started_at_attribute_id = 0, bool including_detached_links = true);
+bool IsLinkDropped(int* started_at_attribute_id = NULL, bool including_detached_links = true);
 // Did the user finish creating a new link?
 bool IsLinkCreated(
     int* started_at_attribute_id,
     int* ended_at_attribute_id,
-    bool* created_from_snap = 0);
+    bool* created_from_snap = NULL);
 bool IsLinkCreated(
     int* started_at_node_id,
     int* started_at_attribute_id,
     int* ended_at_node_id,
     int* ended_at_attribute_id,
-    bool* created_from_snap = 0);
+    bool* created_from_snap = NULL);
 
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
 // output argument link_id.
