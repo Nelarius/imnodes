@@ -455,73 +455,51 @@ inline int sign(float val) { return int(val > 0.0f) - int(val < 0.0f); }
 
 inline bool rectangle_overlaps_line_segment(const ImRect& rect, const ImVec2& p1, const ImVec2& p2)
 {
-    if (rect.Contains(p1) && rect.Contains(p2))
+    // Trivial case: rectangle contains an endpoint
+    if (rect.Contains(p1) || rect.Contains(p2))
     {
         return true;
     }
 
-    bool line_intersects_square = false;
+    // Flip rectangle if necessary
+    ImRect flip_rect = rect;
 
-    // First, test to see if the four corners are on different sides of the line
-    // going through p1 and p2.
-
+    if (flip_rect.Min.x > flip_rect.Max.x)
     {
-        const int corner_signs[4] = {
-            sign(eval_implicit_line_eq(p1, p2, rect.Min)),
-            sign(eval_implicit_line_eq(p1, p2, ImVec2(rect.Max.x, rect.Min.y))),
-            sign(eval_implicit_line_eq(p1, p2, ImVec2(rect.Min.x, rect.Max.y))),
-            sign(eval_implicit_line_eq(p1, p2, rect.Max))};
-
-        for (int i = 0, iprev = 3; i < 4; ++i, iprev = (iprev + 1) % 4)
-        {
-            const int s = corner_signs[i];
-            const int s_prev = corner_signs[iprev];
-
-            if (s == 0)
-            {
-                break;
-            }
-
-            // If the sign changes at any point, then the point is on another
-            // side of the line than the previous point, and we know that there
-            // is a possible intersection.
-
-            if (s != s_prev)
-            {
-                line_intersects_square = true;
-                break;
-            }
-        }
+        ImSwap(flip_rect.Min.x, flip_rect.Max.x);
     }
 
-    // See if the projections of the line segment and square overlap.
-    if (line_intersects_square)
+    if (flip_rect.Min.y > flip_rect.Max.y)
     {
-        ImRect proj_rect = rect;
-        if (proj_rect.Min.x > proj_rect.Max.x)
-        {
-            ImSwap(proj_rect.Min.x, proj_rect.Max.x);
-        }
-
-        if (proj_rect.Min.y > proj_rect.Max.y)
-        {
-            ImSwap(proj_rect.Min.y, proj_rect.Max.y);
-        }
-
-        if ((p1.x > proj_rect.Min.x && p1.x < proj_rect.Max.x) &&
-            (p1.y > proj_rect.Min.y && p1.y < proj_rect.Max.y))
-        {
-            return true;
-        }
-
-        if ((p2.x > proj_rect.Min.x && p2.x < proj_rect.Max.x) &&
-            (p2.y > proj_rect.Min.y && p2.y < proj_rect.Max.y))
-        {
-            return true;
-        }
+        ImSwap(flip_rect.Min.y, flip_rect.Max.y);
     }
 
-    return false;
+    // Trivial case: line segment lies to one particular side of rectangle
+    if ((p1.x < flip_rect.Min.x && p2.x < flip_rect.Min.x) ||
+        (p1.x > flip_rect.Max.x && p2.x > flip_rect.Max.x) ||
+        (p1.y < flip_rect.Min.y && p2.y < flip_rect.Min.y) ||
+        (p1.y > flip_rect.Max.y && p2.y > flip_rect.Max.y))
+    {
+        return false;
+    }
+
+    const int corner_signs[4] = {
+        sign(eval_implicit_line_eq(p1, p2, flip_rect.Min)),
+        sign(eval_implicit_line_eq(p1, p2, ImVec2(flip_rect.Max.x, flip_rect.Min.y))),
+        sign(eval_implicit_line_eq(p1, p2, ImVec2(flip_rect.Min.x, flip_rect.Max.y))),
+        sign(eval_implicit_line_eq(p1, p2, flip_rect.Max))};
+
+    int sum = 0;
+    int sum_abs = 0;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        sum += corner_signs[i];
+        sum_abs += abs(corner_signs[i]);
+    }
+
+    // At least one corner of rectangle lies on a different side of line segment
+    return abs(sum) != sum_abs;
 }
 
 inline bool rectangle_overlaps_bezier(const ImRect& rectangle, const LinkBezierData& link_data)
