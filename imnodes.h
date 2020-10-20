@@ -221,9 +221,16 @@ void Link(int id, int start_attribute_id, int end_attribute_id);
 // BeginNode().
 
 void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
+void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 // Enable or disable the ability to click and drag a specific node.
 void SetNodeDraggable(int node_id, const bool draggable);
+
+// Use the following  two functions to query a node's position. Use after calling BeginNode for the
+// corresponding node at least once.
+ImVec2 GetNodeScreenSpacePos(const int node_id);
+ImVec2 GetNodeEditorSpacePos(const int node_id);
+ImVec2 GetNodeGridSpacePos(const int node_id);
 
 // Returns true if the current node editor canvas is being hovered over by the mouse, and is not
 // blocked by any other windows.
@@ -253,7 +260,7 @@ void ClearLinkSelection();
 // is being pressed over the UI content of the attribute.
 bool IsAttributeActive();
 // Was any attribute active? If so, sets the active attribute id to the output function argument.
-bool IsAnyAttributeActive(int* attribute_id = 0);
+bool IsAnyAttributeActive(int* attribute_id = NULL);
 
 // Use the following functions to query a change of state for an existing link, or new link. Call
 // these after EndNodeEditor().
@@ -266,12 +273,19 @@ bool IsLinkStarted(int* started_at_attribute_id);
 // 2) an existing link which is detached from a pin and then dropped
 // Use the including_detached_links flag to control whether this function triggers when the user
 // detaches a link and drops it.
-bool IsLinkDropped(int* started_at_attribute_id = 0, bool including_detached_links = true);
+bool IsLinkDropped(int* started_at_attribute_id = NULL, bool including_detached_links = true);
 // Did the user finish creating a new link?
 bool IsLinkCreated(
     int* started_at_attribute_id,
     int* ended_at_attribute_id,
-    bool* created_from_snap = 0);
+    bool* created_from_snap = NULL);
+bool IsLinkCreated(
+    int* started_at_node_id,
+    int* started_at_attribute_id,
+    int* ended_at_node_id,
+    int* ended_at_attribute_id,
+    bool* created_from_snap = NULL);
+
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
 // output argument link_id.
 bool IsLinkDestroyed(int* link_id);
