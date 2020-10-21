@@ -2170,6 +2170,7 @@ void BeginNode(const int node_id)
     g.current_node_idx = node_idx;
 
     NodeData& node = editor.nodes.pool[node_idx];
+    node.id = node_id;
     node.color_style.background = g.style.colors[ColorStyle_NodeBackground];
     node.color_style.background_hovered = g.style.colors[ColorStyle_NodeBackgroundHovered];
     node.color_style.background_selected = g.style.colors[ColorStyle_NodeBackgroundSelected];
