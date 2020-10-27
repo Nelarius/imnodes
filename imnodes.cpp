@@ -1376,10 +1376,9 @@ void click_interaction_update(EditorContext& editor)
             editor.click_interaction_state.link_creation.end_pin_idx.reset();
         }
 
-        const bool create_link = should_snap && !maybe_duplicate_link_idx.has_value() &&
-                                 (g.left_mouse_released || link_creation_on_snap);
+        const bool create_link = should_snap && (g.left_mouse_released || link_creation_on_snap);
 
-        if (create_link)
+        if (create_link && !maybe_duplicate_link_idx.has_value())
         {
             // Avoid send OnLinkCreated() events every frame if the snap link is not saved
             // (only applies for EnableLinkCreationOnSnap)
