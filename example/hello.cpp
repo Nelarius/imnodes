@@ -2,10 +2,6 @@
 #include <imnodes.h>
 #include <imgui.h>
 
-#include <SDL_keycode.h>
-#include <unordered_map>
-#include <utility>
-
 namespace example
 {
 namespace
