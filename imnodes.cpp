@@ -944,13 +944,16 @@ int object_pool_find_or_create_index(ObjectPool<NodeData>& nodes, const int node
         {
             node_idx = nodes.free_list.back();
             nodes.free_list.pop_back();
+            nodes.pool[node_idx].id = node_id;
+            nodes.in_use[node_idx] = true;
         }
         nodes.id_map.SetInt(static_cast<ImGuiID>(node_id), node_idx);
 
         EditorContext& editor = editor_context_get();
         editor.node_depth_order.push_back(node_idx);
+    } else {
+        nodes.in_use[node_idx] = true;
     }
-    nodes.in_use[node_idx] = true;
 
     return node_idx;
 }
