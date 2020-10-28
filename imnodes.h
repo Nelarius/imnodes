@@ -32,7 +32,17 @@ enum StyleVar
     StyleVar_GridSpacing = 0,
     StyleVar_NodeCornerRounding,
     StyleVar_NodePaddingHorizontal,
-    StyleVar_NodePaddingVertical
+    StyleVar_NodePaddingVertical,
+    StyleVar_NodeBorderThickness,
+    StyleVar_LinkThickness,
+    StyleVar_LinkLineSegmentsPerLength,
+    StyleVar_LinkHoverDistance,
+    StyleVar_PinCircleRadius,
+    StyleVar_PinQuadSideLength,
+    StyleVar_PinTriangleSideLength,
+    StyleVar_PinLineThickness,
+    StyleVar_PinHoverRadius,
+    StyleVar_PinOffset
 };
 
 enum StyleFlags
@@ -105,6 +115,7 @@ struct Style
     float node_corner_rounding;
     float node_padding_horizontal;
     float node_padding_vertical;
+    float node_border_thickness;
 
     float link_thickness;
     float link_line_segments_per_length;

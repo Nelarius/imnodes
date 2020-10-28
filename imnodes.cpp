@@ -131,6 +131,7 @@ struct NodeData
     {
         float corner_rounding;
         ImVec2 padding;
+        float border_thickness;
     } layout_style;
 
     ImVector<int> pin_indices;
@@ -1726,7 +1727,9 @@ void draw_node(EditorContext& editor, const int node_idx)
                 node.rect.Min,
                 node.rect.Max,
                 node.color_style.outline,
-                node.layout_style.corner_rounding);
+                node.layout_style.corner_rounding,
+                ImDrawCornerFlags_All,
+                node.layout_style.border_thickness);
         }
     }
 
@@ -1870,10 +1873,11 @@ IO::IO() : emulate_three_button_mouse(), link_detach_with_modifier_click() {}
 
 Style::Style()
     : grid_spacing(32.f), node_corner_rounding(4.f), node_padding_horizontal(8.f),
-      node_padding_vertical(8.f), link_thickness(3.f), link_line_segments_per_length(0.1f),
-      link_hover_distance(10.f), pin_circle_radius(4.f), pin_quad_side_length(7.f),
-      pin_triangle_side_length(9.5), pin_line_thickness(1.f), pin_hover_radius(10.f),
-      pin_offset(0.f), flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), colors()
+      node_padding_vertical(8.f), node_border_thickness(1.f), link_thickness(3.f),
+      link_line_segments_per_length(0.1f), link_hover_distance(10.f), pin_circle_radius(4.f),
+      pin_quad_side_length(7.f), pin_triangle_side_length(9.5), pin_line_thickness(1.f),
+      pin_hover_radius(10.f), pin_offset(0.f),
+      flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), colors()
 {
 }
 
@@ -2172,6 +2176,7 @@ void BeginNode(const int node_id)
     node.layout_style.corner_rounding = g.style.node_corner_rounding;
     node.layout_style.padding =
         ImVec2(g.style.node_padding_horizontal, g.style.node_padding_vertical);
+    node.layout_style.border_thickness = g.style.node_border_thickness;
 
     // ImGui::SetCursorPos sets the cursor position, local to the current widget
     // (in this case, the child object started in BeginNodeEditor). Use
@@ -2352,6 +2357,36 @@ float& lookup_style_var(const StyleVar item)
         break;
     case StyleVar_NodePaddingVertical:
         style_var = &g.style.node_padding_vertical;
+        break;
+    case StyleVar_NodeBorderThickness:
+        style_var = &g.style.node_border_thickness;
+        break;
+    case StyleVar_LinkThickness:
+        style_var = &g.style.link_thickness;
+        break;
+    case StyleVar_LinkLineSegmentsPerLength:
+        style_var = &g.style.link_line_segments_per_length;
+        break;
+    case StyleVar_LinkHoverDistance:
+        style_var = &g.style.link_hover_distance;
+        break;
+    case StyleVar_PinCircleRadius:
+        style_var = &g.style.pin_circle_radius;
+        break;
+    case StyleVar_PinQuadSideLength:
+        style_var = &g.style.pin_quad_side_length;
+        break;
+    case StyleVar_PinTriangleSideLength:
+        style_var = &g.style.pin_triangle_side_length;
+        break;
+    case StyleVar_PinLineThickness:
+        style_var = &g.style.pin_line_thickness;
+        break;
+    case StyleVar_PinHoverRadius:
+        style_var = &g.style.pin_hover_radius;
+        break;
+    case StyleVar_PinOffset:
+        style_var = &g.style.pin_offset;
         break;
     default:
         assert(!"Invalid StyleVar value!");
