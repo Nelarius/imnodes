@@ -216,18 +216,22 @@ void PopAttributeFlag();
 // calls. The order of start_attr and end_attr doesn't make a difference for rendering the link.
 void Link(int id, int start_attribute_id, int end_attribute_id);
 
-// Set's the node's position corresponding to the node id, either using screen space coordinates, or
-// node editor grid coordinates. You can even set the position before the node has been created with
-// BeginNode().
+// Enable or disable the ability to click and drag a specific node.
+void SetNodeDraggable(int node_id, const bool draggable);
+
+// The node's position can be expressed in three coordinate systems:
+// * screen space coordinates, -- the origin is the upper left corner of the window.
+// * editor space coordinates -- the origin is the upper left corner of the node editor window
+// * grid space coordinates, -- the origin is the upper left corner of the node editor window,
+// translated by the current editor panning vector (see EditorContextGetPanning() and
+// EditorContextResetPanning())
+
+// Use the following functions to get and set the node's coordinates in these coordinate systems.
 
 void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
 void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
-// Enable or disable the ability to click and drag a specific node.
-void SetNodeDraggable(int node_id, const bool draggable);
 
-// Use the following  two functions to query a node's position. Use after calling BeginNode for the
-// corresponding node at least once.
 ImVec2 GetNodeScreenSpacePos(const int node_id);
 ImVec2 GetNodeEditorSpacePos(const int node_id);
 ImVec2 GetNodeGridSpacePos(const int node_id);
