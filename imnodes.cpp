@@ -844,6 +844,7 @@ void object_pool_update(ObjectPool<T>& objects)
         {
             objects.id_map.SetInt(objects.pool[i].id, -1);
             objects.free_list.push_back(i);
+            (objects.pool.Data + i)->~T();
         }
     }
 }
@@ -854,7 +855,11 @@ void object_pool_update(ObjectPool<NodeData>& nodes)
     nodes.free_list.clear();
     for (int i = 0; i < nodes.in_use.size(); ++i)
     {
-        if (!nodes.in_use[i])
+        if (nodes.in_use[i])
+        {
+            nodes.pool[i].pin_indices.clear();
+        }
+        else
         {
             const int previous_id = nodes.pool[i].id;
             const int previous_idx = nodes.id_map.GetInt(previous_id, -1);
@@ -870,6 +875,7 @@ void object_pool_update(ObjectPool<NodeData>& nodes)
 
             nodes.id_map.SetInt(previous_id, -1);
             nodes.free_list.push_back(i);
+            (nodes.pool.Data + i)->~NodeData();
         }
     }
 }
@@ -898,6 +904,7 @@ int object_pool_find_or_create_index(ObjectPool<T>& objects, const int id)
         else
         {
             index = objects.free_list.back();
+            IM_PLACEMENT_NEW(objects.pool.Data + index) T(id);
             objects.free_list.pop_back();
         }
         objects.id_map.SetInt(static_cast<ImGuiID>(id), index);
@@ -921,6 +928,7 @@ int object_pool_find_or_create_index(ObjectPool<NodeData>& nodes, const int node
         else
         {
             node_idx = nodes.free_list.back();
+            IM_PLACEMENT_NEW(nodes.pool.Data + node_idx) NodeData(node_id);
             nodes.free_list.pop_back();
         }
         nodes.id_map.SetInt(static_cast<ImGuiID>(node_id), node_idx);
@@ -929,7 +937,6 @@ int object_pool_find_or_create_index(ObjectPool<NodeData>& nodes, const int node
         editor.node_depth_order.push_back(node_idx);
     }
     nodes.in_use[node_idx] = true;
-
     return node_idx;
 }
 
@@ -2127,12 +2134,6 @@ void EndNodeEditor()
     ImGui::PopStyleVar();   // pop window padding
     ImGui::PopStyleVar();   // pop frame padding
     ImGui::EndGroup();
-
-    for (int idx = 0; idx < editor.nodes.pool.size(); idx++)
-    {
-        NodeData& node = editor.nodes.pool[idx];
-        node.pin_indices.clear();
-    }
 }
 
 void BeginNode(const int node_id)
@@ -2147,7 +2148,6 @@ void BeginNode(const int node_id)
     g.current_node_idx = node_idx;
 
     NodeData& node = editor.nodes.pool[node_idx];
-    node.id = node_id;
     node.color_style.background = g.style.colors[ColorStyle_NodeBackground];
     node.color_style.background_hovered = g.style.colors[ColorStyle_NodeBackgroundHovered];
     node.color_style.background_selected = g.style.colors[ColorStyle_NodeBackgroundSelected];
