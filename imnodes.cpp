@@ -893,23 +893,30 @@ template<typename T>
 int object_pool_find_or_create_index(ObjectPool<T>& objects, const int id)
 {
     int index = objects.id_map.GetInt(static_cast<ImGuiID>(id), -1);
+
+    // Construct new object
     if (index == -1)
     {
         if (objects.free_list.empty())
         {
             index = objects.pool.size();
-            objects.pool.push_back(T(id));
-            objects.in_use.push_back(true);
+            IM_ASSERT(objects.pool.size() == objects.in_use.size());
+            const int new_size = objects.pool.size() + 1;
+            objects.pool.resize(new_size);
+            objects.in_use.resize(new_size);
         }
         else
         {
             index = objects.free_list.back();
-            IM_PLACEMENT_NEW(objects.pool.Data + index) T(id);
             objects.free_list.pop_back();
         }
+        IM_PLACEMENT_NEW(objects.pool.Data + index) T(id);
         objects.id_map.SetInt(static_cast<ImGuiID>(id), index);
     }
+
+    // Flag it as used
     objects.in_use[index] = true;
+
     return index;
 }
 
@@ -917,26 +924,33 @@ template<>
 int object_pool_find_or_create_index(ObjectPool<NodeData>& nodes, const int node_id)
 {
     int node_idx = nodes.id_map.GetInt(static_cast<ImGuiID>(node_id), -1);
+
+    // Construct new node
     if (node_idx == -1)
     {
         if (nodes.free_list.empty())
         {
             node_idx = nodes.pool.size();
-            nodes.pool.push_back(NodeData(node_id));
-            nodes.in_use.push_back(true);
+            IM_ASSERT(nodes.pool.size() == nodes.in_use.size());
+            const int new_size = nodes.pool.size() + 1;
+            nodes.pool.resize(new_size);
+            nodes.in_use.resize(new_size);
         }
         else
         {
             node_idx = nodes.free_list.back();
-            IM_PLACEMENT_NEW(nodes.pool.Data + node_idx) NodeData(node_id);
             nodes.free_list.pop_back();
         }
+        IM_PLACEMENT_NEW(nodes.pool.Data + node_idx) NodeData(node_id);
         nodes.id_map.SetInt(static_cast<ImGuiID>(node_id), node_idx);
 
         EditorContext& editor = editor_context_get();
         editor.node_depth_order.push_back(node_idx);
     }
+
+    // Flag node as used
     nodes.in_use[node_idx] = true;
+
     return node_idx;
 }
 
