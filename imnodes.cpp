@@ -1102,7 +1102,8 @@ void begin_canvas_interaction(EditorContext& editor)
 
     const bool mouse_not_in_canvas = !mouse_in_canvas();
 
-    if (any_ui_element_hovered || mouse_not_in_canvas)
+    if (editor.click_interaction_type != ClickInteractionType_None || any_ui_element_hovered ||
+        mouse_not_in_canvas)
     {
         return;
     }
@@ -1112,13 +1113,13 @@ void begin_canvas_interaction(EditorContext& editor)
             ? (g.left_mouse_clicked && *g.io.emulate_three_button_mouse.modifier)
             : g.middle_mouse_clicked;
 
-    editor.click_interaction_type = started_panning
-                                        ? ClickInteractionType_Panning
-                                        : g.left_mouse_clicked ? ClickInteractionType_BoxSelection
-                                                               : editor.click_interaction_type;
-
-    if (editor.click_interaction_type == ClickInteractionType_BoxSelection)
+    if (started_panning)
     {
+        editor.click_interaction_type = ClickInteractionType_Panning;
+    }
+    else if (g.left_mouse_clicked)
+    {
+        editor.click_interaction_type = ClickInteractionType_BoxSelection;
         editor.click_interaction_state.box_selector.rect.Min = g.mouse_pos;
     }
 }
@@ -1694,14 +1695,13 @@ void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_cl
 }
 
 // TODO: Separate hover code from drawing code to avoid this unpleasant divergent function signature.
-bool is_node_hovered(EditorContext& editor, const int node_idx)
+bool is_node_hovered(const NodeData& node, const int node_idx, const ObjectPool<PinData> pins)
 {
     // We render pins on top of nodes. In order to prevent node interaction when a pin is on top of
     // a node, we just early out here if a pin is hovered.
-    const NodeData& node = editor.nodes.pool[node_idx];
     for (int i = 0; i < node.pin_indices.size(); ++i)
     {
-        PinData& pin = editor.pins.pool[node.pin_indices[i]];
+        const PinData& pin = pins.pool[node.pin_indices[i]];
         if (is_pin_hovered(pin))
         {
             return false;
@@ -1719,7 +1719,7 @@ void draw_node(EditorContext& editor, const int node_idx)
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
 
-    const bool node_hovered = is_node_hovered(editor, node_idx) && mouse_in_canvas() &&
+    const bool node_hovered = is_node_hovered(node, node_idx, editor.pins) && mouse_in_canvas() &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     ImU32 node_background = node.color_style.background;
