@@ -46,6 +46,14 @@ public:
 
         imnodes::BeginNodeEditor();
 
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A))
+        {
+            const int node_id = ++current_id_;
+            imnodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
+            nodes_.push_back(Node(node_id, 0.f));
+        }
+
         for (Node& node : nodes_)
         {
             imnodes::BeginNode(node.id);
@@ -76,14 +84,6 @@ public:
         for (const Link& link : links_)
         {
             imnodes::Link(link.id, link.start_attr, link.end_attr);
-        }
-
-        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-            imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A))
-        {
-            const int node_id = ++current_id_;
-            imnodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
-            nodes_.push_back(Node(node_id, 0.f));
         }
 
         imnodes::EndNodeEditor();
