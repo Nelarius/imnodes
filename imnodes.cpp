@@ -137,8 +137,8 @@ struct NodeData
     ImVector<int> pin_indices;
     bool draggable;
 
-    NodeData(const int node_id)
-        : id(node_id), origin(100.0f, 100.0f), title_bar_content_rect(),
+    NodeData(const int node_id, const float grid_spacing)
+        : id(node_id), origin(grid_spacing, grid_spacing), title_bar_content_rect(),
           rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(), layout_style(),
           pin_indices(), draggable(true)
     {
@@ -942,7 +942,7 @@ int object_pool_find_or_create_index(ObjectPool<NodeData>& nodes, const int node
             node_idx = nodes.free_list.back();
             nodes.free_list.pop_back();
         }
-        IM_PLACEMENT_NEW(nodes.pool.Data + node_idx) NodeData(node_id);
+        IM_PLACEMENT_NEW(nodes.pool.Data + node_idx) NodeData(node_id, g.style.grid_spacing);
         nodes.id_map.SetInt(static_cast<ImGuiID>(node_id), node_idx);
 
         EditorContext& editor = editor_context_get();
@@ -1187,9 +1187,19 @@ void box_selector_update_selection(EditorContext& editor, ImRect box_rect)
     }
 }
 
+void snap_node_to_grid(NodeData &node, float increment)
+{
+    const ImVec2 origin = node.origin;
+
+    float modx = fmodf(fabsf(origin.x) + increment/2.0f, increment) - increment / 2.0f;
+    float mody = fmodf(fabsf(origin.y) + increment/2.0f, increment) - increment / 2.0f;
+    node.origin.x += (origin.x < 0.0) ? modx : -modx;
+    node.origin.y += (origin.y < 0.0) ? mody : -mody;
+}
+
 void translate_selected_nodes(EditorContext& editor)
 {
-    if (g.left_mouse_dragging)
+    if (g.left_mouse_dragging || g.left_mouse_released)
     {
         const ImGuiIO& io = ImGui::GetIO();
         for (int i = 0; i < editor.selected_node_indices.size(); ++i)
@@ -1199,6 +1209,8 @@ void translate_selected_nodes(EditorContext& editor)
             if (node.draggable)
             {
                 node.origin += io.MouseDelta;
+                if (g.left_mouse_released && (g.style.flags & StyleFlags_GridSnapping))
+                    snap_node_to_grid(node, g.style.grid_spacing);
             }
         }
     }
@@ -1517,6 +1529,7 @@ inline ImRect get_node_title_rect(const NodeData& node)
 void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
 {
     const ImVec2 offset = editor.panning;
+    const bool drawPrimary = g.style.flags & StyleFlags_GridLinesPrimary;
 
     for (float x = fmodf(offset.x, g.style.grid_spacing); x < canvas_size.x;
          x += g.style.grid_spacing)
@@ -1524,7 +1537,7 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
         g.canvas_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(x, 0.0f)),
             editor_space_to_screen_space(ImVec2(x, canvas_size.y)),
-            g.style.colors[ColorStyle_GridLine]);
+            offset.x - x == 0.f && drawPrimary ? g.style.colors[ColorStyle_GridLinePrimary] : g.style.colors[ColorStyle_GridLine]);
     }
 
     for (float y = fmodf(offset.y, g.style.grid_spacing); y < canvas_size.y;
@@ -1533,7 +1546,7 @@ void draw_grid(EditorContext& editor, const ImVec2& canvas_size)
         g.canvas_draw_list->AddLine(
             editor_space_to_screen_space(ImVec2(0.0f, y)),
             editor_space_to_screen_space(ImVec2(canvas_size.x, y)),
-            g.style.colors[ColorStyle_GridLine]);
+            offset.y - y == 0.f && drawPrimary ? g.style.colors[ColorStyle_GridLinePrimary] : g.style.colors[ColorStyle_GridLine]);
     }
 }
 
@@ -1911,7 +1924,8 @@ Style::Style()
       link_line_segments_per_length(0.1f), link_hover_distance(10.f), pin_circle_radius(4.f),
       pin_quad_side_length(7.f), pin_triangle_side_length(9.5), pin_line_thickness(1.f),
       pin_hover_radius(10.f), pin_offset(0.f),
-      flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), colors()
+      flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines | StyleFlags_GridSnapping)),
+      colors()
 {
 }
 
@@ -2006,6 +2020,7 @@ void StyleColorsDark()
 
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g.style.colors[ColorStyle_GridLinePrimary] = IM_COL32(200, 200, 200, 80);
 }
 
 void StyleColorsClassic()
@@ -2026,6 +2041,7 @@ void StyleColorsClassic()
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g.style.colors[ColorStyle_GridLinePrimary] = IM_COL32(200, 200, 200, 80);
 }
 
 void StyleColorsLight()
@@ -2049,7 +2065,7 @@ void StyleColorsLight()
     g.style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
     g.style.colors[ColorStyle_GridBackground] = IM_COL32(225, 225, 225, 255);
     g.style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 100);
-    g.style.flags = StyleFlags(StyleFlags_None);
+    g.style.colors[ColorStyle_GridLinePrimary] = IM_COL32(140, 140, 140, 120);
 }
 
 void BeginNodeEditor()

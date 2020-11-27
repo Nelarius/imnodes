@@ -24,6 +24,7 @@ enum ColorStyle
     ColorStyle_BoxSelectorOutline,
     ColorStyle_GridBackground,
     ColorStyle_GridLine,
+    ColorStyle_GridLinePrimary,
     ColorStyle_Count
 };
 
@@ -49,7 +50,9 @@ enum StyleFlags
 {
     StyleFlags_None = 0,
     StyleFlags_NodeOutline = 1 << 0,
-    StyleFlags_GridLines = 1 << 2
+    StyleFlags_GridLines = 1 << 2,
+    StyleFlags_GridLinesPrimary = 1 << 3,
+    StyleFlags_GridSnapping = 1 << 4
 };
 
 // This enum controls the way attribute pins look.
