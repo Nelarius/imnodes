@@ -11,10 +11,6 @@
 #error "Minimum ImGui version requirement not met -- please use a newer version!"
 #endif
 
-#ifndef IMNODES_API
-#define IMNODES_API
-#endif
-
 struct ImVec2;
 
 namespace imnodes
