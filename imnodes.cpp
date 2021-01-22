@@ -1365,7 +1365,11 @@ void click_interaction_update(EditorContext& editor)
 
         const LinkBezierData link_data = get_link_renderable(
             start_pos, end_pos, start_pin.type, g.style.link_line_segments_per_length);
+#if IMGUI_VERSION_NUM < 18000
         g.canvas_draw_list->AddBezierCurve(
+#else
+        g.canvas_draw_list->AddBezierCubic(
+#endif
             link_data.bezier.p0,
             link_data.bezier.p1,
             link_data.bezier.p2,
@@ -1834,7 +1838,11 @@ void draw_link(EditorContext& editor, const int link_idx)
         link_color = link.color_style.hovered;
     }
 
-    g.canvas_draw_list->AddBezierCurve(
+#if IMGUI_VERSION_NUM < 18000
+        g.canvas_draw_list->AddBezierCurve(
+#else
+        g.canvas_draw_list->AddBezierCubic(
+#endif
         link_data.bezier.p0,
         link_data.bezier.p1,
         link_data.bezier.p2,
