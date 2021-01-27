@@ -143,6 +143,8 @@ struct NodeData
           pin_indices(), draggable(true)
     {
     }
+
+    ~NodeData() { id = INT_MIN; }
 };
 
 struct PinData
@@ -864,8 +866,10 @@ void object_pool_update(ObjectPool<NodeData>& nodes)
         {
             const int previous_id = nodes.pool[i].id;
             const int previous_idx = nodes.id_map.GetInt(previous_id, -1);
+
             if (previous_idx != -1)
             {
+                assert(previous_idx == i);
                 // Remove node idx form depth stack the first time we detect that this idx slot is
                 // unused
                 ImVector<int>& depth_stack = editor_context_get().node_depth_order;
