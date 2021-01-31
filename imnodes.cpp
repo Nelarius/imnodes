@@ -985,12 +985,6 @@ ImVec2 get_screen_space_pin_coordinates(const EditorContext& editor, const PinDa
     return get_screen_space_pin_coordinates(parent_node_rect, pin.attribute_rect, pin.type);
 }
 
-// These functions are here, and not members of the BoxSelector struct, because
-// implementing a C API in C++ is frustrating. EditorContext has a BoxSelector
-// field, but the state changes depend on the editor. So, these are implemented
-// as C-style free functions so that the code is not too much of a mish-mash of
-// C functions and C++ method definitions.
-
 bool mouse_in_canvas()
 {
     return g.canvas_rect_screen_space.Contains(ImGui::GetMousePos()) && ImGui::IsWindowHovered();
