@@ -342,12 +342,6 @@ EditorContext& editor_context_get()
     return *g.editor_ctx;
 }
 
-inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
-{
-    ImVec2 delta = g.mouse_pos - point;
-    return (delta.x * delta.x + delta.y * delta.y) < (radius * radius);
-}
-
 inline ImVec2 eval_bezier(float t, const BezierCurve& bezier)
 {
     // B(t) = (1-t)**3 p0 + 3(1 - t)**2 t P1 + 3(1-t)t**2 P2 + t**3 P3
@@ -1444,6 +1438,38 @@ void click_interaction_update(EditorContext& editor)
     }
 }
 
+OptionalIndex resolve_hovered_pin(const EditorContext& editor)
+{
+    if (!mouse_in_canvas())
+        return OptionalIndex();
+
+    // TODO occluded pins not accounted for here
+
+    float smallest_distance = FLT_MAX;
+    OptionalIndex pin_idx_with_smallest_distance;
+
+    for (int idx = 0; idx < editor.pins.pool.Size; ++idx)
+    {
+        if (!editor.pins.in_use[idx])
+        {
+            continue;
+        }
+
+        const ImVec2& pin_pos = editor.pins.pool[idx].pos;
+        const float distance_sqr = ImLengthSqr(pin_pos - g.mouse_pos);
+
+        // TODO: g.style.pin_hover_radius needs to be copied into pin data and the pin-local value
+        // used here. This is no longer called in BeginAttribute/EndAttribute scope.
+        if (distance_sqr < g.style.pin_hover_radius && distance_sqr < smallest_distance)
+        {
+            smallest_distance = distance_sqr;
+            pin_idx_with_smallest_distance = idx;
+        }
+    }
+
+    return pin_idx_with_smallest_distance;
+}
+
 OptionalIndex resolve_hovered_node(const EditorContext& editor)
 {
     if (g.node_indices_overlapping_with_mouse.Size == 0)
@@ -1671,11 +1697,6 @@ void draw_pin_shape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_c
     }
 }
 
-bool is_pin_hovered(const PinData& pin)
-{
-    return is_mouse_hovering_near_point(pin.pos, g.style.pin_hover_radius);
-}
-
 void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
 {
     PinData& pin = editor.pins.pool[pin_idx];
@@ -1685,7 +1706,7 @@ void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_cl
 
     ImU32 pin_color = pin.color_style.background;
 
-    const bool pin_hovered = is_pin_hovered(pin) && mouse_in_canvas() &&
+    const bool pin_hovered = g.hovered_pin_idx == pin_idx &&
                              editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     if (pin_hovered)
@@ -1705,18 +1726,12 @@ void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_cl
 
 // TODO: Separate hover code from drawing code to avoid this unpleasant divergent function
 // signature.
-bool is_node_hovered(const NodeData& node, const int node_idx, const ObjectPool<PinData> pins)
+bool is_node_hovered(const int node_idx)
 {
     // We render pins on top of nodes. In order to prevent node interaction when a pin is on top of
     // a node, we just early out here if a pin is hovered.
-    for (int i = 0; i < node.pin_indices.size(); ++i)
-    {
-        const PinData& pin = pins.pool[node.pin_indices[i]];
-        if (is_pin_hovered(pin))
-        {
-            return false;
-        }
-    }
+    if (g.hovered_pin_idx.has_value())
+        return false;
 
     return g.hovered_node_idx.has_value() && node_idx == g.hovered_node_idx.value();
 }
@@ -1729,7 +1744,7 @@ void draw_node(EditorContext& editor, const int node_idx)
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
 
-    const bool node_hovered = is_node_hovered(node, node_idx, editor.pins) && mouse_in_canvas() &&
+    const bool node_hovered = is_node_hovered(node_idx) && mouse_in_canvas() &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     ImU32 node_background = node.color_style.background;
@@ -2139,10 +2154,15 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
+    // TODO: this needs the occluded pin information.
+    g.hovered_pin_idx = resolve_hovered_pin(editor);
+
     // Resolve which node is actually on top and being hovered. This needs to be done before any of
     // the nodes can be rendered.
 
     g.hovered_node_idx = resolve_hovered_node(editor);
+
+    // TODO: Resolve which links are being hovered over. Only one link should be resolved.
 
     // Render the nodes and resolve which pin the mouse is hovering over. The hovered pin is needed
     // for handling click interactions.
