@@ -1420,9 +1420,6 @@ void click_interaction_update(EditorContext& editor)
 
 OptionalIndex resolve_hovered_pin(const EditorContext& editor)
 {
-    if (!mouse_in_canvas())
-        return OptionalIndex();
-
     // TODO occluded pins not accounted for here
 
     float smallest_distance = FLT_MAX;
@@ -1482,9 +1479,6 @@ OptionalIndex resolve_hovered_node(const EditorContext& editor)
 
 OptionalIndex resolve_hovered_link(const EditorContext& editor)
 {
-    if (!mouse_in_canvas)
-        return OptionalIndex();
-
     float smallest_distance = FLT_MAX;
     OptionalIndex link_idx_with_smallest_distance;
 
@@ -1773,7 +1767,7 @@ void draw_node(EditorContext& editor, const int node_idx)
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
 
-    const bool node_hovered = is_node_hovered(node_idx) && mouse_in_canvas() &&
+    const bool node_hovered = is_node_hovered(node_idx) &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     ImU32 node_background = node.color_style.background;
@@ -2171,25 +2165,26 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
-    // TODO: this needs the occluded pin information.
-    g.hovered_pin_idx = resolve_hovered_pin(editor);
-
-    // Resolve which node is actually on top and being hovered. This needs to be done before any of
-    // the nodes can be rendered.
-
-    if (!g.hovered_pin_idx.has_value())
+    if (mouse_in_canvas())
     {
-        g.hovered_node_idx = resolve_hovered_node(editor);
-    }
+        // TODO: this needs the occluded pin information.
+        g.hovered_pin_idx = resolve_hovered_pin(editor);
 
-    // We render pins and nodes on top of links. In order to prevent link interaction when a pin or
-    // node is on top of a link, we skip link interaction if a node or pin is already active.
-    if ((!g.hovered_pin_idx.has_value()) && (!g.hovered_node_idx.has_value()))
-    {
-        g.hovered_link_idx = resolve_hovered_link(editor);
-    }
+        // Resolve which node is actually on top and being hovered. This needs to be done before any
+        // of the nodes can be rendered.
 
-    // TODO: Resolve which links are being hovered over. Only one link should be resolved.
+        if (!g.hovered_pin_idx.has_value())
+        {
+            g.hovered_node_idx = resolve_hovered_node(editor);
+        }
+
+        // We render pins and nodes on top of links. In order to prevent link interaction when a pin
+        // or node is on top of a link, we skip link interaction if a node or pin is already active.
+        if ((!g.hovered_pin_idx.has_value()) && (!g.hovered_node_idx.has_value()))
+        {
+            g.hovered_link_idx = resolve_hovered_link(editor);
+        }
+    }
 
     // Render the nodes and resolve which pin the mouse is hovering over. The hovered pin is needed
     // for handling click interactions.
