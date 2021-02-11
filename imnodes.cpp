@@ -427,26 +427,6 @@ inline LinkBezierData get_link_renderable(
     return link_data;
 }
 
-inline bool is_mouse_hovering_near_link(const BezierCurve& bezier, const int num_segments)
-{
-    const ImVec2 mouse_pos = g.mouse_pos;
-
-    // First, do a simple bounding box test against the box containing the link
-    // to see whether calculating the distance to the link is worth doing.
-    const ImRect link_rect = get_containing_rect_for_bezier_curve(bezier);
-
-    if (link_rect.Contains(mouse_pos))
-    {
-        const float distance = get_distance_to_cubic_bezier(mouse_pos, bezier, num_segments);
-        if (distance < g.style.link_hover_distance)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 inline float eval_implicit_line_eq(const ImVec2& p1, const ImVec2& p2, const ImVec2& p)
 {
     return (p2.y - p1.y) * p.x + (p1.x - p2.x) * p.y + (p2.x * p1.y - p1.x * p2.y);
@@ -1459,7 +1439,9 @@ OptionalIndex resolve_hovered_pin(const EditorContext& editor)
         const float distance_sqr = ImLengthSqr(pin_pos - g.mouse_pos);
 
         // TODO: g.style.pin_hover_radius needs to be copied into pin data and the pin-local value
-        // used here. This is no longer called in BeginAttribute/EndAttribute scope.
+        // used here. This is no longer called in BeginAttribute/EndAttribute scope and the detected
+        // pin might have a different hover radius than what the user had when calling
+        // BeginAttribute/EndAttribute.
         if (distance_sqr < g.style.pin_hover_radius && distance_sqr < smallest_distance)
         {
             smallest_distance = distance_sqr;
@@ -1496,6 +1478,53 @@ OptionalIndex resolve_hovered_node(const EditorContext& editor)
 
     assert(node_idx_on_top != -1);
     return OptionalIndex(node_idx_on_top);
+}
+
+OptionalIndex resolve_hovered_link(const EditorContext& editor)
+{
+    if (!mouse_in_canvas)
+        return OptionalIndex();
+
+    float smallest_distance = FLT_MAX;
+    OptionalIndex link_idx_with_smallest_distance;
+
+    for (int idx = 0; idx < editor.links.pool.Size; ++idx)
+    {
+        const LinkData& link = editor.links.pool[idx];
+        const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
+        const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
+
+        // TODO: the calculated LinkBezierDatas could be cached since we generate them again when
+        // rendering the links
+
+        const LinkBezierData link_data = get_link_renderable(
+            start_pin.pos, end_pin.pos, start_pin.type, g.style.link_line_segments_per_length);
+
+        // The distance test
+        {
+            const ImRect link_rect = get_containing_rect_for_bezier_curve(link_data.bezier);
+
+            // First, do a simple bounding box test against the box containing the link
+            // to see whether calculating the distance to the link is worth doing.
+            if (link_rect.Contains(g.mouse_pos))
+            {
+                const float distance = get_distance_to_cubic_bezier(
+                    g.mouse_pos, link_data.bezier, link_data.num_segments);
+
+                // TODO: g.style.link_hover_distance could be also copied into LinkData, since we're
+                // not calling this function in the same scope as imnodes::Link(). The
+                // rendered/detected link might have a different hover distance than what the user
+                // had specified when calling Link()
+                if (distance < g.style.link_hover_distance)
+                {
+                    smallest_distance = distance;
+                    link_idx_with_smallest_distance = idx;
+                }
+            }
+        }
+    }
+
+    return link_idx_with_smallest_distance;
 }
 
 // [SECTION] render helpers
@@ -1807,18 +1836,6 @@ void draw_node(EditorContext& editor, const int node_idx)
     }
 }
 
-bool is_link_hovered(const LinkBezierData& link_data)
-{
-    // We render pins and nodes on top of links. In order to prevent link interaction when a pin or
-    // node is on top of a link, we just early out here if a pin or node is hovered.
-    if (g.hovered_pin_idx.has_value() || g.hovered_node_idx.has_value())
-    {
-        return false;
-    }
-
-    return is_mouse_hovering_near_link(link_data.bezier, link_data.num_segments);
-}
-
 void draw_link(EditorContext& editor, const int link_idx)
 {
     const LinkData& link = editor.links.pool[link_idx];
@@ -1828,7 +1845,7 @@ void draw_link(EditorContext& editor, const int link_idx)
     const LinkBezierData link_data = get_link_renderable(
         start_pin.pos, end_pin.pos, start_pin.type, g.style.link_line_segments_per_length);
 
-    const bool link_hovered = is_link_hovered(link_data) && mouse_in_canvas() &&
+    const bool link_hovered = g.hovered_link_idx == link_idx &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     if (link_hovered)
@@ -2160,7 +2177,17 @@ void EndNodeEditor()
     // Resolve which node is actually on top and being hovered. This needs to be done before any of
     // the nodes can be rendered.
 
-    g.hovered_node_idx = resolve_hovered_node(editor);
+    if (!g.hovered_pin_idx.has_value())
+    {
+        g.hovered_node_idx = resolve_hovered_node(editor);
+    }
+
+    // We render pins and nodes on top of links. In order to prevent link interaction when a pin or
+    // node is on top of a link, we skip link interaction if a node or pin is already active.
+    if ((!g.hovered_pin_idx.has_value()) && (!g.hovered_node_idx.has_value()))
+    {
+        g.hovered_link_idx = resolve_hovered_link(editor);
+    }
 
     // TODO: Resolve which links are being hovered over. Only one link should be resolved.
 
