@@ -1747,27 +1747,12 @@ void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_cl
     draw_pin_shape(pin.pos, pin, pin_color);
 }
 
-// TODO: Separate hover code from drawing code to avoid this unpleasant divergent function
-// signature.
-bool is_node_hovered(const int node_idx)
-{
-    // We render pins on top of nodes. In order to prevent node interaction when a pin is on top of
-    // a node, we just early out here if a pin is hovered.
-    if (g.hovered_pin_idx.has_value())
-        return false;
-
-    return g.hovered_node_idx.has_value() && node_idx == g.hovered_node_idx.value();
-}
-
-// TODO: It may be useful to make this an EditorContext method, since this uses
-// a lot of editor state. Currently that is just not clear, since we don't pass
-// the editor as a part of the function signature.
 void draw_node(EditorContext& editor, const int node_idx)
 {
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
 
-    const bool node_hovered = is_node_hovered(node_idx) &&
+    const bool node_hovered = g.hovered_node_idx == node_idx &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     ImU32 node_background = node.color_style.background;
