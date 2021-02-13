@@ -1114,10 +1114,7 @@ void begin_canvas_interaction(EditorContext& editor)
         return;
     }
 
-    const bool started_panning =
-        g.io.emulate_three_button_mouse.enabled
-            ? (g.left_mouse_clicked && *g.io.emulate_three_button_mouse.modifier)
-            : g.middle_mouse_clicked;
+    const bool started_panning = g.middle_mouse_clicked;
 
     if (started_panning)
     {
@@ -1421,10 +1418,7 @@ void click_interaction_update(EditorContext& editor)
     break;
     case ClickInteractionType_Panning:
     {
-        const bool dragging =
-            g.io.emulate_three_button_mouse.enabled
-                ? (g.left_mouse_dragging && (*g.io.emulate_three_button_mouse.modifier))
-                : g.middle_mouse_dragging;
+        const bool dragging = g.middle_mouse_dragging;
 
         if (dragging)
         {
@@ -2094,9 +2088,15 @@ void BeginNodeEditor()
     g.mouse_pos = ImGui::GetIO().MousePos;
     g.left_mouse_clicked = ImGui::IsMouseClicked(0);
     g.left_mouse_released = ImGui::IsMouseReleased(0);
-    g.middle_mouse_clicked = ImGui::IsMouseClicked(2);
+    g.middle_mouse_clicked =
+        g.io.emulate_three_button_mouse.enabled
+            ? (g.left_mouse_clicked && *g.io.emulate_three_button_mouse.modifier)
+            : ImGui::IsMouseClicked(2);
     g.left_mouse_dragging = ImGui::IsMouseDragging(0, 0.0f);
-    g.middle_mouse_dragging = ImGui::IsMouseDragging(2, 0.0f);
+    g.middle_mouse_dragging =
+        g.io.emulate_three_button_mouse.enabled
+            ? (g.left_mouse_dragging && (*g.io.emulate_three_button_mouse.modifier))
+            : ImGui::IsMouseDragging(2, 0.0f);
 
     g.active_attribute = false;
 
