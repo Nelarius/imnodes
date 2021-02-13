@@ -2193,22 +2193,25 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
+    // Detect which UI element is being hovered over. Detection is done in a hierarchical fashion,
+    // because a UI element being hovered excludes any other as being hovered over.
+
     if (mouse_in_canvas())
     {
+        // Pins needs some special care. We need to check the depth stack to see which pins are
+        // being occluded by other nodes.
         resolve_occluded_pins(editor, g.occluded_pin_indices);
 
         g.hovered_pin_idx = resolve_hovered_pin(editor, g.occluded_pin_indices);
 
-        // Resolve which node is actually on top and being hovered. This needs to be done before any
-        // of the nodes can be rendered.
-
         if (!g.hovered_pin_idx.has_value())
         {
+            // Resolve which node is actually on top and being hovered using the depth stack.
             g.hovered_node_idx = resolve_hovered_node(editor);
         }
 
-        // We render pins and nodes on top of links. In order to prevent link interaction when a pin
-        // or node is on top of a link, we skip link interaction if a node or pin is already active.
+        // We don't need to check the depth stack for links. If a node occludes a link and is being
+        // hovered, then we would not be able to detect the link anyway.
         if ((!g.hovered_pin_idx.has_value()) && (!g.hovered_node_idx.has_value()))
         {
             g.hovered_link_idx = resolve_hovered_link(editor);
