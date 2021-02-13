@@ -286,6 +286,7 @@ struct
     ImGuiStorage node_idx_to_submission_idx;
     ImVector<int> node_idx_submission_order;
     ImVector<int> node_indices_overlapping_with_mouse;
+    ImVector<int> occluded_pin_indices;
 
     // Canvas extents
     ImVec2 canvas_origin_screen_space;
@@ -1418,16 +1419,58 @@ void click_interaction_update(EditorContext& editor)
     }
 }
 
-OptionalIndex resolve_hovered_pin(const EditorContext& editor)
+void resolve_occluded_pins(const EditorContext& editor, ImVector<int>& occluded_pin_indices)
 {
-    // TODO occluded pins not accounted for here
+    const ImVector<int>& depth_stack = editor.node_depth_order;
 
+    occluded_pin_indices.resize(0);
+
+    if (depth_stack.Size < 2)
+    {
+        return;
+    }
+
+    // For each node in the depth stack
+    for (int depth_idx = 0; depth_idx < (depth_stack.Size - 1); ++depth_idx)
+    {
+        const NodeData& node_below = editor.nodes.pool[depth_stack[depth_idx]];
+
+        // Iterate over the rest of the depth stack to find nodes overlapping the pins
+        for (int next_depth_idx = depth_idx + 1; next_depth_idx < depth_stack.Size;
+             ++next_depth_idx)
+        {
+            const ImRect& rect_above = editor.nodes.pool[depth_stack[next_depth_idx]].rect;
+
+            // Iterate over each pin
+            for (int idx = 0; idx < node_below.pin_indices.Size; ++idx)
+            {
+                const int pin_idx = node_below.pin_indices[idx];
+                const ImVec2& pin_pos = editor.pins.pool[pin_idx].pos;
+
+                if (rect_above.Contains(pin_pos))
+                {
+                    occluded_pin_indices.push_back(pin_idx);
+                }
+            }
+        }
+    }
+}
+
+OptionalIndex resolve_hovered_pin(
+    const EditorContext& editor,
+    const ImVector<int>& occluded_pin_indices)
+{
     float smallest_distance = FLT_MAX;
     OptionalIndex pin_idx_with_smallest_distance;
 
     for (int idx = 0; idx < editor.pins.pool.Size; ++idx)
     {
         if (!editor.pins.in_use[idx])
+        {
+            continue;
+        }
+
+        if (occluded_pin_indices.contains(idx))
         {
             continue;
         }
@@ -2152,8 +2195,9 @@ void EndNodeEditor()
 
     if (mouse_in_canvas())
     {
-        // TODO: this needs the occluded pin information.
-        g.hovered_pin_idx = resolve_hovered_pin(editor);
+        resolve_occluded_pins(editor, g.occluded_pin_indices);
+
+        g.hovered_pin_idx = resolve_hovered_pin(editor, g.occluded_pin_indices);
 
         // Resolve which node is actually on top and being hovered. This needs to be done before any
         // of the nodes can be rendered.
@@ -2170,9 +2214,6 @@ void EndNodeEditor()
             g.hovered_link_idx = resolve_hovered_link(editor);
         }
     }
-
-    // Render the nodes and resolve which pin the mouse is hovering over. The hovered pin is needed
-    // for handling click interactions.
 
     for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
     {
