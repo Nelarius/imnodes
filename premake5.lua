@@ -39,6 +39,8 @@ function imnodes_example_project(name, example_file)
     }
     links { "gl3w", "imgui", "imnodes" }
 
+    defines { "IMGUI_IMPL_OPENGL_LOADER_GL3W" }
+
     if _OPTIONS["sdl-include-path"] then
         includedirs { _OPTIONS["sdl-include-path"] }
     end
