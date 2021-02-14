@@ -1440,19 +1440,24 @@ void click_interaction_update(EditorContext& editor)
 
 OptionalIndex resolve_hovered_node(const EditorContext& editor)
 {
-    if (g.node_indices_overlapping_with_mouse.Size == 0)
+    if (g.node_indices_overlapping_with_mouse.size() == 0)
     {
         return OptionalIndex();
+    }
+
+    if (g.node_indices_overlapping_with_mouse.size() == 1)
+    {
+        return OptionalIndex(g.node_indices_overlapping_with_mouse[0]);
     }
 
     int largest_depth_idx = -1;
     int node_idx_on_top = -1;
 
     const ImVector<int>& depth_stack = editor.node_depth_order;
-    for (int i = 0; i < g.node_indices_overlapping_with_mouse.Size; ++i)
+    for (int i = 0; i < g.node_indices_overlapping_with_mouse.size(); ++i)
     {
         const int node_idx = g.node_indices_overlapping_with_mouse[i];
-        for (int depth_idx = 0; depth_idx < depth_stack.Size; ++depth_idx)
+        for (int depth_idx = 0; depth_idx < depth_stack.size(); ++depth_idx)
         {
             if (depth_stack[depth_idx] == node_idx && (depth_idx > largest_depth_idx))
             {
