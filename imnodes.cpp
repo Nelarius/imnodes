@@ -1083,6 +1083,8 @@ void begin_link_interaction(EditorContext& editor, const int link_idx)
 
             editor.click_interaction_type = ClickInteractionType_LinkCreation;
             begin_link_detach(editor, link_idx, closest_pin_idx);
+            editor.click_interaction_state.link_creation.link_creation_type =
+                LinkCreationType_FromDetach;
         }
         else
         {
