@@ -1791,11 +1791,16 @@ void draw_node(EditorContext& editor, const int node_idx)
     }
 }
 
-bool is_link_hovered(const LinkBezierData& link_data)
+bool is_link_hovered(const LinkData& link, const LinkBezierData& link_data)
 {
     // We render pins and nodes on top of links. In order to prevent link interaction when a pin or
     // node is on top of a link, we just early out here if a pin or node is hovered.
-    if (g.hovered_pin_idx.has_value() || g.hovered_node_idx.has_value())
+    if (g.hovered_pin_idx.has_value() )
+    {
+        // If hovered pin is part of the link consider the link also hovered
+        return g.hovered_pin_idx == link.start_pin_idx || g.hovered_pin_idx == link.end_pin_idx;        
+    }
+    if (g.hovered_node_idx.has_value())
     {
         return false;
     }
@@ -1812,7 +1817,7 @@ void draw_link(EditorContext& editor, const int link_idx)
     const LinkBezierData link_data = get_link_renderable(
         start_pin.pos, end_pin.pos, start_pin.type, g.style.link_line_segments_per_length);
 
-    const bool link_hovered = is_link_hovered(link_data) && mouse_in_canvas() &&
+    const bool link_hovered = is_link_hovered(link, link_data) && mouse_in_canvas() &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     if (link_hovered)
