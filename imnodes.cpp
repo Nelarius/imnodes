@@ -1463,6 +1463,8 @@ OptionalIndex resolve_hovered_pin(
     float smallest_distance = FLT_MAX;
     OptionalIndex pin_idx_with_smallest_distance;
 
+    const float hover_radius_sqr = g.style.pin_hover_radius * g.style.pin_hover_radius;
+
     for (int idx = 0; idx < editor.pins.pool.Size; ++idx)
     {
         if (!editor.pins.in_use[idx])
@@ -1482,7 +1484,7 @@ OptionalIndex resolve_hovered_pin(
         // used here. This is no longer called in BeginAttribute/EndAttribute scope and the detected
         // pin might have a different hover radius than what the user had when calling
         // BeginAttribute/EndAttribute.
-        if (distance_sqr < g.style.pin_hover_radius && distance_sqr < smallest_distance)
+        if (distance_sqr < hover_radius_sqr && distance_sqr < smallest_distance)
         {
             smallest_distance = distance_sqr;
             pin_idx_with_smallest_distance = idx;
