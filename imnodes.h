@@ -1,15 +1,8 @@
 #pragma once
 
 #include <stddef.h>
-#include <imgui.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui_internal.h>
 
-// Check minimum ImGui version
-#define MINIMUM_COMPATIBLE_IMGUI_VERSION 16401
-#if IMGUI_VERSION_NUM < MINIMUM_COMPATIBLE_IMGUI_VERSION
-#error "Minimum ImGui version requirement not met -- please use a newer version!"
-#endif
+struct ImGuiContext;
 
 struct ImVec2;
 
