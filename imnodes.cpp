@@ -1527,11 +1527,24 @@ OptionalIndex resolve_hovered_link(const EditorContext& editor)
     float smallest_distance = FLT_MAX;
     OptionalIndex link_idx_with_smallest_distance;
 
+    // There are two ways a link can be detected as "hovered".
+    // 1. The link is within hover distance to the mouse. The closest such link is selected as being
+    // hovered over.
+    // 2. If the link is connected to the currently hovered pin.
+    //
+    // The latter is a requirement for link detaching with drag click to work, as both a link and
+    // pin are required to be hovered over for the feature to work.
+
     for (int idx = 0; idx < editor.links.pool.Size; ++idx)
     {
         const LinkData& link = editor.links.pool[idx];
         const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
         const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
+
+        if (g.hovered_pin_idx == link.start_pin_idx || g.hovered_pin_idx == link.end_pin_idx)
+        {
+            return idx;
+        }
 
         // TODO: the calculated LinkBezierDatas could be cached since we generate them again when
         // rendering the links
@@ -2214,7 +2227,7 @@ void EndNodeEditor()
 
         // We don't need to check the depth stack for links. If a node occludes a link and is being
         // hovered, then we would not be able to detect the link anyway.
-        if ((!g.hovered_pin_idx.has_value()) && (!g.hovered_node_idx.has_value()))
+        if (!g.hovered_node_idx.has_value())
         {
             g.hovered_link_idx = resolve_hovered_link(editor);
         }
