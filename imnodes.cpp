@@ -1537,6 +1537,11 @@ OptionalIndex resolve_hovered_link(const EditorContext& editor)
 
     for (int idx = 0; idx < editor.links.pool.Size; ++idx)
     {
+        if (!editor.links.in_use[idx])
+        {
+            continue;
+        }
+
         const LinkData& link = editor.links.pool[idx];
         const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
         const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
