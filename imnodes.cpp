@@ -286,6 +286,7 @@ struct
     ImGuiStorage node_idx_to_submission_idx;
     ImVector<int> node_idx_submission_order;
     ImVector<int> node_indices_overlapping_with_mouse;
+    ImVector<int> occluded_pin_indices;
 
     // Canvas extents
     ImVec2 canvas_origin_screen_space;
@@ -340,12 +341,6 @@ EditorContext& editor_context_get()
     // No editor context was set! Did you forget to call imnodes::Initialize?
     assert(g.editor_ctx != NULL);
     return *g.editor_ctx;
-}
-
-inline bool is_mouse_hovering_near_point(const ImVec2& point, float radius)
-{
-    ImVec2 delta = g.mouse_pos - point;
-    return (delta.x * delta.x + delta.y * delta.y) < (radius * radius);
 }
 
 inline ImVec2 eval_bezier(float t, const BezierCurve& bezier)
@@ -431,26 +426,6 @@ inline LinkBezierData get_link_renderable(
     link_data.bezier.p3 = end;
     link_data.num_segments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
     return link_data;
-}
-
-inline bool is_mouse_hovering_near_link(const BezierCurve& bezier, const int num_segments)
-{
-    const ImVec2 mouse_pos = g.mouse_pos;
-
-    // First, do a simple bounding box test against the box containing the link
-    // to see whether calculating the distance to the link is worth doing.
-    const ImRect link_rect = get_containing_rect_for_bezier_curve(bezier);
-
-    if (link_rect.Contains(mouse_pos))
-    {
-        const float distance = get_distance_to_cubic_bezier(mouse_pos, bezier, num_segments);
-        if (distance < g.style.link_hover_distance)
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 inline float eval_implicit_line_eq(const ImVec2& p1, const ImVec2& p2, const ImVec2& p)
@@ -1440,7 +1415,82 @@ void click_interaction_update(EditorContext& editor)
     }
 }
 
-OptionalIndex resolve_hovered_node(const EditorContext& editor)
+void resolve_occluded_pins(const EditorContext& editor, ImVector<int>& occluded_pin_indices)
+{
+    const ImVector<int>& depth_stack = editor.node_depth_order;
+
+    occluded_pin_indices.resize(0);
+
+    if (depth_stack.Size < 2)
+    {
+        return;
+    }
+
+    // For each node in the depth stack
+    for (int depth_idx = 0; depth_idx < (depth_stack.Size - 1); ++depth_idx)
+    {
+        const NodeData& node_below = editor.nodes.pool[depth_stack[depth_idx]];
+
+        // Iterate over the rest of the depth stack to find nodes overlapping the pins
+        for (int next_depth_idx = depth_idx + 1; next_depth_idx < depth_stack.Size;
+             ++next_depth_idx)
+        {
+            const ImRect& rect_above = editor.nodes.pool[depth_stack[next_depth_idx]].rect;
+
+            // Iterate over each pin
+            for (int idx = 0; idx < node_below.pin_indices.Size; ++idx)
+            {
+                const int pin_idx = node_below.pin_indices[idx];
+                const ImVec2& pin_pos = editor.pins.pool[pin_idx].pos;
+
+                if (rect_above.Contains(pin_pos))
+                {
+                    occluded_pin_indices.push_back(pin_idx);
+                }
+            }
+        }
+    }
+}
+
+OptionalIndex resolve_hovered_pin(
+    const ObjectPool<PinData>& pins,
+    const ImVector<int>& occluded_pin_indices)
+{
+    float smallest_distance = FLT_MAX;
+    OptionalIndex pin_idx_with_smallest_distance;
+
+    const float hover_radius_sqr = g.style.pin_hover_radius * g.style.pin_hover_radius;
+
+    for (int idx = 0; idx < pins.pool.Size; ++idx)
+    {
+        if (!pins.in_use[idx])
+        {
+            continue;
+        }
+
+        if (occluded_pin_indices.contains(idx))
+        {
+            continue;
+        }
+
+        const ImVec2& pin_pos = pins.pool[idx].pos;
+        const float distance_sqr = ImLengthSqr(pin_pos - g.mouse_pos);
+
+        // TODO: g.style.pin_hover_radius needs to be copied into pin data and the pin-local value
+        // used here. This is no longer called in BeginAttribute/EndAttribute scope and the detected
+        // pin might have a different hover radius than what the user had when calling
+        // BeginAttribute/EndAttribute.
+        if (distance_sqr < hover_radius_sqr && distance_sqr < smallest_distance)
+        {
+            smallest_distance = distance_sqr;
+            pin_idx_with_smallest_distance = idx;
+        }
+    }
+
+    return pin_idx_with_smallest_distance;
+}
+
+OptionalIndex resolve_hovered_node(const ImVector<int>& depth_stack)
 {
     if (g.node_indices_overlapping_with_mouse.size() == 0)
     {
@@ -1455,7 +1505,6 @@ OptionalIndex resolve_hovered_node(const EditorContext& editor)
     int largest_depth_idx = -1;
     int node_idx_on_top = -1;
 
-    const ImVector<int>& depth_stack = editor.node_depth_order;
     for (int i = 0; i < g.node_indices_overlapping_with_mouse.size(); ++i)
     {
         const int node_idx = g.node_indices_overlapping_with_mouse[i];
@@ -1471,6 +1520,68 @@ OptionalIndex resolve_hovered_node(const EditorContext& editor)
 
     assert(node_idx_on_top != -1);
     return OptionalIndex(node_idx_on_top);
+}
+
+OptionalIndex resolve_hovered_link(const ObjectPool<LinkData>& links, const ObjectPool<PinData>& pins)
+{
+    float smallest_distance = FLT_MAX;
+    OptionalIndex link_idx_with_smallest_distance;
+
+    // There are two ways a link can be detected as "hovered".
+    // 1. The link is within hover distance to the mouse. The closest such link is selected as being
+    // hovered over.
+    // 2. If the link is connected to the currently hovered pin.
+    //
+    // The latter is a requirement for link detaching with drag click to work, as both a link and
+    // pin are required to be hovered over for the feature to work.
+
+    for (int idx = 0; idx < links.pool.Size; ++idx)
+    {
+        if (!links.in_use[idx])
+        {
+            continue;
+        }
+
+        const LinkData& link = links.pool[idx];
+        const PinData& start_pin = pins.pool[link.start_pin_idx];
+        const PinData& end_pin = pins.pool[link.end_pin_idx];
+
+        if (g.hovered_pin_idx == link.start_pin_idx || g.hovered_pin_idx == link.end_pin_idx)
+        {
+            return idx;
+        }
+
+        // TODO: the calculated LinkBezierDatas could be cached since we generate them again when
+        // rendering the links
+
+        const LinkBezierData link_data = get_link_renderable(
+            start_pin.pos, end_pin.pos, start_pin.type, g.style.link_line_segments_per_length);
+
+        // The distance test
+        {
+            const ImRect link_rect = get_containing_rect_for_bezier_curve(link_data.bezier);
+
+            // First, do a simple bounding box test against the box containing the link
+            // to see whether calculating the distance to the link is worth doing.
+            if (link_rect.Contains(g.mouse_pos))
+            {
+                const float distance = get_distance_to_cubic_bezier(
+                    g.mouse_pos, link_data.bezier, link_data.num_segments);
+
+                // TODO: g.style.link_hover_distance could be also copied into LinkData, since we're
+                // not calling this function in the same scope as imnodes::Link(). The
+                // rendered/detected link might have a different hover distance than what the user
+                // had specified when calling Link()
+                if (distance < g.style.link_hover_distance)
+                {
+                    smallest_distance = distance;
+                    link_idx_with_smallest_distance = idx;
+                }
+            }
+        }
+    }
+
+    return link_idx_with_smallest_distance;
 }
 
 // [SECTION] render helpers
@@ -1672,11 +1783,6 @@ void draw_pin_shape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_c
     }
 }
 
-bool is_pin_hovered(const PinData& pin)
-{
-    return is_mouse_hovering_near_point(pin.pos, g.style.pin_hover_radius);
-}
-
 void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
 {
     PinData& pin = editor.pins.pool[pin_idx];
@@ -1686,7 +1792,7 @@ void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_cl
 
     ImU32 pin_color = pin.color_style.background;
 
-    const bool pin_hovered = is_pin_hovered(pin) && mouse_in_canvas() &&
+    const bool pin_hovered = g.hovered_pin_idx == pin_idx &&
                              editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     if (pin_hovered)
@@ -1704,33 +1810,12 @@ void draw_pin(EditorContext& editor, const int pin_idx, const bool left_mouse_cl
     draw_pin_shape(pin.pos, pin, pin_color);
 }
 
-// TODO: Separate hover code from drawing code to avoid this unpleasant divergent function
-// signature.
-bool is_node_hovered(const NodeData& node, const int node_idx, const ObjectPool<PinData> pins)
-{
-    // We render pins on top of nodes. In order to prevent node interaction when a pin is on top of
-    // a node, we just early out here if a pin is hovered.
-    for (int i = 0; i < node.pin_indices.size(); ++i)
-    {
-        const PinData& pin = pins.pool[node.pin_indices[i]];
-        if (is_pin_hovered(pin))
-        {
-            return false;
-        }
-    }
-
-    return g.hovered_node_idx.has_value() && node_idx == g.hovered_node_idx.value();
-}
-
-// TODO: It may be useful to make this an EditorContext method, since this uses
-// a lot of editor state. Currently that is just not clear, since we don't pass
-// the editor as a part of the function signature.
 void draw_node(EditorContext& editor, const int node_idx)
 {
     const NodeData& node = editor.nodes.pool[node_idx];
     ImGui::SetCursorPos(node.origin + editor.panning);
 
-    const bool node_hovered = is_node_hovered(node, node_idx, editor.pins) && mouse_in_canvas() &&
+    const bool node_hovered = g.hovered_node_idx == node_idx &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     ImU32 node_background = node.color_style.background;
@@ -1793,23 +1878,6 @@ void draw_node(EditorContext& editor, const int node_idx)
     }
 }
 
-bool is_link_hovered(const LinkData& link, const LinkBezierData& link_data)
-{
-    // We render pins and nodes on top of links. In order to prevent link interaction when a pin or
-    // node is on top of a link, we just early out here if a pin or node is hovered.
-    if (g.hovered_pin_idx.has_value() )
-    {
-        // If hovered pin is part of the link consider the link also hovered
-        return g.hovered_pin_idx == link.start_pin_idx || g.hovered_pin_idx == link.end_pin_idx;        
-    }
-    if (g.hovered_node_idx.has_value())
-    {
-        return false;
-    }
-
-    return is_mouse_hovering_near_link(link_data.bezier, link_data.num_segments);
-}
-
 void draw_link(EditorContext& editor, const int link_idx)
 {
     const LinkData& link = editor.links.pool[link_idx];
@@ -1819,7 +1887,7 @@ void draw_link(EditorContext& editor, const int link_idx)
     const LinkBezierData link_data = get_link_renderable(
         start_pin.pos, end_pin.pos, start_pin.type, g.style.link_line_segments_per_length);
 
-    const bool link_hovered = is_link_hovered(link, link_data) && mouse_in_canvas() &&
+    const bool link_hovered = g.hovered_link_idx == link_idx &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
     if (link_hovered)
@@ -2149,13 +2217,30 @@ void EndNodeEditor()
 
     EditorContext& editor = editor_context_get();
 
-    // Resolve which node is actually on top and being hovered. This needs to be done before any of
-    // the nodes can be rendered.
+    // Detect which UI element is being hovered over. Detection is done in a hierarchical fashion,
+    // because a UI element being hovered excludes any other as being hovered over.
 
-    g.hovered_node_idx = resolve_hovered_node(editor);
+    if (mouse_in_canvas())
+    {
+        // Pins needs some special care. We need to check the depth stack to see which pins are
+        // being occluded by other nodes.
+        resolve_occluded_pins(editor, g.occluded_pin_indices);
 
-    // Render the nodes and resolve which pin the mouse is hovering over. The hovered pin is needed
-    // for handling click interactions.
+        g.hovered_pin_idx = resolve_hovered_pin(editor.pins, g.occluded_pin_indices);
+
+        if (!g.hovered_pin_idx.has_value())
+        {
+            // Resolve which node is actually on top and being hovered using the depth stack.
+            g.hovered_node_idx = resolve_hovered_node(editor.node_depth_order);
+        }
+
+        // We don't need to check the depth stack for links. If a node occludes a link and is being
+        // hovered, then we would not be able to detect the link anyway.
+        if (!g.hovered_node_idx.has_value())
+        {
+            g.hovered_link_idx = resolve_hovered_link(editor.links, editor.pins);
+        }
+    }
 
     for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
     {
