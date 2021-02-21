@@ -1522,7 +1522,9 @@ OptionalIndex resolve_hovered_node(const ImVector<int>& depth_stack)
     return OptionalIndex(node_idx_on_top);
 }
 
-OptionalIndex resolve_hovered_link(const ObjectPool<LinkData>& links, const ObjectPool<PinData>& pins)
+OptionalIndex resolve_hovered_link(
+    const ObjectPool<LinkData>& links,
+    const ObjectPool<PinData>& pins)
 {
     float smallest_distance = FLT_MAX;
     OptionalIndex link_idx_with_smallest_distance;
