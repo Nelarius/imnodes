@@ -1457,7 +1457,7 @@ void resolve_occluded_pins(const EditorContext& editor, ImVector<int>& occluded_
 }
 
 OptionalIndex resolve_hovered_pin(
-    const EditorContext& editor,
+    const ObjectPool<PinData>& pins,
     const ImVector<int>& occluded_pin_indices)
 {
     float smallest_distance = FLT_MAX;
@@ -1465,9 +1465,9 @@ OptionalIndex resolve_hovered_pin(
 
     const float hover_radius_sqr = g.style.pin_hover_radius * g.style.pin_hover_radius;
 
-    for (int idx = 0; idx < editor.pins.pool.Size; ++idx)
+    for (int idx = 0; idx < pins.pool.Size; ++idx)
     {
-        if (!editor.pins.in_use[idx])
+        if (!pins.in_use[idx])
         {
             continue;
         }
@@ -1477,7 +1477,7 @@ OptionalIndex resolve_hovered_pin(
             continue;
         }
 
-        const ImVec2& pin_pos = editor.pins.pool[idx].pos;
+        const ImVec2& pin_pos = pins.pool[idx].pos;
         const float distance_sqr = ImLengthSqr(pin_pos - g.mouse_pos);
 
         // TODO: g.style.pin_hover_radius needs to be copied into pin data and the pin-local value
@@ -1494,7 +1494,7 @@ OptionalIndex resolve_hovered_pin(
     return pin_idx_with_smallest_distance;
 }
 
-OptionalIndex resolve_hovered_node(const EditorContext& editor)
+OptionalIndex resolve_hovered_node(const ImVector<int>& depth_stack)
 {
     if (g.node_indices_overlapping_with_mouse.Size == 0)
     {
@@ -1504,7 +1504,6 @@ OptionalIndex resolve_hovered_node(const EditorContext& editor)
     int largest_depth_idx = -1;
     int node_idx_on_top = -1;
 
-    const ImVector<int>& depth_stack = editor.node_depth_order;
     for (int i = 0; i < g.node_indices_overlapping_with_mouse.Size; ++i)
     {
         const int node_idx = g.node_indices_overlapping_with_mouse[i];
@@ -1522,7 +1521,7 @@ OptionalIndex resolve_hovered_node(const EditorContext& editor)
     return OptionalIndex(node_idx_on_top);
 }
 
-OptionalIndex resolve_hovered_link(const EditorContext& editor)
+OptionalIndex resolve_hovered_link(const ObjectPool<LinkData>& links, const ObjectPool<PinData>& pins)
 {
     float smallest_distance = FLT_MAX;
     OptionalIndex link_idx_with_smallest_distance;
@@ -1535,16 +1534,16 @@ OptionalIndex resolve_hovered_link(const EditorContext& editor)
     // The latter is a requirement for link detaching with drag click to work, as both a link and
     // pin are required to be hovered over for the feature to work.
 
-    for (int idx = 0; idx < editor.links.pool.Size; ++idx)
+    for (int idx = 0; idx < links.pool.Size; ++idx)
     {
-        if (!editor.links.in_use[idx])
+        if (!links.in_use[idx])
         {
             continue;
         }
 
-        const LinkData& link = editor.links.pool[idx];
-        const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
-        const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
+        const LinkData& link = links.pool[idx];
+        const PinData& start_pin = pins.pool[link.start_pin_idx];
+        const PinData& end_pin = pins.pool[link.end_pin_idx];
 
         if (g.hovered_pin_idx == link.start_pin_idx || g.hovered_pin_idx == link.end_pin_idx)
         {
@@ -2222,19 +2221,19 @@ void EndNodeEditor()
         // being occluded by other nodes.
         resolve_occluded_pins(editor, g.occluded_pin_indices);
 
-        g.hovered_pin_idx = resolve_hovered_pin(editor, g.occluded_pin_indices);
+        g.hovered_pin_idx = resolve_hovered_pin(editor.pins, g.occluded_pin_indices);
 
         if (!g.hovered_pin_idx.has_value())
         {
             // Resolve which node is actually on top and being hovered using the depth stack.
-            g.hovered_node_idx = resolve_hovered_node(editor);
+            g.hovered_node_idx = resolve_hovered_node(editor.node_depth_order);
         }
 
         // We don't need to check the depth stack for links. If a node occludes a link and is being
         // hovered, then we would not be able to detect the link anyway.
         if (!g.hovered_node_idx.has_value())
         {
-            g.hovered_link_idx = resolve_hovered_link(editor);
+            g.hovered_link_idx = resolve_hovered_link(editor.links, editor.pins);
         }
     }
 
