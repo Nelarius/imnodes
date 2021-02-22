@@ -2070,10 +2070,7 @@ void Shutdown()
     g.default_editor_ctx = NULL;
 }
 
-void SetImGuiContext(ImGuiContext* ctx) 
-{
-    ImGui::SetCurrentContext(ctx);
-}
+void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
 
 IO& GetIO() { return g.io; }
 
