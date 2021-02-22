@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+struct ImGuiContext;
+
 struct ImVec2;
 
 namespace imnodes
@@ -165,6 +167,8 @@ void EditorContextMoveToNode(const int node_id);
 // Initialize the node editor system.
 void Initialize();
 void Shutdown();
+
+void SetImGuiContext(ImGuiContext* ctx);
 
 IO& GetIO();
 
