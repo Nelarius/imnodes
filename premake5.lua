@@ -17,7 +17,7 @@ newoption {
 
 local projectlocation = os.getcwd()
 local gl3wlocation = path.join(os.getcwd(), "dependencies/gl3w")
-local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.79")
+local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.80")
 
 if _ACTION then
     projectlocation = path.join(projectlocation, "build", _ACTION)
@@ -38,6 +38,8 @@ function imnodes_example_project(name, example_file)
         path.join(gl3wlocation, "include"),
     }
     links { "gl3w", "imgui", "imnodes" }
+
+    defines { "IMGUI_IMPL_OPENGL_LOADER_GL3W" }
 
     if _OPTIONS["sdl-include-path"] then
         includedirs { _OPTIONS["sdl-include-path"] }
