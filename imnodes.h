@@ -163,6 +163,8 @@ ImVec2 EditorContextGetPanning();
 void EditorContextResetPanning(const ImVec2& pos);
 void EditorContextMoveToNode(const int node_id);
 
+struct Context;
+
 // Initialize the node editor system.
 void Initialize();
 void Shutdown();
@@ -170,6 +172,13 @@ void Shutdown();
 // Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
 // function sets the GImGui global variable, which is not shared across dll boundaries.
 void SetImGuiContext(ImGuiContext* ctx);
+
+Context* ContextCreate();
+void ContextFree(Context*);
+// Call this function to set the current global context. Needed if you use imnodes from different
+// dlls for the same editor
+void SetCurrentContext(Context* ctx);
+Context* GetCurrentContext();
 
 IO& GetIO();
 
