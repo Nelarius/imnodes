@@ -336,7 +336,7 @@ struct Context
     bool middle_mouse_dragging;
 };
 
-static Context* g = nullptr;
+static Context* g = NULL;
 
 namespace
 {
@@ -2075,6 +2075,7 @@ void Shutdown()
 {
     EditorContextFree(g->default_editor_ctx);
     ContextFree(g);
+    g = NULL;
 }
 
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
