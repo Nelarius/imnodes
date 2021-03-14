@@ -46,10 +46,10 @@ Before anything can be done, the library must be initialized. This can be done a
 
 ```cpp
 ImGui::CreateContext();
-imnodes::Initialize();
+imnodes::CreateContext();
 
 // elsewhere in the code...
-imnodes::Shutdown();
+imnodes::DestroyContext();
 ImGui::DestroyContext();
 ```
 

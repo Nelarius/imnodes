@@ -336,7 +336,7 @@ struct Context
     bool middle_mouse_dragging;
 };
 
-static Context* g = NULL;
+Context* g = NULL;
 
 namespace
 {
@@ -2013,6 +2013,49 @@ Style::Style()
 {
 }
 
+void Initialize(Context* context)
+{
+    context->canvas_origin_screen_space = ImVec2(0.0f, 0.0f);
+    context->canvas_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
+    context->current_scope = Scope_None;
+
+    context->current_pin_idx = INT_MAX;
+    context->current_node_idx = INT_MAX;
+
+    context->default_editor_ctx = EditorContextCreate();
+    EditorContextSet(g->default_editor_ctx);
+
+    const ImGuiIO& io = ImGui::GetIO();
+    context->io.emulate_three_button_mouse.modifier = &io.KeyAlt;
+
+    context->current_attribute_flags = AttributeFlags_None;
+    context->attribute_flag_stack.push_back(g->current_attribute_flags);
+
+    StyleColorsDark();
+}
+
+Context* CreateContext()
+{
+    Context* ctx = IM_NEW(Context)();
+    if (g == NULL)
+        SetCurrentContext(ctx);
+    Initialize(ctx);
+    return ctx;
+}
+void DestroyContext(Context* ctx)
+{
+    if (ctx == NULL)
+        ctx = g;
+    Shutdown(ctx);
+    if (g == ctx)
+        SetCurrentContext(NULL);
+    IM_DELETE(ctx);
+}
+
+
+Context* GetCurrentContext() { return g; }
+void SetCurrentContext(Context* ctx) { g = ctx; }
+
 EditorContext* EditorContextCreate()
 {
     void* mem = ImGui::MemAlloc(sizeof(EditorContext));
@@ -2049,50 +2092,9 @@ void EditorContextMoveToNode(const int node_id)
     editor.panning.y = -node.origin.y;
 }
 
-void Initialize()
-{
-    g = ContextCreate();
-    g->canvas_origin_screen_space = ImVec2(0.0f, 0.0f);
-    g->canvas_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
-    g->current_scope = Scope_None;
-
-    g->current_pin_idx = INT_MAX;
-    g->current_node_idx = INT_MAX;
-
-    g->default_editor_ctx = EditorContextCreate();
-    EditorContextSet(g->default_editor_ctx);
-
-    const ImGuiIO& io = ImGui::GetIO();
-    g->io.emulate_three_button_mouse.modifier = &io.KeyAlt;
-
-    g->current_attribute_flags = AttributeFlags_None;
-    g->attribute_flag_stack.push_back(g->current_attribute_flags);
-
-    StyleColorsDark();
-}
-
-void Shutdown()
-{
-    EditorContextFree(g->default_editor_ctx);
-    ContextFree(g);
-    g = NULL;
-}
+void Shutdown(Context* ctx) { EditorContextFree(ctx->default_editor_ctx); }
 
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
-
-Context* ContextCreate()
-{
-    void* mem = ImGui::MemAlloc(sizeof(Context));
-    new (mem) Context();
-    return (Context*)mem;
-}
-void ContextFree(Context* ctx)
-{
-    if (ctx)
-        ImGui::MemFree(ctx);
-}
-void SetCurrentContext(Context* ctx) { g = ctx; }
-Context* GetCurrentContext() { return g; }
 
 IO& GetIO() { return g->io; }
 
