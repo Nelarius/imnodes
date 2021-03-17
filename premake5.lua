@@ -17,7 +17,7 @@ newoption {
 
 local projectlocation = os.getcwd()
 local gl3wlocation = path.join(os.getcwd(), "dependencies/gl3w")
-local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.80")
+local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.82")
 
 if _ACTION then
     projectlocation = path.join(projectlocation, "build", _ACTION)
