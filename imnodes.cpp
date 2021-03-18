@@ -2034,6 +2034,8 @@ void Initialize(Context* context)
     StyleColorsDark();
 }
 
+void Shutdown(Context* ctx) { EditorContextFree(ctx->default_editor_ctx); }
+
 Context* CreateContext()
 {
     Context* ctx = IM_NEW(Context)();
@@ -2051,7 +2053,6 @@ void DestroyContext(Context* ctx)
         SetCurrentContext(NULL);
     IM_DELETE(ctx);
 }
-
 
 Context* GetCurrentContext() { return g; }
 void SetCurrentContext(Context* ctx) { g = ctx; }
@@ -2091,8 +2092,6 @@ void EditorContextMoveToNode(const int node_id)
     editor.panning.x = -node.origin.x;
     editor.panning.y = -node.origin.y;
 }
-
-void Shutdown(Context* ctx) { EditorContextFree(ctx->default_editor_ctx); }
 
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
 

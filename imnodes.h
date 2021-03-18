@@ -160,9 +160,6 @@ void DestroyContext(Context* ctx = NULL); // NULL = destroy current context
 Context* GetCurrentContext();
 void SetCurrentContext(Context* ctx);
 
-// Initialize the node editor system.
-void Shutdown(Context* ctx);
-
 // An editor context corresponds to a set of nodes in a single workspace (created with a single
 // Begin/EndNodeEditor pair)
 //
