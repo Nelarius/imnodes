@@ -149,6 +149,17 @@ struct Style
     Style();
 };
 
+struct Context;
+
+// Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
+// function sets the GImGui global variable, which is not shared across dll boundaries.
+void SetImGuiContext(ImGuiContext* ctx);
+
+Context* CreateContext();
+void DestroyContext(Context* ctx = NULL); // NULL = destroy current context
+Context* GetCurrentContext();
+void SetCurrentContext(Context* ctx);
+
 // An editor context corresponds to a set of nodes in a single workspace (created with a single
 // Begin/EndNodeEditor pair)
 //
@@ -162,14 +173,6 @@ void EditorContextSet(EditorContext*);
 ImVec2 EditorContextGetPanning();
 void EditorContextResetPanning(const ImVec2& pos);
 void EditorContextMoveToNode(const int node_id);
-
-// Initialize the node editor system.
-void Initialize();
-void Shutdown();
-
-// Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
-// function sets the GImGui global variable, which is not shared across dll boundaries.
-void SetImGuiContext(ImGuiContext* ctx);
 
 IO& GetIO();
 
