@@ -1993,27 +1993,8 @@ void end_pin_attribute()
     pin.attribute_rect = get_item_rect();
     node.pin_indices.push_back(g->current_pin_idx);
 }
-} // namespace
 
-// [SECTION] API implementation
-
-IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : enabled(false), modifier(NULL) {}
-
-IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : modifier(NULL) {}
-
-IO::IO() : emulate_three_button_mouse(), link_detach_with_modifier_click() {}
-
-Style::Style()
-    : grid_spacing(32.f), node_corner_rounding(4.f), node_padding_horizontal(8.f),
-      node_padding_vertical(8.f), node_border_thickness(1.f), link_thickness(3.f),
-      link_line_segments_per_length(0.1f), link_hover_distance(10.f), pin_circle_radius(4.f),
-      pin_quad_side_length(7.f), pin_triangle_side_length(9.5), pin_line_thickness(1.f),
-      pin_hover_radius(10.f), pin_offset(0.f),
-      flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), colors()
-{
-}
-
-void Initialize(Context* context)
+void initialize(Context* context)
 {
     context->canvas_origin_screen_space = ImVec2(0.0f, 0.0f);
     context->canvas_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
@@ -2034,27 +2015,48 @@ void Initialize(Context* context)
     StyleColorsDark();
 }
 
-void Shutdown(Context* ctx) { EditorContextFree(ctx->default_editor_ctx); }
+void shutdown(Context* ctx) { EditorContextFree(ctx->default_editor_ctx); }
+} // namespace
+
+// [SECTION] API implementation
+
+IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : enabled(false), modifier(NULL) {}
+
+IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : modifier(NULL) {}
+
+IO::IO() : emulate_three_button_mouse(), link_detach_with_modifier_click() {}
+
+Style::Style()
+    : grid_spacing(32.f), node_corner_rounding(4.f), node_padding_horizontal(8.f),
+      node_padding_vertical(8.f), node_border_thickness(1.f), link_thickness(3.f),
+      link_line_segments_per_length(0.1f), link_hover_distance(10.f), pin_circle_radius(4.f),
+      pin_quad_side_length(7.f), pin_triangle_side_length(9.5), pin_line_thickness(1.f),
+      pin_hover_radius(10.f), pin_offset(0.f),
+      flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), colors()
+{
+}
 
 Context* CreateContext()
 {
     Context* ctx = IM_NEW(Context)();
     if (g == NULL)
         SetCurrentContext(ctx);
-    Initialize(ctx);
+    initialize(ctx);
     return ctx;
 }
+
 void DestroyContext(Context* ctx)
 {
     if (ctx == NULL)
         ctx = g;
-    Shutdown(ctx);
+    shutdown(ctx);
     if (g == ctx)
         SetCurrentContext(NULL);
     IM_DELETE(ctx);
 }
 
 Context* GetCurrentContext() { return g; }
+
 void SetCurrentContext(Context* ctx) { g = ctx; }
 
 EditorContext* EditorContextCreate()
