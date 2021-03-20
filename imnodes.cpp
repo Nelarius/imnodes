@@ -1851,16 +1851,27 @@ void draw_node(EditorContext& editor, const int node_idx)
         {
             ImRect title_bar_rect = get_node_title_rect(node);
 
+#if IMGUI_VERSION_NUM < 18200
             g->canvas_draw_list->AddRectFilled(
                 title_bar_rect.Min,
                 title_bar_rect.Max,
                 titlebar_background,
                 node.layout_style.corner_rounding,
                 ImDrawCornerFlags_Top);
+#else
+            g->canvas_draw_list->AddRectFilled(
+                title_bar_rect.Min,
+                title_bar_rect.Max,
+                titlebar_background,
+                node.layout_style.corner_rounding,
+                ImDrawFlags_RoundCornersTop);
+
+#endif
         }
 
         if ((g->style.flags & StyleFlags_NodeOutline) != 0)
         {
+#if IMGUI_VERSION_NUM < 18200
             g->canvas_draw_list->AddRect(
                 node.rect.Min,
                 node.rect.Max,
@@ -1868,6 +1879,15 @@ void draw_node(EditorContext& editor, const int node_idx)
                 node.layout_style.corner_rounding,
                 ImDrawCornerFlags_All,
                 node.layout_style.border_thickness);
+#else
+            g->canvas_draw_list->AddRect(
+                node.rect.Min,
+                node.rect.Max,
+                node.color_style.outline,
+                node.layout_style.corner_rounding,
+                ImDrawFlags_RoundCornersAll,
+                node.layout_style.border_thickness);
+#endif
         }
     }
 
