@@ -306,6 +306,9 @@ bool IsLinkCreated(
 // output argument link_id.
 bool IsLinkDestroyed(int* link_id);
 
+// Gets connected node IDs from link ID
+void GetNodesFromLink(const int link_id, int* const parent_node_id, int* const child_node_id);
+
 // Use the following functions to write the editor context's state to a string, or directly to a
 // file. The editor context is serialized in the INI file format.
 

@@ -2777,6 +2777,16 @@ bool IsLinkDestroyed(int* const link_id)
     return link_destroyed;
 }
 
+void GetNodesFromLink(const int link_id, int* const parent_node_id, int* const child_node_id)
+{
+    EditorContext& editor = editor_context_get();
+    LinkData& link = object_pool_find_or_create_object(editor.links, link_id);
+    const PinData& pin_start = editor.pins.pool[link.start_pin_idx];
+    const PinData& pin_end = editor.pins.pool[link.end_pin_idx];
+    *parent_node_id = editor.nodes.pool[pin_start.parent_node_idx].id;
+    *child_node_id = editor.nodes.pool[pin_end.parent_node_idx].id;
+}
+
 namespace
 {
 void node_line_handler(EditorContext& editor, const char* line)
