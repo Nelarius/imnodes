@@ -61,7 +61,7 @@ int main(int, char**)
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    imnodes::Initialize();
+    imnodes::CreateContext();
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -114,7 +114,7 @@ int main(int, char**)
     }
 
     example::NodeEditorShutdown();
-    imnodes::Shutdown();
+    imnodes::DestroyContext();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
