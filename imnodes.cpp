@@ -330,9 +330,9 @@ struct
 
     bool left_mouse_clicked;
     bool left_mouse_released;
-    bool middle_mouse_clicked;
+    bool alt_mouse_clicked;
     bool left_mouse_dragging;
-    bool middle_mouse_dragging;
+    bool alt_mouse_dragging;
 } g;
 
 EditorContext& editor_context_get()
@@ -1116,7 +1116,7 @@ void begin_canvas_interaction(EditorContext& editor)
         return;
     }
 
-    const bool started_panning = g.middle_mouse_clicked;
+    const bool started_panning = g.alt_mouse_clicked;
 
     if (started_panning)
     {
@@ -1420,7 +1420,7 @@ void click_interaction_update(EditorContext& editor)
     break;
     case ClickInteractionType_Panning:
     {
-        const bool dragging = g.middle_mouse_dragging;
+        const bool dragging = g.alt_mouse_dragging;
 
         if (dragging)
         {
@@ -1924,7 +1924,11 @@ IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : enabled(false), modifie
 
 IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : modifier(NULL) {}
 
-IO::IO() : emulate_three_button_mouse(), link_detach_with_modifier_click() {}
+IO::IO()
+    : emulate_three_button_mouse(), link_detach_with_modifier_click(),
+      alt_mouse_button(ImGuiMouseButton_Middle)
+{
+}
 
 Style::Style()
     : grid_spacing(32.f), node_corner_rounding(4.f), node_padding_horizontal(8.f),
@@ -2100,13 +2104,13 @@ void BeginNodeEditor()
     g.mouse_pos = ImGui::GetIO().MousePos;
     g.left_mouse_clicked = ImGui::IsMouseClicked(0);
     g.left_mouse_released = ImGui::IsMouseReleased(0);
-    g.middle_mouse_clicked = (g.io.emulate_three_button_mouse.enabled && g.left_mouse_clicked &&
-                              *g.io.emulate_three_button_mouse.modifier) ||
-                             ImGui::IsMouseClicked(2);
+    g.alt_mouse_clicked = (g.io.emulate_three_button_mouse.enabled && g.left_mouse_clicked &&
+                          *g.io.emulate_three_button_mouse.modifier) ||
+                          ImGui::IsMouseClicked(g.io.alt_mouse_button);
     g.left_mouse_dragging = ImGui::IsMouseDragging(0, 0.0f);
-    g.middle_mouse_dragging = (g.io.emulate_three_button_mouse.enabled && g.left_mouse_dragging &&
-                               (*g.io.emulate_three_button_mouse.modifier)) ||
-                              ImGui::IsMouseDragging(2, 0.0f);
+    g.alt_mouse_dragging = (g.io.emulate_three_button_mouse.enabled && g.left_mouse_dragging &&
+                           (*g.io.emulate_three_button_mouse.modifier)) ||
+                           ImGui::IsMouseDragging(g.io.alt_mouse_button, 0.0f);
 
     g.active_attribute = false;
 
@@ -2184,7 +2188,7 @@ void EndNodeEditor()
     draw_list_append_click_interaction_channel();
     draw_list_activate_click_interaction_channel();
 
-    if (g.left_mouse_clicked || g.middle_mouse_clicked)
+    if (g.left_mouse_clicked || g.alt_mouse_clicked)
     {
         begin_canvas_interaction(editor);
     }
