@@ -86,10 +86,12 @@ struct IO
     {
         EmulateThreeButtonMouse();
 
-        // Controls whether this feature is enabled or not.
-        bool enabled;
-        const bool* modifier; // The keyboard modifier to use with the mouse left click. Set to
-                              // &ImGuiIO::KeyAlt by default.
+        // The keyboard modifier to use in combination with mouse left click to pan the editor view.
+        // Set to NULL by default. To enable this feature, set the modifier to point to a boolean
+        // indicating the state of a modifier. For example,
+        //
+        // imnodes::GetIO().emulate_three_button_mouse.modifier = &ImGui::GetIO().KeyAlt;
+        const bool* modifier;
     } emulate_three_button_mouse;
 
     struct LinkDetachWithModifierClick
@@ -97,8 +99,10 @@ struct IO
         LinkDetachWithModifierClick();
 
         // Pointer to a boolean value indicating when the desired modifier is pressed. Set to NULL
-        // by default (i.e. this feature is disabled). To enable the feature, set the link to point
-        // to, for example, &ImGuiIO::KeyCtrl.
+        // by default. To enable the feature, set the modifier to point to a boolean indicating the
+        // state of a modifier. For example,
+        //
+        // imnodes::GetIO().link_detach_with_modifier_click.modifier = &ImGui::GetIO().KeyCtrl;
         //
         // Left-clicking a link with this modifier pressed will detach that link. NOTE: the user has
         // to actually delete the link for this to work. A deleted link can be detected by calling

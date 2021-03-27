@@ -2026,9 +2026,6 @@ void initialize(Context* context)
     context->default_editor_ctx = EditorContextCreate();
     EditorContextSet(g->default_editor_ctx);
 
-    const ImGuiIO& io = ImGui::GetIO();
-    context->io.emulate_three_button_mouse.modifier = &io.KeyAlt;
-
     context->current_attribute_flags = AttributeFlags_None;
     context->attribute_flag_stack.push_back(g->current_attribute_flags);
 
@@ -2040,7 +2037,7 @@ void shutdown(Context* ctx) { EditorContextFree(ctx->default_editor_ctx); }
 
 // [SECTION] API implementation
 
-IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : enabled(false), modifier(NULL) {}
+IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : modifier(NULL) {}
 
 IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : modifier(NULL) {}
 
@@ -2217,12 +2214,13 @@ void BeginNodeEditor()
     g->mouse_pos = ImGui::GetIO().MousePos;
     g->left_mouse_clicked = ImGui::IsMouseClicked(0);
     g->left_mouse_released = ImGui::IsMouseReleased(0);
-    g->middle_mouse_clicked = (g->io.emulate_three_button_mouse.enabled && g->left_mouse_clicked &&
-                               *g->io.emulate_three_button_mouse.modifier) ||
-                              ImGui::IsMouseClicked(2);
+    g->middle_mouse_clicked =
+        (g->io.emulate_three_button_mouse.modifier != NULL &&
+         *g->io.emulate_three_button_mouse.modifier && g->left_mouse_clicked) ||
+        ImGui::IsMouseClicked(2);
     g->left_mouse_dragging = ImGui::IsMouseDragging(0, 0.0f);
     g->middle_mouse_dragging =
-        (g->io.emulate_three_button_mouse.enabled && g->left_mouse_dragging &&
+        (g->io.emulate_three_button_mouse.modifier != NULL && g->left_mouse_dragging &&
          (*g->io.emulate_three_button_mouse.modifier)) ||
         ImGui::IsMouseDragging(2, 0.0f);
 
