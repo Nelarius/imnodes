@@ -43,6 +43,7 @@ T clamp(T x, T a, T b)
 }
 
 static float current_time_seconds = 0.f;
+static bool emulate_three_button_mouse = false;
 
 ImU32 evaluate(const Graph<Node>& graph, const int root_node)
 {
@@ -136,8 +137,11 @@ public:
         ImGui::TextUnformatted("A -- add node");
         ImGui::TextUnformatted("X -- delete selected node or link");
         ImGui::NextColumn();
-        ImGui::Checkbox(
-            "emulate three button mouse", &imnodes::GetIO().emulate_three_button_mouse.enabled);
+        if (ImGui::Checkbox("emulate_three_button_mouse", &emulate_three_button_mouse))
+        {
+            imnodes::GetIO().emulate_three_button_mouse.modifier =
+                emulate_three_button_mouse ? &ImGui::GetIO().KeyAlt : NULL;
+        }
         ImGui::Columns(1);
 
         imnodes::BeginNodeEditor();
