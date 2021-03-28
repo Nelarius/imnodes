@@ -110,6 +110,10 @@ struct IO
         const bool* modifier;
     } link_detach_with_modifier_click;
 
+    // Holding alt mouse button pans the node area, by default middle mouse button will be used
+    // Set based on ImGuiMouseButton values
+    int alt_mouse_button;
+
     IO();
 };
 
