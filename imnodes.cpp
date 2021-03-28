@@ -1095,7 +1095,7 @@ void begin_canvas_interaction(EditorContext& editor)
     {
         return;
     }
-    
+
     const bool started_panning = g->alt_mouse_clicked;
 
     if (started_panning)
@@ -1915,7 +1915,7 @@ void draw_link(EditorContext& editor, const int link_idx)
 
     const LinkBezierData link_data = get_link_renderable(
         start_pin.pos, end_pin.pos, start_pin.type, g->style.link_line_segments_per_length);
-    
+
     const bool link_hovered = g->hovered_link_idx == link_idx &&
                               editor.click_interaction_type != ClickInteractionType_BoxSelection;
 
@@ -2202,7 +2202,7 @@ void BeginNodeEditor()
     object_pool_reset(editor.nodes);
     object_pool_reset(editor.pins);
     object_pool_reset(editor.links);
-    
+
     g->hovered_node_idx.reset();
     g->interactive_node_idx.reset();
     g->hovered_link_idx.reset();
@@ -2218,10 +2218,9 @@ void BeginNodeEditor()
     g->mouse_pos = ImGui::GetIO().MousePos;
     g->left_mouse_clicked = ImGui::IsMouseClicked(0);
     g->left_mouse_released = ImGui::IsMouseReleased(0);
-    g->alt_mouse_clicked =
-        (g->io.emulate_three_button_mouse.modifier != NULL &&
-         *g->io.emulate_three_button_mouse.modifier && g->left_mouse_clicked) ||
-        ImGui::IsMouseClicked(g->io.alt_mouse_button);
+    g->alt_mouse_clicked = (g->io.emulate_three_button_mouse.modifier != NULL &&
+                            *g->io.emulate_three_button_mouse.modifier && g->left_mouse_clicked) ||
+                           ImGui::IsMouseClicked(g->io.alt_mouse_button);
     g->left_mouse_dragging = ImGui::IsMouseDragging(0, 0.0f);
     g->alt_mouse_dragging =
         (g->io.emulate_three_button_mouse.modifier != NULL && g->left_mouse_dragging &&
@@ -2320,7 +2319,7 @@ void EndNodeEditor()
 
     draw_list_append_click_interaction_channel();
     draw_list_activate_click_interaction_channel();
-    
+
     if (g->left_mouse_clicked || g->alt_mouse_clicked)
     {
         begin_canvas_interaction(editor);
