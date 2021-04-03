@@ -191,7 +191,7 @@ static SaveLoadEditor editor;
 
 void NodeEditorInitialize()
 {
-    imnodes::GetIO().link_detach_with_modifier_click.modifier = &ImGui::GetIO().KeyCtrl;
+    imnodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
     imnodes::PushAttributeFlag(imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
     editor.load();
 }

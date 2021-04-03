@@ -70,120 +70,120 @@ enum ElementStateChange
 template<typename T>
 struct ObjectPool
 {
-    ImVector<T> pool;
-    ImVector<bool> in_use;
-    ImVector<int> free_list;
-    ImGuiStorage id_map;
+    ImVector<T> Pool;
+    ImVector<bool> InUse;
+    ImVector<int> FreeList;
+    ImGuiStorage IdMap;
 
-    ObjectPool() : pool(), in_use(), free_list(), id_map() {}
+    ObjectPool() : Pool(), InUse(), FreeList(), IdMap() {}
 };
 
 // Emulates std::optional<int> using the sentinel value `invalid_index`.
 struct OptionalIndex
 {
-    OptionalIndex() : m_index(invalid_index) {}
-    OptionalIndex(const int value) : m_index(value) {}
+    OptionalIndex() : _Index(invalid_index) {}
+    OptionalIndex(const int value) : _Index(value) {}
 
     // Observers
 
-    inline bool HasValue() const { return m_index != invalid_index; }
+    inline bool HasValue() const { return _Index != invalid_index; }
 
     inline int Value() const
     {
         assert(HasValue());
-        return m_index;
+        return _Index;
     }
 
     // Modifiers
 
     inline OptionalIndex& operator=(const int value)
     {
-        m_index = value;
+        _Index = value;
         return *this;
     }
 
-    inline void Reset() { m_index = invalid_index; }
+    inline void Reset() { _Index = invalid_index; }
 
-    inline bool operator==(const OptionalIndex& rhs) const { return m_index == rhs.m_index; }
+    inline bool operator==(const OptionalIndex& rhs) const { return _Index == rhs._Index; }
 
-    inline bool operator==(const int rhs) const { return m_index == rhs; }
+    inline bool operator==(const int rhs) const { return _Index == rhs; }
 
-    inline bool operator!=(const OptionalIndex& rhs) const { return m_index != rhs.m_index; }
+    inline bool operator!=(const OptionalIndex& rhs) const { return _Index != rhs._Index; }
 
-    inline bool operator!=(const int rhs) const { return m_index != rhs; }
+    inline bool operator!=(const int rhs) const { return _Index != rhs; }
 
     static const int invalid_index = -1;
 
 private:
-    int m_index;
+    int _Index;
 };
 
 struct NodeData
 {
-    int id;
-    ImVec2 origin; // The node origin is in editor space
-    ImRect title_bar_content_rect;
-    ImRect rect;
+    int Id;
+    ImVec2 Origin; // The node origin is in editor space
+    ImRect TitleBarContentRect;
+    ImRect Rect;
 
     struct
     {
-        ImU32 background, background_hovered, background_selected, outline, titlebar,
-            titlebar_hovered, titlebar_selected;
-    } color_style;
+        ImU32 Background, BackgroundHovered, BackgroundSelected, Outline, Titlebar, TitlebarHovered,
+            TitlebarSelected;
+    } ColorStyle;
 
     struct
     {
-        float corner_rounding;
-        ImVec2 padding;
-        float border_thickness;
-    } layout_style;
+        float CornerRounding;
+        ImVec2 Padding;
+        float BorderThickness;
+    } LayoutStyle;
 
-    ImVector<int> pin_indices;
-    bool draggable;
+    ImVector<int> PinIndices;
+    bool Draggable;
 
     NodeData(const int node_id)
-        : id(node_id), origin(100.0f, 100.0f), title_bar_content_rect(),
-          rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), color_style(), layout_style(),
-          pin_indices(), draggable(true)
+        : Id(node_id), Origin(100.0f, 100.0f), TitleBarContentRect(),
+          Rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), ColorStyle(), LayoutStyle(), PinIndices(),
+          Draggable(true)
     {
     }
 
-    ~NodeData() { id = INT_MIN; }
+    ~NodeData() { Id = INT_MIN; }
 };
 
 struct PinData
 {
-    int id;
-    int parent_node_idx;
-    ImRect attribute_rect;
-    AttributeType type;
-    PinShape shape;
-    ImVec2 pos; // screen-space coordinates
-    int flags;
+    int Id;
+    int ParentNodeIdx;
+    ImRect AttributeRect;
+    AttributeType Type;
+    PinShape Shape;
+    ImVec2 Pos; // screen-space coordinates
+    int Flags;
 
     struct
     {
-        ImU32 background, hovered;
-    } color_style;
+        ImU32 Background, Hovered;
+    } ColorStyle;
 
     PinData(const int pin_id)
-        : id(pin_id), parent_node_idx(), attribute_rect(), type(AttributeType_None),
-          shape(PinShape_CircleFilled), pos(), flags(AttributeFlags_None), color_style()
+        : Id(pin_id), ParentNodeIdx(), AttributeRect(), Type(AttributeType_None),
+          Shape(PinShape_CircleFilled), Pos(), Flags(AttributeFlags_None), ColorStyle()
     {
     }
 };
 
 struct LinkData
 {
-    int id;
-    int start_pin_idx, end_pin_idx;
+    int Id;
+    int StartPinIdx, EndPinIdx;
 
     struct
     {
-        ImU32 base, hovered, selected;
-    } color_style;
+        ImU32 Base, Hovered, Selected;
+    } ColorStyle;
 
-    LinkData(const int link_id) : id(link_id), start_pin_idx(), end_pin_idx(), color_style() {}
+    LinkData(const int link_id) : Id(link_id), StartPinIdx(), EndPinIdx(), ColorStyle() {}
 };
 
 struct LinkPredicate
@@ -196,10 +196,10 @@ struct LinkPredicate
         // Sorting by pin index should have the uniqueness guarantees as sorting
         // by id -- each unique id will get one slot in the link pool array.
 
-        int lhs_start = lhs.start_pin_idx;
-        int lhs_end = lhs.end_pin_idx;
-        int rhs_start = rhs.start_pin_idx;
-        int rhs_end = rhs.end_pin_idx;
+        int lhs_start = lhs.StartPinIdx;
+        int lhs_end = lhs.EndPinIdx;
+        int rhs_start = rhs.StartPinIdx;
+        int rhs_end = rhs.EndPinIdx;
 
         if (lhs_start > lhs_end)
         {
@@ -218,13 +218,13 @@ struct LinkPredicate
 struct BezierCurve
 {
     // the curve control points
-    ImVec2 p0, p1, p2, p3;
+    ImVec2 P0, P1, P2, P3;
 };
 
 struct LinkBezierData
 {
-    BezierCurve bezier;
-    int num_segments;
+    BezierCurve Bezier;
+    int NumSegments;
 };
 
 enum ClickInteractionType
@@ -247,93 +247,93 @@ struct ClickInteractionState
 {
     struct
     {
-        int start_pin_idx;
-        OptionalIndex end_pin_idx;
-        LinkCreationType link_creation_type;
-    } link_creation;
+        int StartPinIdx;
+        OptionalIndex EndPinIdx;
+        LinkCreationType LinkCreationType;
+    } LinkCreation;
 
     struct
     {
-        ImRect rect;
-    } box_selector;
+        ImRect Rect;
+    } BoxSelector;
 };
 
 struct ColorStyleElement
 {
-    ImU32 color;
-    ColorStyle item;
+    ImU32 Color;
+    ColorStyle Item;
 
-    ColorStyleElement(const ImU32 c, const ColorStyle s) : color(c), item(s) {}
+    ColorStyleElement(const ImU32 c, const ColorStyle s) : Color(c), Item(s) {}
 };
 
 struct StyleElement
 {
-    StyleVar item;
-    float value;
+    StyleVar Item;
+    float Value;
 
-    StyleElement(const float value, const StyleVar variable) : item(variable), value(value) {}
+    StyleElement(const float value, const StyleVar variable) : Item(variable), Value(value) {}
 };
 } // namespace
 // [SECTION] global struct
 // this stores data which only lives for one frame
 struct Context
 {
-    EditorContext* default_editor_ctx;
-    EditorContext* editor_ctx;
+    EditorContext* DefaultEditorCtx;
+    EditorContext* EditorCtx;
 
     // Canvas draw list and helper state
-    ImDrawList* canvas_draw_list;
-    ImGuiStorage node_idx_to_submission_idx;
-    ImVector<int> node_idx_submission_order;
-    ImVector<int> node_indices_overlapping_with_mouse;
-    ImVector<int> occluded_pin_indices;
+    ImDrawList* CanvasDrawList;
+    ImGuiStorage NodeIdxToSubmissionIdx;
+    ImVector<int> NodeIdxSubmissionOrder;
+    ImVector<int> NodeIndicesOverlappingWithMouse;
+    ImVector<int> OccludedPinIndices;
 
     // Canvas extents
-    ImVec2 canvas_origin_screen_space;
-    ImRect canvas_rect_screen_space;
+    ImVec2 CanvasOriginScreenSpace;
+    ImRect CanvasRectScreenSpace;
 
     // Debug helpers
-    ScopeFlags current_scope;
+    ScopeFlags CurrentScope;
 
     // Configuration state
-    IO io;
-    Style style;
-    ImVector<ColorStyleElement> color_modifier_stack;
-    ImVector<StyleElement> style_modifier_stack;
-    ImGuiTextBuffer text_buffer;
+    IO Io;
+    Style Style;
+    ImVector<ColorStyleElement> ColorModifierStack;
+    ImVector<StyleElement> StyleModifierStack;
+    ImGuiTextBuffer TextBuffer;
 
-    int current_attribute_flags;
-    ImVector<int> attribute_flag_stack;
+    int CurrentAttributeFlags;
+    ImVector<int> AttributeFlagStack;
 
     // UI element state
-    int current_node_idx;
-    int current_pin_idx;
-    int current_attribute_id;
+    int CurrentNodeIdx;
+    int CurrentPinIdx;
+    int CurrentAttributeId;
 
-    OptionalIndex hovered_node_idx;
-    OptionalIndex interactive_node_idx;
-    OptionalIndex hovered_link_idx;
-    OptionalIndex hovered_pin_idx;
-    int hovered_pin_flags;
+    OptionalIndex HoveredNodeIdx;
+    OptionalIndex InteractiveNodeIdx;
+    OptionalIndex HoveredLinkIdx;
+    OptionalIndex HoveredPinIdx;
+    int HoveredPinFlags;
 
-    OptionalIndex deleted_link_idx;
-    OptionalIndex snap_link_idx;
+    OptionalIndex DeletedLinkIdx;
+    OptionalIndex SnapLinkIdx;
 
     // Event helper state
-    int element_state_change;
+    int ElementStateChange;
 
-    int active_attribute_id;
-    bool active_attribute;
+    int ActiveAttributeId;
+    bool ActiveAttribute;
 
     // ImGui::IO cache
 
-    ImVec2 mouse_pos;
+    ImVec2 MousePos;
 
-    bool left_mouse_clicked;
-    bool left_mouse_released;
-    bool alt_mouse_clicked;
-    bool left_mouse_dragging;
-    bool alt_mouse_dragging;
+    bool LeftMouseClicked;
+    bool LeftMouseReleased;
+    bool AltMouseClicked;
+    bool LeftMouseDragging;
+    bool AltMouseDragging;
 };
 
 Context* g = NULL;
@@ -344,18 +344,18 @@ namespace
 EditorContext& EditorContextGet()
 {
     // No editor context was set! Did you forget to call imnodes::Initialize?
-    assert(g->editor_ctx != NULL);
-    return *g->editor_ctx;
+    assert(g->EditorCtx != NULL);
+    return *g->EditorCtx;
 }
 
 inline ImVec2 EvalBezier(float t, const BezierCurve& bezier)
 {
     // B(t) = (1-t)**3 p0 + 3(1 - t)**2 t P1 + 3(1-t)t**2 P2 + t**3 P3
     return ImVec2(
-        (1 - t) * (1 - t) * (1 - t) * bezier.p0.x + 3 * (1 - t) * (1 - t) * t * bezier.p1.x +
-            3 * (1 - t) * t * t * bezier.p2.x + t * t * t * bezier.p3.x,
-        (1 - t) * (1 - t) * (1 - t) * bezier.p0.y + 3 * (1 - t) * (1 - t) * t * bezier.p1.y +
-            3 * (1 - t) * t * t * bezier.p2.y + t * t * t * bezier.p3.y);
+        (1 - t) * (1 - t) * (1 - t) * bezier.P0.x + 3 * (1 - t) * (1 - t) * t * bezier.P1.x +
+            3 * (1 - t) * t * t * bezier.P2.x + t * t * t * bezier.P3.x,
+        (1 - t) * (1 - t) * (1 - t) * bezier.P0.y + 3 * (1 - t) * (1 - t) * t * bezier.P1.y +
+            3 * (1 - t) * t * t * bezier.P2.y + t * t * t * bezier.P3.y);
 }
 
 // Calculates the closest point along each bezier curve segment.
@@ -365,7 +365,7 @@ ImVec2 GetClosestPointOnCubicBezier(
     const BezierCurve& bezier)
 {
     IM_ASSERT(num_segments > 0);
-    ImVec2 p_last = bezier.p0;
+    ImVec2 p_last = bezier.P0;
     ImVec2 p_closest;
     float p_closest_dist = FLT_MAX;
     float t_step = 1.0f / (float)num_segments;
@@ -397,14 +397,14 @@ inline float GetDistanceToCubicBezier(
 
 inline ImRect GetContainingRectForBezierCurve(const BezierCurve& bezier)
 {
-    const ImVec2 min = ImVec2(ImMin(bezier.p0.x, bezier.p3.x), ImMin(bezier.p0.y, bezier.p3.y));
-    const ImVec2 max = ImVec2(ImMax(bezier.p0.x, bezier.p3.x), ImMax(bezier.p0.y, bezier.p3.y));
+    const ImVec2 min = ImVec2(ImMin(bezier.P0.x, bezier.P3.x), ImMin(bezier.P0.y, bezier.P3.y));
+    const ImVec2 max = ImVec2(ImMax(bezier.P0.x, bezier.P3.x), ImMax(bezier.P0.y, bezier.P3.y));
 
-    const float hover_distance = g->style.link_hover_distance;
+    const float hover_distance = g->Style.LinkHoverDistance;
 
     ImRect rect(min, max);
-    rect.Add(bezier.p1);
-    rect.Add(bezier.p2);
+    rect.Add(bezier.P1);
+    rect.Add(bezier.P2);
     rect.Expand(ImVec2(hover_distance, hover_distance));
 
     return rect;
@@ -425,11 +425,11 @@ inline LinkBezierData GetLinkRenderable(
     const float link_length = ImSqrt(ImLengthSqr(end - start));
     const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
     LinkBezierData link_data;
-    link_data.bezier.p0 = start;
-    link_data.bezier.p1 = start + offset;
-    link_data.bezier.p2 = end - offset;
-    link_data.bezier.p3 = end;
-    link_data.num_segments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
+    link_data.Bezier.P0 = start;
+    link_data.Bezier.P1 = start + offset;
+    link_data.Bezier.P2 = end - offset;
+    link_data.Bezier.P3 = end;
+    link_data.NumSegments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
     return link_data;
 }
 
@@ -491,11 +491,11 @@ inline bool RectangleOverlapsLineSegment(const ImRect& rect, const ImVec2& p1, c
 
 inline bool RectangleOverlapsBezier(const ImRect& rectangle, const LinkBezierData& link_data)
 {
-    ImVec2 current = EvalBezier(0.f, link_data.bezier);
-    const float dt = 1.0f / link_data.num_segments;
-    for (int s = 0; s < link_data.num_segments; ++s)
+    ImVec2 current = EvalBezier(0.f, link_data.Bezier);
+    const float dt = 1.0f / link_data.NumSegments;
+    for (int s = 0; s < link_data.NumSegments; ++s)
     {
-        ImVec2 next = EvalBezier(static_cast<float>((s + 1) * dt), link_data.bezier);
+        ImVec2 next = EvalBezier(static_cast<float>((s + 1) * dt), link_data.Bezier);
         if (RectangleOverlapsLineSegment(rectangle, current, next))
         {
             return true;
@@ -538,7 +538,7 @@ inline bool RectangleOverlapsLink(
         // link
 
         const LinkBezierData link_data =
-            GetLinkRenderable(start, end, start_type, g->style.link_line_segments_per_length);
+            GetLinkRenderable(start, end, start_type, g->Style.LinkLineSegmentsPerLength);
         return RectangleOverlapsBezier(rectangle, link_data);
     }
 
@@ -550,25 +550,24 @@ inline bool RectangleOverlapsLink(
 
 struct EditorContext
 {
-    ObjectPool<NodeData> nodes;
-    ObjectPool<PinData> pins;
-    ObjectPool<LinkData> links;
+    ObjectPool<NodeData> Nodes;
+    ObjectPool<PinData> Pins;
+    ObjectPool<LinkData> Links;
 
-    ImVector<int> node_depth_order;
+    ImVector<int> NodeDepthOrder;
 
     // ui related fields
-    ImVec2 panning;
+    ImVec2 Panning;
 
-    ImVector<int> selected_node_indices;
-    ImVector<int> selected_link_indices;
+    ImVector<int> SelectedNodeIndices;
+    ImVector<int> SelectedLinkIndices;
 
-    ClickInteractionType click_interaction_type;
-    ClickInteractionState click_interaction_state;
+    ClickInteractionType ClickInteractionType;
+    ClickInteractionState ClickInteractionState;
 
     EditorContext()
-        : nodes(), pins(), links(), panning(0.f, 0.f), selected_node_indices(),
-          selected_link_indices(), click_interaction_type(ClickInteractionType_None),
-          click_interaction_state()
+        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
+          ClickInteractionType(ClickInteractionType_None), ClickInteractionState()
     {
     }
 };
@@ -661,9 +660,9 @@ void ImDrawListSplitterSwapChannels(
 
 void DrawListSet(ImDrawList* window_draw_list)
 {
-    g->canvas_draw_list = window_draw_list;
-    g->node_idx_to_submission_idx.Clear();
-    g->node_idx_submission_order.clear();
+    g->CanvasDrawList = window_draw_list;
+    g->NodeIdxToSubmissionIdx.Clear();
+    g->NodeIdxSubmissionOrder.clear();
 }
 
 // The draw list channels are structured as follows. First we have our base channel, the canvas grid
@@ -687,17 +686,17 @@ void DrawListSet(ImDrawList* window_draw_list)
 
 void DrawListAddNode(const int node_idx)
 {
-    g->node_idx_to_submission_idx.SetInt(
-        static_cast<ImGuiID>(node_idx), g->node_idx_submission_order.Size);
-    g->node_idx_submission_order.push_back(node_idx);
-    ImDrawListGrowChannels(g->canvas_draw_list, 2);
+    g->NodeIdxToSubmissionIdx.SetInt(
+        static_cast<ImGuiID>(node_idx), g->NodeIdxSubmissionOrder.Size);
+    g->NodeIdxSubmissionOrder.push_back(node_idx);
+    ImDrawListGrowChannels(g->CanvasDrawList, 2);
 }
 
 void DrawListAppendClickInteractionChannel()
 {
     // NOTE: don't use this function outside of EndNodeEditor. Using this before all nodes have been
     // added will screw up the node draw order.
-    ImDrawListGrowChannels(g->canvas_draw_list, 1);
+    ImDrawListGrowChannels(g->CanvasDrawList, 1);
 }
 
 int DrawListSubmissionIdxToBackgroundChannelIdx(const int submission_idx)
@@ -713,21 +712,20 @@ int DrawListSubmissionIdxToForegroundChannelIdx(const int submission_idx)
 
 void DrawListActivateClickInteractionChannel()
 {
-    g->canvas_draw_list->_Splitter.SetCurrentChannel(
-        g->canvas_draw_list, g->canvas_draw_list->_Splitter._Count - 1);
+    g->CanvasDrawList->_Splitter.SetCurrentChannel(
+        g->CanvasDrawList, g->CanvasDrawList->_Splitter._Count - 1);
 }
 
 void DrawListActivateCurrentNodeForeground()
 {
     const int foreground_channel_idx =
-        DrawListSubmissionIdxToForegroundChannelIdx(g->node_idx_submission_order.Size - 1);
-    g->canvas_draw_list->_Splitter.SetCurrentChannel(g->canvas_draw_list, foreground_channel_idx);
+        DrawListSubmissionIdxToForegroundChannelIdx(g->NodeIdxSubmissionOrder.Size - 1);
+    g->CanvasDrawList->_Splitter.SetCurrentChannel(g->CanvasDrawList, foreground_channel_idx);
 }
 
 void DrawListActivateNodeBackground(const int node_idx)
 {
-    const int submission_idx =
-        g->node_idx_to_submission_idx.GetInt(static_cast<ImGuiID>(node_idx), -1);
+    const int submission_idx = g->NodeIdxToSubmissionIdx.GetInt(static_cast<ImGuiID>(node_idx), -1);
     // There is a discrepancy in the submitted node count and the rendered node count! Did you call
     // one of the following functions
     // * EditorContextMoveToNode
@@ -737,7 +735,7 @@ void DrawListActivateNodeBackground(const int node_idx)
     // after the BeginNode/EndNode function calls?
     assert(submission_idx != -1);
     const int background_channel_idx = DrawListSubmissionIdxToBackgroundChannelIdx(submission_idx);
-    g->canvas_draw_list->_Splitter.SetCurrentChannel(g->canvas_draw_list, background_channel_idx);
+    g->CanvasDrawList->_Splitter.SetCurrentChannel(g->CanvasDrawList, background_channel_idx);
 }
 
 void DrawListSwapSubmissionIndices(const int lhs_idx, const int rhs_idx)
@@ -750,23 +748,23 @@ void DrawListSwapSubmissionIndices(const int lhs_idx, const int rhs_idx)
     const int rhs_background_channel_idx = DrawListSubmissionIdxToBackgroundChannelIdx(rhs_idx);
 
     ImDrawListSplitterSwapChannels(
-        g->canvas_draw_list->_Splitter, lhs_background_channel_idx, rhs_background_channel_idx);
+        g->CanvasDrawList->_Splitter, lhs_background_channel_idx, rhs_background_channel_idx);
     ImDrawListSplitterSwapChannels(
-        g->canvas_draw_list->_Splitter, lhs_foreground_channel_idx, rhs_foreground_channel_idx);
+        g->CanvasDrawList->_Splitter, lhs_foreground_channel_idx, rhs_foreground_channel_idx);
 }
 
 void DrawListSortChannelsByDepth(const ImVector<int>& node_idx_depth_order)
 {
-    if (g->node_idx_to_submission_idx.Data.Size < 2)
+    if (g->NodeIdxToSubmissionIdx.Data.Size < 2)
     {
         return;
     }
 
-    assert(node_idx_depth_order.Size == g->node_idx_submission_order.Size);
+    assert(node_idx_depth_order.Size == g->NodeIdxSubmissionOrder.Size);
 
     int start_idx = node_idx_depth_order.Size - 1;
 
-    while (node_idx_depth_order[start_idx] == g->node_idx_submission_order[start_idx])
+    while (node_idx_depth_order[start_idx] == g->NodeIdxSubmissionOrder[start_idx])
     {
         if (--start_idx == 0)
         {
@@ -784,9 +782,9 @@ void DrawListSortChannelsByDepth(const ImVector<int>& node_idx_depth_order)
 
         // Find the current index of the node_idx in the submission order array
         int submission_idx = -1;
-        for (int i = 0; i < g->node_idx_submission_order.Size; ++i)
+        for (int i = 0; i < g->NodeIdxSubmissionOrder.Size; ++i)
         {
-            if (g->node_idx_submission_order[i] == node_idx)
+            if (g->NodeIdxSubmissionOrder[i] == node_idx)
             {
                 submission_idx = i;
                 break;
@@ -802,7 +800,7 @@ void DrawListSortChannelsByDepth(const ImVector<int>& node_idx_depth_order)
         for (int j = submission_idx; j < depth_idx; ++j)
         {
             DrawListSwapSubmissionIndices(j, j + 1);
-            ImSwap(g->node_idx_submission_order[j], g->node_idx_submission_order[j + 1]);
+            ImSwap(g->NodeIdxSubmissionOrder[j], g->NodeIdxSubmissionOrder[j + 1]);
         }
     }
 }
@@ -812,21 +810,21 @@ void DrawListSortChannelsByDepth(const ImVector<int>& node_idx_depth_order)
 template<typename T>
 int ObjectPoolFind(ObjectPool<T>& objects, const int id)
 {
-    const int index = objects.id_map.GetInt(static_cast<ImGuiID>(id), -1);
+    const int index = objects.IdMap.GetInt(static_cast<ImGuiID>(id), -1);
     return index;
 }
 
 template<typename T>
 void ObjectPoolUpdate(ObjectPool<T>& objects)
 {
-    objects.free_list.clear();
-    for (int i = 0; i < objects.in_use.size(); ++i)
+    objects.FreeList.clear();
+    for (int i = 0; i < objects.InUse.size(); ++i)
     {
-        if (!objects.in_use[i])
+        if (!objects.InUse[i])
         {
-            objects.id_map.SetInt(objects.pool[i].id, -1);
-            objects.free_list.push_back(i);
-            (objects.pool.Data + i)->~T();
+            objects.IdMap.SetInt(objects.Pool[i].Id, -1);
+            objects.FreeList.push_back(i);
+            (objects.Pool.Data + i)->~T();
         }
     }
 }
@@ -834,32 +832,32 @@ void ObjectPoolUpdate(ObjectPool<T>& objects)
 template<>
 void ObjectPoolUpdate(ObjectPool<NodeData>& nodes)
 {
-    nodes.free_list.clear();
-    for (int i = 0; i < nodes.in_use.size(); ++i)
+    nodes.FreeList.clear();
+    for (int i = 0; i < nodes.InUse.size(); ++i)
     {
-        if (nodes.in_use[i])
+        if (nodes.InUse[i])
         {
-            nodes.pool[i].pin_indices.clear();
+            nodes.Pool[i].PinIndices.clear();
         }
         else
         {
-            const int previous_id = nodes.pool[i].id;
-            const int previous_idx = nodes.id_map.GetInt(previous_id, -1);
+            const int previous_id = nodes.Pool[i].Id;
+            const int previous_idx = nodes.IdMap.GetInt(previous_id, -1);
 
             if (previous_idx != -1)
             {
                 assert(previous_idx == i);
                 // Remove node idx form depth stack the first time we detect that this idx slot is
                 // unused
-                ImVector<int>& depth_stack = EditorContextGet().node_depth_order;
+                ImVector<int>& depth_stack = EditorContextGet().NodeDepthOrder;
                 const int* const elem = depth_stack.find(i);
                 assert(elem != depth_stack.end());
                 depth_stack.erase(elem);
             }
 
-            nodes.id_map.SetInt(previous_id, -1);
-            nodes.free_list.push_back(i);
-            (nodes.pool.Data + i)->~NodeData();
+            nodes.IdMap.SetInt(previous_id, -1);
+            nodes.FreeList.push_back(i);
+            (nodes.Pool.Data + i)->~NodeData();
         }
     }
 }
@@ -867,39 +865,39 @@ void ObjectPoolUpdate(ObjectPool<NodeData>& nodes)
 template<typename T>
 void ObjectPoolReset(ObjectPool<T>& objects)
 {
-    if (!objects.in_use.empty())
+    if (!objects.InUse.empty())
     {
-        memset(objects.in_use.Data, 0, objects.in_use.size_in_bytes());
+        memset(objects.InUse.Data, 0, objects.InUse.size_in_bytes());
     }
 }
 
 template<typename T>
 int ObjectPoolFindOrCreateIndex(ObjectPool<T>& objects, const int id)
 {
-    int index = objects.id_map.GetInt(static_cast<ImGuiID>(id), -1);
+    int index = objects.IdMap.GetInt(static_cast<ImGuiID>(id), -1);
 
     // Construct new object
     if (index == -1)
     {
-        if (objects.free_list.empty())
+        if (objects.FreeList.empty())
         {
-            index = objects.pool.size();
-            IM_ASSERT(objects.pool.size() == objects.in_use.size());
-            const int new_size = objects.pool.size() + 1;
-            objects.pool.resize(new_size);
-            objects.in_use.resize(new_size);
+            index = objects.Pool.size();
+            IM_ASSERT(objects.Pool.size() == objects.InUse.size());
+            const int new_size = objects.Pool.size() + 1;
+            objects.Pool.resize(new_size);
+            objects.InUse.resize(new_size);
         }
         else
         {
-            index = objects.free_list.back();
-            objects.free_list.pop_back();
+            index = objects.FreeList.back();
+            objects.FreeList.pop_back();
         }
-        IM_PLACEMENT_NEW(objects.pool.Data + index) T(id);
-        objects.id_map.SetInt(static_cast<ImGuiID>(id), index);
+        IM_PLACEMENT_NEW(objects.Pool.Data + index) T(id);
+        objects.IdMap.SetInt(static_cast<ImGuiID>(id), index);
     }
 
     // Flag it as used
-    objects.in_use[index] = true;
+    objects.InUse[index] = true;
 
     return index;
 }
@@ -907,33 +905,33 @@ int ObjectPoolFindOrCreateIndex(ObjectPool<T>& objects, const int id)
 template<>
 int ObjectPoolFindOrCreateIndex(ObjectPool<NodeData>& nodes, const int node_id)
 {
-    int node_idx = nodes.id_map.GetInt(static_cast<ImGuiID>(node_id), -1);
+    int node_idx = nodes.IdMap.GetInt(static_cast<ImGuiID>(node_id), -1);
 
     // Construct new node
     if (node_idx == -1)
     {
-        if (nodes.free_list.empty())
+        if (nodes.FreeList.empty())
         {
-            node_idx = nodes.pool.size();
-            IM_ASSERT(nodes.pool.size() == nodes.in_use.size());
-            const int new_size = nodes.pool.size() + 1;
-            nodes.pool.resize(new_size);
-            nodes.in_use.resize(new_size);
+            node_idx = nodes.Pool.size();
+            IM_ASSERT(nodes.Pool.size() == nodes.InUse.size());
+            const int new_size = nodes.Pool.size() + 1;
+            nodes.Pool.resize(new_size);
+            nodes.InUse.resize(new_size);
         }
         else
         {
-            node_idx = nodes.free_list.back();
-            nodes.free_list.pop_back();
+            node_idx = nodes.FreeList.back();
+            nodes.FreeList.pop_back();
         }
-        IM_PLACEMENT_NEW(nodes.pool.Data + node_idx) NodeData(node_id);
-        nodes.id_map.SetInt(static_cast<ImGuiID>(node_id), node_idx);
+        IM_PLACEMENT_NEW(nodes.Pool.Data + node_idx) NodeData(node_id);
+        nodes.IdMap.SetInt(static_cast<ImGuiID>(node_id), node_idx);
 
         EditorContext& editor = EditorContextGet();
-        editor.node_depth_order.push_back(node_idx);
+        editor.NodeDepthOrder.push_back(node_idx);
     }
 
     // Flag node as used
-    nodes.in_use[node_idx] = true;
+    nodes.InUse[node_idx] = true;
 
     return node_idx;
 }
@@ -942,7 +940,7 @@ template<typename T>
 T& ObjectPoolFindOrCreateObject(ObjectPool<T>& objects, const int id)
 {
     const int index = ObjectPoolFindOrCreateIndex(objects, id);
-    return objects.pool[index];
+    return objects.Pool[index];
 }
 
 // [SECTION] ui state logic
@@ -953,15 +951,15 @@ ImVec2 GetScreenSpacePinCoordinates(
     const AttributeType type)
 {
     assert(type == AttributeType_Input || type == AttributeType_Output);
-    const float x = type == AttributeType_Input ? (node_rect.Min.x - g->style.pin_offset)
-                                                : (node_rect.Max.x + g->style.pin_offset);
+    const float x = type == AttributeType_Input ? (node_rect.Min.x - g->Style.PinOffset)
+                                                : (node_rect.Max.x + g->Style.PinOffset);
     return ImVec2(x, 0.5f * (attribute_rect.Min.y + attribute_rect.Max.y));
 }
 
 ImVec2 GetScreenSpacePinCoordinates(const EditorContext& editor, const PinData& pin)
 {
-    const ImRect& parent_node_rect = editor.nodes.pool[pin.parent_node_idx].rect;
-    return GetScreenSpacePinCoordinates(parent_node_rect, pin.attribute_rect, pin.type);
+    const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
+    return GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
 }
 
 bool MouseInCanvas()
@@ -969,8 +967,7 @@ bool MouseInCanvas()
     // This flag should be true either when hovering or clicking something in the canvas.
     const bool is_window_hovered_or_focused = ImGui::IsWindowHovered() || ImGui::IsWindowFocused();
 
-    return is_window_hovered_or_focused &&
-           g->canvas_rect_screen_space.Contains(ImGui::GetMousePos());
+    return is_window_hovered_or_focused && g->CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
 }
 
 void BeginNodeSelection(EditorContext& editor, const int node_idx)
@@ -978,25 +975,25 @@ void BeginNodeSelection(EditorContext& editor, const int node_idx)
     // Don't start selecting a node if we are e.g. already creating and dragging
     // a new link! New link creation can happen when the mouse is clicked over
     // a node, but within the hover radius of a pin.
-    if (editor.click_interaction_type != ClickInteractionType_None)
+    if (editor.ClickInteractionType != ClickInteractionType_None)
     {
         return;
     }
 
-    editor.click_interaction_type = ClickInteractionType_Node;
+    editor.ClickInteractionType = ClickInteractionType_Node;
     // If the node is not already contained in the selection, then we want only
     // the interaction node to be selected, effective immediately.
     //
     // Otherwise, we want to allow for the possibility of multiple nodes to be
     // moved at once.
-    if (!editor.selected_node_indices.contains(node_idx))
+    if (!editor.SelectedNodeIndices.contains(node_idx))
     {
-        editor.selected_node_indices.clear();
-        editor.selected_link_indices.clear();
-        editor.selected_node_indices.push_back(node_idx);
+        editor.SelectedNodeIndices.clear();
+        editor.SelectedLinkIndices.clear();
+        editor.SelectedNodeIndices.push_back(node_idx);
 
         // Ensure that individually selected nodes get rendered on top
-        ImVector<int>& depth_stack = editor.node_depth_order;
+        ImVector<int>& depth_stack = editor.NodeDepthOrder;
         const int* const elem = depth_stack.find(node_idx);
         assert(elem != depth_stack.end());
         depth_stack.erase(elem);
@@ -1006,34 +1003,34 @@ void BeginNodeSelection(EditorContext& editor, const int node_idx)
 
 void BeginLinkSelection(EditorContext& editor, const int link_idx)
 {
-    editor.click_interaction_type = ClickInteractionType_Link;
+    editor.ClickInteractionType = ClickInteractionType_Link;
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
-    editor.selected_node_indices.clear();
-    editor.selected_link_indices.clear();
-    editor.selected_link_indices.push_back(link_idx);
+    editor.SelectedNodeIndices.clear();
+    editor.SelectedLinkIndices.clear();
+    editor.SelectedLinkIndices.push_back(link_idx);
 }
 
 void BeginLinkDetach(EditorContext& editor, const int link_idx, const int detach_pin_idx)
 {
-    const LinkData& link = editor.links.pool[link_idx];
-    ClickInteractionState& state = editor.click_interaction_state;
-    state.link_creation.end_pin_idx.Reset();
-    state.link_creation.start_pin_idx =
-        detach_pin_idx == link.start_pin_idx ? link.end_pin_idx : link.start_pin_idx;
-    g->deleted_link_idx = link_idx;
+    const LinkData& link = editor.Links.Pool[link_idx];
+    ClickInteractionState& state = editor.ClickInteractionState;
+    state.LinkCreation.EndPinIdx.Reset();
+    state.LinkCreation.StartPinIdx =
+        detach_pin_idx == link.StartPinIdx ? link.EndPinIdx : link.StartPinIdx;
+    g->DeletedLinkIdx = link_idx;
 }
 
 void BeginLinkInteraction(EditorContext& editor, const int link_idx)
 {
     // First check if we are clicking a link in the vicinity of a pin.
     // This may result in a link detach via click and drag.
-    if (editor.click_interaction_type == ClickInteractionType_LinkCreation)
+    if (editor.ClickInteractionType == ClickInteractionType_LinkCreation)
     {
-        if ((g->hovered_pin_flags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
+        if ((g->HoveredPinFlags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
         {
-            BeginLinkDetach(editor, link_idx, g->hovered_pin_idx.Value());
-            editor.click_interaction_state.link_creation.link_creation_type =
+            BeginLinkDetach(editor, link_idx, g->HoveredPinIdx.Value());
+            editor.ClickInteractionState.LinkCreation.LinkCreationType =
                 LinkCreationType_FromDetach;
         }
     }
@@ -1041,24 +1038,24 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
     // modifier pressed. This may also result in a link detach via clicking.
     else
     {
-        const bool modifier_pressed = g->io.link_detach_with_modifier_click.modifier == NULL
+        const bool modifier_pressed = g->Io.LinkDetachWithModifierClick.Modifier == NULL
                                           ? false
-                                          : *g->io.link_detach_with_modifier_click.modifier;
+                                          : *g->Io.LinkDetachWithModifierClick.Modifier;
 
         if (modifier_pressed)
         {
-            const LinkData& link = editor.links.pool[link_idx];
-            const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
-            const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
-            const ImVec2& mouse_pos = g->mouse_pos;
-            const float dist_to_start = ImLengthSqr(start_pin.pos - mouse_pos);
-            const float dist_to_end = ImLengthSqr(end_pin.pos - mouse_pos);
+            const LinkData& link = editor.Links.Pool[link_idx];
+            const PinData& start_pin = editor.Pins.Pool[link.StartPinIdx];
+            const PinData& end_pin = editor.Pins.Pool[link.EndPinIdx];
+            const ImVec2& mouse_pos = g->MousePos;
+            const float dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
+            const float dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
             const int closest_pin_idx =
-                dist_to_start < dist_to_end ? link.start_pin_idx : link.end_pin_idx;
+                dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
 
-            editor.click_interaction_type = ClickInteractionType_LinkCreation;
+            editor.ClickInteractionType = ClickInteractionType_LinkCreation;
             BeginLinkDetach(editor, link_idx, closest_pin_idx);
-            editor.click_interaction_state.link_creation.link_creation_type =
+            editor.ClickInteractionState.LinkCreation.LinkCreationType =
                 LinkCreationType_FromDetach;
         }
         else
@@ -1070,37 +1067,37 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
 
 void BeginLinkCreation(EditorContext& editor, const int hovered_pin_idx)
 {
-    editor.click_interaction_type = ClickInteractionType_LinkCreation;
-    editor.click_interaction_state.link_creation.start_pin_idx = hovered_pin_idx;
-    editor.click_interaction_state.link_creation.end_pin_idx.Reset();
-    editor.click_interaction_state.link_creation.link_creation_type = LinkCreationType_Standard;
-    g->element_state_change |= ElementStateChange_LinkStarted;
+    editor.ClickInteractionType = ClickInteractionType_LinkCreation;
+    editor.ClickInteractionState.LinkCreation.StartPinIdx = hovered_pin_idx;
+    editor.ClickInteractionState.LinkCreation.EndPinIdx.Reset();
+    editor.ClickInteractionState.LinkCreation.LinkCreationType = LinkCreationType_Standard;
+    g->ElementStateChange |= ElementStateChange_LinkStarted;
 }
 
 void BeginCanvasInteraction(EditorContext& editor)
 {
-    const bool any_ui_element_hovered = g->hovered_node_idx.HasValue() ||
-                                        g->hovered_link_idx.HasValue() ||
-                                        g->hovered_pin_idx.HasValue() || ImGui::IsAnyItemHovered();
+    const bool any_ui_element_hovered = g->HoveredNodeIdx.HasValue() ||
+                                        g->HoveredLinkIdx.HasValue() ||
+                                        g->HoveredPinIdx.HasValue() || ImGui::IsAnyItemHovered();
 
     const bool mouse_not_in_canvas = !MouseInCanvas();
 
-    if (editor.click_interaction_type != ClickInteractionType_None || any_ui_element_hovered ||
+    if (editor.ClickInteractionType != ClickInteractionType_None || any_ui_element_hovered ||
         mouse_not_in_canvas)
     {
         return;
     }
 
-    const bool started_panning = g->alt_mouse_clicked;
+    const bool started_panning = g->AltMouseClicked;
 
     if (started_panning)
     {
-        editor.click_interaction_type = ClickInteractionType_Panning;
+        editor.ClickInteractionType = ClickInteractionType_Panning;
     }
-    else if (g->left_mouse_clicked)
+    else if (g->LeftMouseClicked)
     {
-        editor.click_interaction_type = ClickInteractionType_BoxSelection;
-        editor.click_interaction_state.box_selector.rect.Min = g->mouse_pos;
+        editor.ClickInteractionType = ClickInteractionType_BoxSelection;
+        editor.ClickInteractionState.BoxSelector.Rect.Min = g->MousePos;
     }
 }
 
@@ -1120,48 +1117,48 @@ void BoxSelectorUpdateSelection(EditorContext& editor, ImRect box_rect)
 
     // Update node selection
 
-    editor.selected_node_indices.clear();
+    editor.SelectedNodeIndices.clear();
 
     // Test for overlap against node rectangles
 
-    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
+    for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
     {
-        if (editor.nodes.in_use[node_idx])
+        if (editor.Nodes.InUse[node_idx])
         {
-            NodeData& node = editor.nodes.pool[node_idx];
-            if (box_rect.Overlaps(node.rect))
+            NodeData& node = editor.Nodes.Pool[node_idx];
+            if (box_rect.Overlaps(node.Rect))
             {
-                editor.selected_node_indices.push_back(node_idx);
+                editor.SelectedNodeIndices.push_back(node_idx);
             }
         }
     }
 
     // Update link selection
 
-    editor.selected_link_indices.clear();
+    editor.SelectedLinkIndices.clear();
 
     // Test for overlap against links
 
-    for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
+    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
     {
-        if (editor.links.in_use[link_idx])
+        if (editor.Links.InUse[link_idx])
         {
-            const LinkData& link = editor.links.pool[link_idx];
+            const LinkData& link = editor.Links.Pool[link_idx];
 
-            const PinData& pin_start = editor.pins.pool[link.start_pin_idx];
-            const PinData& pin_end = editor.pins.pool[link.end_pin_idx];
-            const ImRect& node_start_rect = editor.nodes.pool[pin_start.parent_node_idx].rect;
-            const ImRect& node_end_rect = editor.nodes.pool[pin_end.parent_node_idx].rect;
+            const PinData& pin_start = editor.Pins.Pool[link.StartPinIdx];
+            const PinData& pin_end = editor.Pins.Pool[link.EndPinIdx];
+            const ImRect& node_start_rect = editor.Nodes.Pool[pin_start.ParentNodeIdx].Rect;
+            const ImRect& node_end_rect = editor.Nodes.Pool[pin_end.ParentNodeIdx].Rect;
 
             const ImVec2 start = GetScreenSpacePinCoordinates(
-                node_start_rect, pin_start.attribute_rect, pin_start.type);
+                node_start_rect, pin_start.AttributeRect, pin_start.Type);
             const ImVec2 end =
-                GetScreenSpacePinCoordinates(node_end_rect, pin_end.attribute_rect, pin_end.type);
+                GetScreenSpacePinCoordinates(node_end_rect, pin_end.AttributeRect, pin_end.Type);
 
             // Test
-            if (RectangleOverlapsLink(box_rect, start, end, pin_start.type))
+            if (RectangleOverlapsLink(box_rect, start, end, pin_start.Type))
             {
-                editor.selected_link_indices.push_back(link_idx);
+                editor.SelectedLinkIndices.push_back(link_idx);
             }
         }
     }
@@ -1169,16 +1166,16 @@ void BoxSelectorUpdateSelection(EditorContext& editor, ImRect box_rect)
 
 void TranslateSelectedNodes(EditorContext& editor)
 {
-    if (g->left_mouse_dragging)
+    if (g->LeftMouseDragging)
     {
         const ImGuiIO& io = ImGui::GetIO();
-        for (int i = 0; i < editor.selected_node_indices.size(); ++i)
+        for (int i = 0; i < editor.SelectedNodeIndices.size(); ++i)
         {
-            const int node_idx = editor.selected_node_indices[i];
-            NodeData& node = editor.nodes.pool[node_idx];
-            if (node.draggable)
+            const int node_idx = editor.SelectedNodeIndices[i];
+            NodeData& node = editor.Nodes.Pool[node_idx];
+            if (node.Draggable)
             {
-                node.origin += io.MouseDelta;
+                node.Origin += io.MouseDelta;
             }
         }
     }
@@ -1190,12 +1187,12 @@ OptionalIndex FindDuplicateLink(
     const int end_pin_idx)
 {
     LinkData test_link(0);
-    test_link.start_pin_idx = start_pin_idx;
-    test_link.end_pin_idx = end_pin_idx;
-    for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
+    test_link.StartPinIdx = start_pin_idx;
+    test_link.EndPinIdx = end_pin_idx;
+    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
     {
-        const LinkData& link = editor.links.pool[link_idx];
-        if (LinkPredicate()(test_link, link) && editor.links.in_use[link_idx])
+        const LinkData& link = editor.Links.Pool[link_idx];
+        if (LinkPredicate()(test_link, link) && editor.Links.InUse[link_idx])
         {
             return OptionalIndex(link_idx);
         }
@@ -1210,16 +1207,16 @@ bool ShouldLinkSnapToPin(
     const int hovered_pin_idx,
     const OptionalIndex duplicate_link)
 {
-    const PinData& end_pin = editor.pins.pool[hovered_pin_idx];
+    const PinData& end_pin = editor.Pins.Pool[hovered_pin_idx];
 
     // The end pin must be in a different node
-    if (start_pin.parent_node_idx == end_pin.parent_node_idx)
+    if (start_pin.ParentNodeIdx == end_pin.ParentNodeIdx)
     {
         return false;
     }
 
     // The end pin must be of a different type
-    if (start_pin.type == end_pin.type)
+    if (start_pin.Type == end_pin.Type)
     {
         return false;
     }
@@ -1227,7 +1224,7 @@ bool ShouldLinkSnapToPin(
     // The link to be created must not be a duplicate, unless it is the link which was created on
     // snap. In that case we want to snap, since we want it to appear visually as if the created
     // link remains snapped to the pin.
-    if (duplicate_link.HasValue() && !(duplicate_link == g->snap_link_idx))
+    if (duplicate_link.HasValue() && !(duplicate_link == g->SnapLinkIdx))
     {
         return false;
     }
@@ -1237,24 +1234,24 @@ bool ShouldLinkSnapToPin(
 
 void ClickInteractionUpdate(EditorContext& editor)
 {
-    switch (editor.click_interaction_type)
+    switch (editor.ClickInteractionType)
     {
     case ClickInteractionType_BoxSelection:
     {
-        ImRect& box_rect = editor.click_interaction_state.box_selector.rect;
-        box_rect.Max = g->mouse_pos;
+        ImRect& box_rect = editor.ClickInteractionState.BoxSelector.Rect;
+        box_rect.Max = g->MousePos;
 
         BoxSelectorUpdateSelection(editor, box_rect);
 
-        const ImU32 box_selector_color = g->style.colors[ColorStyle_BoxSelector];
-        const ImU32 box_selector_outline = g->style.colors[ColorStyle_BoxSelectorOutline];
-        g->canvas_draw_list->AddRectFilled(box_rect.Min, box_rect.Max, box_selector_color);
-        g->canvas_draw_list->AddRect(box_rect.Min, box_rect.Max, box_selector_outline);
+        const ImU32 box_selector_color = g->Style.Colors[ColorStyle_BoxSelector];
+        const ImU32 box_selector_outline = g->Style.Colors[ColorStyle_BoxSelectorOutline];
+        g->CanvasDrawList->AddRectFilled(box_rect.Min, box_rect.Max, box_selector_color);
+        g->CanvasDrawList->AddRect(box_rect.Min, box_rect.Max, box_selector_outline);
 
-        if (g->left_mouse_released)
+        if (g->LeftMouseReleased)
         {
-            ImVector<int>& depth_stack = editor.node_depth_order;
-            const ImVector<int>& selected_idxs = editor.selected_node_indices;
+            ImVector<int>& depth_stack = editor.NodeDepthOrder;
+            const ImVector<int>& selected_idxs = editor.SelectedNodeIndices;
 
             // Bump the selected node indices, in order, to the top of the depth stack.
             // NOTE: this algorithm has worst case time complexity of O(N^2), if the node selection
@@ -1280,7 +1277,7 @@ void ClickInteractionUpdate(EditorContext& editor)
                 }
             }
 
-            editor.click_interaction_type = ClickInteractionType_None;
+            editor.ClickInteractionType = ClickInteractionType_None;
         }
     }
     break;
@@ -1288,51 +1285,50 @@ void ClickInteractionUpdate(EditorContext& editor)
     {
         TranslateSelectedNodes(editor);
 
-        if (g->left_mouse_released)
+        if (g->LeftMouseReleased)
         {
-            editor.click_interaction_type = ClickInteractionType_None;
+            editor.ClickInteractionType = ClickInteractionType_None;
         }
     }
     break;
     case ClickInteractionType_Link:
     {
-        if (g->left_mouse_released)
+        if (g->LeftMouseReleased)
         {
-            editor.click_interaction_type = ClickInteractionType_None;
+            editor.ClickInteractionType = ClickInteractionType_None;
         }
     }
     break;
     case ClickInteractionType_LinkCreation:
     {
         const PinData& start_pin =
-            editor.pins.pool[editor.click_interaction_state.link_creation.start_pin_idx];
+            editor.Pins.Pool[editor.ClickInteractionState.LinkCreation.StartPinIdx];
 
         const OptionalIndex maybe_duplicate_link_idx =
-            g->hovered_pin_idx.HasValue()
-                ? FindDuplicateLink(
-                      editor,
-                      editor.click_interaction_state.link_creation.start_pin_idx,
-                      g->hovered_pin_idx.Value())
-                : OptionalIndex();
+            g->HoveredPinIdx.HasValue() ? FindDuplicateLink(
+                                              editor,
+                                              editor.ClickInteractionState.LinkCreation.StartPinIdx,
+                                              g->HoveredPinIdx.Value())
+                                        : OptionalIndex();
 
         const bool should_snap =
-            g->hovered_pin_idx.HasValue() &&
+            g->HoveredPinIdx.HasValue() &&
             ShouldLinkSnapToPin(
-                editor, start_pin, g->hovered_pin_idx.Value(), maybe_duplicate_link_idx);
+                editor, start_pin, g->HoveredPinIdx.Value(), maybe_duplicate_link_idx);
 
         // If we created on snap and the hovered pin is empty or changed, then we need signal that
         // the link's state has changed.
         const bool snapping_pin_changed =
-            editor.click_interaction_state.link_creation.end_pin_idx.HasValue() &&
-            !(g->hovered_pin_idx == editor.click_interaction_state.link_creation.end_pin_idx);
+            editor.ClickInteractionState.LinkCreation.EndPinIdx.HasValue() &&
+            !(g->HoveredPinIdx == editor.ClickInteractionState.LinkCreation.EndPinIdx);
 
         // Detach the link that was created by this link event if it's no longer in snap range
-        if (snapping_pin_changed && g->snap_link_idx.HasValue())
+        if (snapping_pin_changed && g->SnapLinkIdx.HasValue())
         {
             BeginLinkDetach(
                 editor,
-                g->snap_link_idx.Value(),
-                editor.click_interaction_state.link_creation.end_pin_idx.Value());
+                g->SnapLinkIdx.Value(),
+                editor.ClickInteractionState.LinkCreation.EndPinIdx.Value());
         }
 
         const ImVec2 start_pos = GetScreenSpacePinCoordinates(editor, start_pin);
@@ -1340,70 +1336,70 @@ void ClickInteractionUpdate(EditorContext& editor)
         // endpoint to it
         const ImVec2 end_pos =
             should_snap
-                ? GetScreenSpacePinCoordinates(editor, editor.pins.pool[g->hovered_pin_idx.Value()])
-                : g->mouse_pos;
+                ? GetScreenSpacePinCoordinates(editor, editor.Pins.Pool[g->HoveredPinIdx.Value()])
+                : g->MousePos;
 
         const LinkBezierData link_data = GetLinkRenderable(
-            start_pos, end_pos, start_pin.type, g->style.link_line_segments_per_length);
+            start_pos, end_pos, start_pin.Type, g->Style.LinkLineSegmentsPerLength);
 #if IMGUI_VERSION_NUM < 18000
-        g->canvas_draw_list->AddBezierCurve(
+        g->CanvasDrawList->AddBezierCurve(
 #else
-        g->canvas_draw_list->AddBezierCubic(
+        g->CanvasDrawList->AddBezierCubic(
 #endif
-            link_data.bezier.p0,
-            link_data.bezier.p1,
-            link_data.bezier.p2,
-            link_data.bezier.p3,
-            g->style.colors[ColorStyle_Link],
-            g->style.link_thickness,
-            link_data.num_segments);
+            link_data.Bezier.P0,
+            link_data.Bezier.P1,
+            link_data.Bezier.P2,
+            link_data.Bezier.P3,
+            g->Style.Colors[ColorStyle_Link],
+            g->Style.LinkThickness,
+            link_data.NumSegments);
 
         const bool link_creation_on_snap =
-            g->hovered_pin_idx.HasValue() && (editor.pins.pool[g->hovered_pin_idx.Value()].flags &
-                                              AttributeFlags_EnableLinkCreationOnSnap);
+            g->HoveredPinIdx.HasValue() && (editor.Pins.Pool[g->HoveredPinIdx.Value()].Flags &
+                                            AttributeFlags_EnableLinkCreationOnSnap);
 
         if (!should_snap)
         {
-            editor.click_interaction_state.link_creation.end_pin_idx.Reset();
+            editor.ClickInteractionState.LinkCreation.EndPinIdx.Reset();
         }
 
-        const bool create_link = should_snap && (g->left_mouse_released || link_creation_on_snap);
+        const bool create_link = should_snap && (g->LeftMouseReleased || link_creation_on_snap);
 
         if (create_link && !maybe_duplicate_link_idx.HasValue())
         {
             // Avoid send OnLinkCreated() events every frame if the snap link is not saved
             // (only applies for EnableLinkCreationOnSnap)
-            if (!g->left_mouse_released &&
-                editor.click_interaction_state.link_creation.end_pin_idx == g->hovered_pin_idx)
+            if (!g->LeftMouseReleased &&
+                editor.ClickInteractionState.LinkCreation.EndPinIdx == g->HoveredPinIdx)
             {
                 break;
             }
 
-            g->element_state_change |= ElementStateChange_LinkCreated;
-            editor.click_interaction_state.link_creation.end_pin_idx = g->hovered_pin_idx.Value();
+            g->ElementStateChange |= ElementStateChange_LinkCreated;
+            editor.ClickInteractionState.LinkCreation.EndPinIdx = g->HoveredPinIdx.Value();
         }
 
-        if (g->left_mouse_released)
+        if (g->LeftMouseReleased)
         {
-            editor.click_interaction_type = ClickInteractionType_None;
+            editor.ClickInteractionType = ClickInteractionType_None;
             if (!create_link)
             {
-                g->element_state_change |= ElementStateChange_LinkDropped;
+                g->ElementStateChange |= ElementStateChange_LinkDropped;
             }
         }
     }
     break;
     case ClickInteractionType_Panning:
     {
-        const bool dragging = g->alt_mouse_dragging;
+        const bool dragging = g->AltMouseDragging;
 
         if (dragging)
         {
-            editor.panning += ImGui::GetIO().MouseDelta;
+            editor.Panning += ImGui::GetIO().MouseDelta;
         }
         else
         {
-            editor.click_interaction_type = ClickInteractionType_None;
+            editor.ClickInteractionType = ClickInteractionType_None;
         }
     }
     break;
@@ -1417,7 +1413,7 @@ void ClickInteractionUpdate(EditorContext& editor)
 
 void ResolveOccludedPins(const EditorContext& editor, ImVector<int>& occluded_pin_indices)
 {
-    const ImVector<int>& depth_stack = editor.node_depth_order;
+    const ImVector<int>& depth_stack = editor.NodeDepthOrder;
 
     occluded_pin_indices.resize(0);
 
@@ -1429,19 +1425,19 @@ void ResolveOccludedPins(const EditorContext& editor, ImVector<int>& occluded_pi
     // For each node in the depth stack
     for (int depth_idx = 0; depth_idx < (depth_stack.Size - 1); ++depth_idx)
     {
-        const NodeData& node_below = editor.nodes.pool[depth_stack[depth_idx]];
+        const NodeData& node_below = editor.Nodes.Pool[depth_stack[depth_idx]];
 
         // Iterate over the rest of the depth stack to find nodes overlapping the pins
         for (int next_depth_idx = depth_idx + 1; next_depth_idx < depth_stack.Size;
              ++next_depth_idx)
         {
-            const ImRect& rect_above = editor.nodes.pool[depth_stack[next_depth_idx]].rect;
+            const ImRect& rect_above = editor.Nodes.Pool[depth_stack[next_depth_idx]].Rect;
 
             // Iterate over each pin
-            for (int idx = 0; idx < node_below.pin_indices.Size; ++idx)
+            for (int idx = 0; idx < node_below.PinIndices.Size; ++idx)
             {
-                const int pin_idx = node_below.pin_indices[idx];
-                const ImVec2& pin_pos = editor.pins.pool[pin_idx].pos;
+                const int pin_idx = node_below.PinIndices[idx];
+                const ImVec2& pin_pos = editor.Pins.Pool[pin_idx].Pos;
 
                 if (rect_above.Contains(pin_pos))
                 {
@@ -1459,11 +1455,11 @@ OptionalIndex ResolveHoveredPin(
     float smallest_distance = FLT_MAX;
     OptionalIndex pin_idx_with_smallest_distance;
 
-    const float hover_radius_sqr = g->style.pin_hover_radius * g->style.pin_hover_radius;
+    const float hover_radius_sqr = g->Style.PinHoverRadius * g->Style.PinHoverRadius;
 
-    for (int idx = 0; idx < pins.pool.Size; ++idx)
+    for (int idx = 0; idx < pins.Pool.Size; ++idx)
     {
-        if (!pins.in_use[idx])
+        if (!pins.InUse[idx])
         {
             continue;
         }
@@ -1473,10 +1469,10 @@ OptionalIndex ResolveHoveredPin(
             continue;
         }
 
-        const ImVec2& pin_pos = pins.pool[idx].pos;
-        const float distance_sqr = ImLengthSqr(pin_pos - g->mouse_pos);
+        const ImVec2& pin_pos = pins.Pool[idx].Pos;
+        const float distance_sqr = ImLengthSqr(pin_pos - g->MousePos);
 
-        // TODO: g->style.pin_hover_radius needs to be copied into pin data and the pin-local value
+        // TODO: g->Style.PinHoverRadius needs to be copied into pin data and the pin-local value
         // used here. This is no longer called in BeginAttribute/EndAttribute scope and the detected
         // pin might have a different hover radius than what the user had when calling
         // BeginAttribute/EndAttribute.
@@ -1492,22 +1488,22 @@ OptionalIndex ResolveHoveredPin(
 
 OptionalIndex ResolveHoveredNode(const ImVector<int>& depth_stack)
 {
-    if (g->node_indices_overlapping_with_mouse.size() == 0)
+    if (g->NodeIndicesOverlappingWithMouse.size() == 0)
     {
         return OptionalIndex();
     }
 
-    if (g->node_indices_overlapping_with_mouse.size() == 1)
+    if (g->NodeIndicesOverlappingWithMouse.size() == 1)
     {
-        return OptionalIndex(g->node_indices_overlapping_with_mouse[0]);
+        return OptionalIndex(g->NodeIndicesOverlappingWithMouse[0]);
     }
 
     int largest_depth_idx = -1;
     int node_idx_on_top = -1;
 
-    for (int i = 0; i < g->node_indices_overlapping_with_mouse.size(); ++i)
+    for (int i = 0; i < g->NodeIndicesOverlappingWithMouse.size(); ++i)
     {
-        const int node_idx = g->node_indices_overlapping_with_mouse[i];
+        const int node_idx = g->NodeIndicesOverlappingWithMouse[i];
         for (int depth_idx = 0; depth_idx < depth_stack.size(); ++depth_idx)
         {
             if (depth_stack[depth_idx] == node_idx && (depth_idx > largest_depth_idx))
@@ -1535,18 +1531,18 @@ OptionalIndex ResolveHoveredLink(const ObjectPool<LinkData>& links, const Object
     // The latter is a requirement for link detaching with drag click to work, as both a link and
     // pin are required to be hovered over for the feature to work.
 
-    for (int idx = 0; idx < links.pool.Size; ++idx)
+    for (int idx = 0; idx < links.Pool.Size; ++idx)
     {
-        if (!links.in_use[idx])
+        if (!links.InUse[idx])
         {
             continue;
         }
 
-        const LinkData& link = links.pool[idx];
-        const PinData& start_pin = pins.pool[link.start_pin_idx];
-        const PinData& end_pin = pins.pool[link.end_pin_idx];
+        const LinkData& link = links.Pool[idx];
+        const PinData& start_pin = pins.Pool[link.StartPinIdx];
+        const PinData& end_pin = pins.Pool[link.EndPinIdx];
 
-        if (g->hovered_pin_idx == link.start_pin_idx || g->hovered_pin_idx == link.end_pin_idx)
+        if (g->HoveredPinIdx == link.StartPinIdx || g->HoveredPinIdx == link.EndPinIdx)
         {
             return idx;
         }
@@ -1555,24 +1551,24 @@ OptionalIndex ResolveHoveredLink(const ObjectPool<LinkData>& links, const Object
         // rendering the links
 
         const LinkBezierData link_data = GetLinkRenderable(
-            start_pin.pos, end_pin.pos, start_pin.type, g->style.link_line_segments_per_length);
+            start_pin.Pos, end_pin.Pos, start_pin.Type, g->Style.LinkLineSegmentsPerLength);
 
         // The distance test
         {
-            const ImRect link_rect = GetContainingRectForBezierCurve(link_data.bezier);
+            const ImRect link_rect = GetContainingRectForBezierCurve(link_data.Bezier);
 
             // First, do a simple bounding box test against the box containing the link
             // to see whether calculating the distance to the link is worth doing.
-            if (link_rect.Contains(g->mouse_pos))
+            if (link_rect.Contains(g->MousePos))
             {
-                const float distance = GetDistanceToCubicBezier(
-                    g->mouse_pos, link_data.bezier, link_data.num_segments);
+                const float distance =
+                    GetDistanceToCubicBezier(g->MousePos, link_data.Bezier, link_data.NumSegments);
 
-                // TODO: g->style.link_hover_distance could be also copied into LinkData, since
+                // TODO: g->Style.LinkHoverDistance could be also copied into LinkData, since
                 // we're not calling this function in the same scope as imnodes::Link(). The
                 // rendered/detected link might have a different hover distance than what the user
                 // had specified when calling Link()
-                if (distance < g->style.link_hover_distance)
+                if (distance < g->Style.LinkHoverDistance)
                 {
                     smallest_distance = distance;
                     link_idx_with_smallest_distance = idx;
@@ -1588,80 +1584,77 @@ OptionalIndex ResolveHoveredLink(const ObjectPool<LinkData>& links, const Object
 
 inline ImVec2 ScreenSpaceToGridSpace(const EditorContext& editor, const ImVec2& v)
 {
-    return v - g->canvas_origin_screen_space - editor.panning;
+    return v - g->CanvasOriginScreenSpace - editor.Panning;
 }
 
 inline ImVec2 GridSpaceToScreenSpace(const EditorContext& editor, const ImVec2& v)
 {
-    return v + g->canvas_origin_screen_space + editor.panning;
+    return v + g->CanvasOriginScreenSpace + editor.Panning;
 }
 
 inline ImVec2 GridSpaceToEditorSpace(const EditorContext& editor, const ImVec2& v)
 {
-    return v + editor.panning;
+    return v + editor.Panning;
 }
 
 inline ImVec2 EditorSpaceToGridSpace(const EditorContext& editor, const ImVec2& v)
 {
-    return v - editor.panning;
+    return v - editor.Panning;
 }
 
-inline ImVec2 EditorSpaceToScreenSpace(const ImVec2& v)
-{
-    return g->canvas_origin_screen_space + v;
-}
+inline ImVec2 EditorSpaceToScreenSpace(const ImVec2& v) { return g->CanvasOriginScreenSpace + v; }
 
 inline ImRect GetItemRect() { return ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()); }
 
 inline ImVec2 GetNodeTitleBarOrigin(const NodeData& node)
 {
-    return node.origin + node.layout_style.padding;
+    return node.Origin + node.LayoutStyle.Padding;
 }
 
 inline ImVec2 GetNodeContentOrigin(const NodeData& node)
 {
     const ImVec2 title_bar_height =
-        ImVec2(0.f, node.title_bar_content_rect.GetHeight() + 2.0f * node.layout_style.padding.y);
-    return node.origin + title_bar_height + node.layout_style.padding;
+        ImVec2(0.f, node.TitleBarContentRect.GetHeight() + 2.0f * node.LayoutStyle.Padding.y);
+    return node.Origin + title_bar_height + node.LayoutStyle.Padding;
 }
 
 inline ImRect GetNodeTitleRect(const NodeData& node)
 {
-    ImRect expanded_title_rect = node.title_bar_content_rect;
-    expanded_title_rect.Expand(node.layout_style.padding);
+    ImRect expanded_title_rect = node.TitleBarContentRect;
+    expanded_title_rect.Expand(node.LayoutStyle.Padding);
 
     return ImRect(
         expanded_title_rect.Min,
-        expanded_title_rect.Min + ImVec2(node.rect.GetWidth(), 0.f) +
+        expanded_title_rect.Min + ImVec2(node.Rect.GetWidth(), 0.f) +
             ImVec2(0.f, expanded_title_rect.GetHeight()));
 }
 
 void DrawGrid(EditorContext& editor, const ImVec2& canvas_size)
 {
-    const ImVec2 offset = editor.panning;
+    const ImVec2 offset = editor.Panning;
 
-    for (float x = fmodf(offset.x, g->style.grid_spacing); x < canvas_size.x;
-         x += g->style.grid_spacing)
+    for (float x = fmodf(offset.x, g->Style.GridSpacing); x < canvas_size.x;
+         x += g->Style.GridSpacing)
     {
-        g->canvas_draw_list->AddLine(
+        g->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(x, 0.0f)),
             EditorSpaceToScreenSpace(ImVec2(x, canvas_size.y)),
-            g->style.colors[ColorStyle_GridLine]);
+            g->Style.Colors[ColorStyle_GridLine]);
     }
 
-    for (float y = fmodf(offset.y, g->style.grid_spacing); y < canvas_size.y;
-         y += g->style.grid_spacing)
+    for (float y = fmodf(offset.y, g->Style.GridSpacing); y < canvas_size.y;
+         y += g->Style.GridSpacing)
     {
-        g->canvas_draw_list->AddLine(
+        g->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(0.0f, y)),
             EditorSpaceToScreenSpace(ImVec2(canvas_size.x, y)),
-            g->style.colors[ColorStyle_GridLine]);
+            g->Style.Colors[ColorStyle_GridLine]);
     }
 }
 
 struct QuadOffsets
 {
-    ImVec2 top_left, bottom_left, bottom_right, top_right;
+    ImVec2 TopLeft, BottomLeft, BottomRight, TopRight;
 };
 
 QuadOffsets CalculateQuadOffsets(const float side_length)
@@ -1670,17 +1663,17 @@ QuadOffsets CalculateQuadOffsets(const float side_length)
 
     QuadOffsets offset;
 
-    offset.top_left = ImVec2(-half_side, half_side);
-    offset.bottom_left = ImVec2(-half_side, -half_side);
-    offset.bottom_right = ImVec2(half_side, -half_side);
-    offset.top_right = ImVec2(half_side, half_side);
+    offset.TopLeft = ImVec2(-half_side, half_side);
+    offset.BottomLeft = ImVec2(-half_side, -half_side);
+    offset.BottomRight = ImVec2(half_side, -half_side);
+    offset.TopRight = ImVec2(half_side, half_side);
 
     return offset;
 }
 
 struct TriangleOffsets
 {
-    ImVec2 top_left, bottom_left, right;
+    ImVec2 TopLeft, BottomLeft, Right;
 };
 
 TriangleOffsets CalculateTriangleOffsets(const float side_length)
@@ -1700,9 +1693,9 @@ TriangleOffsets CalculateTriangleOffsets(const float side_length)
     const float vertical_offset = 0.5f * side_length;
 
     TriangleOffsets offset;
-    offset.top_left = ImVec2(left_offset, vertical_offset);
-    offset.bottom_left = ImVec2(left_offset, -vertical_offset);
-    offset.right = ImVec2(right_offset, 0.f);
+    offset.TopLeft = ImVec2(left_offset, vertical_offset);
+    offset.BottomLeft = ImVec2(left_offset, -vertical_offset);
+    offset.Right = ImVec2(right_offset, 0.f);
 
     return offset;
 }
@@ -1711,69 +1704,69 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
 {
     static const int circle_num_segments = 8;
 
-    switch (pin.shape)
+    switch (pin.Shape)
     {
     case PinShape_Circle:
     {
-        g->canvas_draw_list->AddCircle(
+        g->CanvasDrawList->AddCircle(
             pin_pos,
-            g->style.pin_circle_radius,
+            g->Style.PinCircleRadius,
             pin_color,
             circle_num_segments,
-            g->style.pin_line_thickness);
+            g->Style.PinLineThickness);
     }
     break;
     case PinShape_CircleFilled:
     {
-        g->canvas_draw_list->AddCircleFilled(
-            pin_pos, g->style.pin_circle_radius, pin_color, circle_num_segments);
+        g->CanvasDrawList->AddCircleFilled(
+            pin_pos, g->Style.PinCircleRadius, pin_color, circle_num_segments);
     }
     break;
     case PinShape_Quad:
     {
-        const QuadOffsets offset = CalculateQuadOffsets(g->style.pin_quad_side_length);
-        g->canvas_draw_list->AddQuad(
-            pin_pos + offset.top_left,
-            pin_pos + offset.bottom_left,
-            pin_pos + offset.bottom_right,
-            pin_pos + offset.top_right,
+        const QuadOffsets offset = CalculateQuadOffsets(g->Style.PinQuadSideLength);
+        g->CanvasDrawList->AddQuad(
+            pin_pos + offset.TopLeft,
+            pin_pos + offset.BottomLeft,
+            pin_pos + offset.BottomRight,
+            pin_pos + offset.TopRight,
             pin_color,
-            g->style.pin_line_thickness);
+            g->Style.PinLineThickness);
     }
     break;
     case PinShape_QuadFilled:
     {
-        const QuadOffsets offset = CalculateQuadOffsets(g->style.pin_quad_side_length);
-        g->canvas_draw_list->AddQuadFilled(
-            pin_pos + offset.top_left,
-            pin_pos + offset.bottom_left,
-            pin_pos + offset.bottom_right,
-            pin_pos + offset.top_right,
+        const QuadOffsets offset = CalculateQuadOffsets(g->Style.PinQuadSideLength);
+        g->CanvasDrawList->AddQuadFilled(
+            pin_pos + offset.TopLeft,
+            pin_pos + offset.BottomLeft,
+            pin_pos + offset.BottomRight,
+            pin_pos + offset.TopRight,
             pin_color);
     }
     break;
     case PinShape_Triangle:
     {
-        const TriangleOffsets offset = CalculateTriangleOffsets(g->style.pin_triangle_side_length);
-        g->canvas_draw_list->AddTriangle(
-            pin_pos + offset.top_left,
-            pin_pos + offset.bottom_left,
-            pin_pos + offset.right,
+        const TriangleOffsets offset = CalculateTriangleOffsets(g->Style.PinTriangleSideLength);
+        g->CanvasDrawList->AddTriangle(
+            pin_pos + offset.TopLeft,
+            pin_pos + offset.BottomLeft,
+            pin_pos + offset.Right,
             pin_color,
             // NOTE: for some weird reason, the line drawn by AddTriangle is
             // much thinner than the lines drawn by AddCircle or AddQuad.
             // Multiplying the line thickness by two seemed to solve the
             // problem at a few different thickness values.
-            2.f * g->style.pin_line_thickness);
+            2.f * g->Style.PinLineThickness);
     }
     break;
     case PinShape_TriangleFilled:
     {
-        const TriangleOffsets offset = CalculateTriangleOffsets(g->style.pin_triangle_side_length);
-        g->canvas_draw_list->AddTriangleFilled(
-            pin_pos + offset.top_left,
-            pin_pos + offset.bottom_left,
-            pin_pos + offset.right,
+        const TriangleOffsets offset = CalculateTriangleOffsets(g->Style.PinTriangleSideLength);
+        g->CanvasDrawList->AddTriangleFilled(
+            pin_pos + offset.TopLeft,
+            pin_pos + offset.BottomLeft,
+            pin_pos + offset.Right,
             pin_color);
     }
     break;
@@ -1785,21 +1778,21 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
 
 void DrawPin(EditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
 {
-    PinData& pin = editor.pins.pool[pin_idx];
-    const ImRect& parent_node_rect = editor.nodes.pool[pin.parent_node_idx].rect;
+    PinData& pin = editor.Pins.Pool[pin_idx];
+    const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
 
-    pin.pos = GetScreenSpacePinCoordinates(parent_node_rect, pin.attribute_rect, pin.type);
+    pin.Pos = GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
 
-    ImU32 pin_color = pin.color_style.background;
+    ImU32 pin_color = pin.ColorStyle.Background;
 
-    const bool pin_hovered = g->hovered_pin_idx == pin_idx &&
-                             editor.click_interaction_type != ClickInteractionType_BoxSelection;
+    const bool pin_hovered = g->HoveredPinIdx == pin_idx &&
+                             editor.ClickInteractionType != ClickInteractionType_BoxSelection;
 
     if (pin_hovered)
     {
-        g->hovered_pin_idx = pin_idx;
-        g->hovered_pin_flags = pin.flags;
-        pin_color = pin.color_style.hovered;
+        g->HoveredPinIdx = pin_idx;
+        g->HoveredPinFlags = pin.Flags;
+        pin_color = pin.ColorStyle.Hovered;
 
         if (left_mouse_clicked)
         {
@@ -1807,91 +1800,91 @@ void DrawPin(EditorContext& editor, const int pin_idx, const bool left_mouse_cli
         }
     }
 
-    DrawPinShape(pin.pos, pin, pin_color);
+    DrawPinShape(pin.Pos, pin, pin_color);
 }
 
 void DrawNode(EditorContext& editor, const int node_idx)
 {
-    const NodeData& node = editor.nodes.pool[node_idx];
-    ImGui::SetCursorPos(node.origin + editor.panning);
+    const NodeData& node = editor.Nodes.Pool[node_idx];
+    ImGui::SetCursorPos(node.Origin + editor.Panning);
 
-    const bool node_hovered = g->hovered_node_idx == node_idx &&
-                              editor.click_interaction_type != ClickInteractionType_BoxSelection;
+    const bool node_hovered = g->HoveredNodeIdx == node_idx &&
+                              editor.ClickInteractionType != ClickInteractionType_BoxSelection;
 
-    ImU32 node_background = node.color_style.background;
-    ImU32 titlebar_background = node.color_style.titlebar;
+    ImU32 node_background = node.ColorStyle.Background;
+    ImU32 titlebar_background = node.ColorStyle.Titlebar;
 
-    if (editor.selected_node_indices.contains(node_idx))
+    if (editor.SelectedNodeIndices.contains(node_idx))
     {
-        node_background = node.color_style.background_selected;
-        titlebar_background = node.color_style.titlebar_selected;
+        node_background = node.ColorStyle.BackgroundSelected;
+        titlebar_background = node.ColorStyle.TitlebarSelected;
     }
     else if (node_hovered)
     {
-        node_background = node.color_style.background_hovered;
-        titlebar_background = node.color_style.titlebar_hovered;
+        node_background = node.ColorStyle.BackgroundHovered;
+        titlebar_background = node.ColorStyle.TitlebarHovered;
     }
 
     {
         // node base
-        g->canvas_draw_list->AddRectFilled(
-            node.rect.Min, node.rect.Max, node_background, node.layout_style.corner_rounding);
+        g->CanvasDrawList->AddRectFilled(
+            node.Rect.Min, node.Rect.Max, node_background, node.LayoutStyle.CornerRounding);
 
         // title bar:
-        if (node.title_bar_content_rect.GetHeight() > 0.f)
+        if (node.TitleBarContentRect.GetHeight() > 0.f)
         {
             ImRect title_bar_rect = GetNodeTitleRect(node);
 
 #if IMGUI_VERSION_NUM < 18200
-            g->canvas_draw_list->AddRectFilled(
+            g->CanvasDrawList->AddRectFilled(
                 title_bar_rect.Min,
                 title_bar_rect.Max,
                 titlebar_background,
-                node.layout_style.corner_rounding,
+                node.LayoutStyle.CornerRounding,
                 ImDrawCornerFlags_Top);
 #else
-            g->canvas_draw_list->AddRectFilled(
+            g->CanvasDrawList->AddRectFilled(
                 title_bar_rect.Min,
                 title_bar_rect.Max,
                 titlebar_background,
-                node.layout_style.corner_rounding,
+                node.LayoutStyle.CornerRounding,
                 ImDrawFlags_RoundCornersTop);
 
 #endif
         }
 
-        if ((g->style.flags & StyleFlags_NodeOutline) != 0)
+        if ((g->Style.Flags & StyleFlags_NodeOutline) != 0)
         {
 #if IMGUI_VERSION_NUM < 18200
-            g->canvas_draw_list->AddRect(
-                node.rect.Min,
-                node.rect.Max,
-                node.color_style.outline,
-                node.layout_style.corner_rounding,
+            g->CanvasDrawList->AddRect(
+                node.Rect.Min,
+                node.Rect.Max,
+                node.ColorStyle.Outline,
+                node.LayoutStyle.CornerRounding,
                 ImDrawCornerFlags_All,
-                node.layout_style.border_thickness);
+                node.LayoutStyle.BorderThickness);
 #else
-            g->canvas_draw_list->AddRect(
-                node.rect.Min,
-                node.rect.Max,
-                node.color_style.outline,
-                node.layout_style.corner_rounding,
+            g->CanvasDrawList->AddRect(
+                node.Rect.Min,
+                node.Rect.Max,
+                node.ColorStyle.Outline,
+                node.LayoutStyle.CornerRounding,
                 ImDrawFlags_RoundCornersAll,
-                node.layout_style.border_thickness);
+                node.LayoutStyle.BorderThickness);
 #endif
         }
     }
 
-    for (int i = 0; i < node.pin_indices.size(); ++i)
+    for (int i = 0; i < node.PinIndices.size(); ++i)
     {
-        DrawPin(editor, node.pin_indices[i], g->left_mouse_clicked);
+        DrawPin(editor, node.PinIndices[i], g->LeftMouseClicked);
     }
 
     if (node_hovered)
     {
-        g->hovered_node_idx = node_idx;
-        const bool node_free_to_move = g->interactive_node_idx != node_idx;
-        if (g->left_mouse_clicked && node_free_to_move)
+        g->HoveredNodeIdx = node_idx;
+        const bool node_free_to_move = g->InteractiveNodeIdx != node_idx;
+        if (g->LeftMouseClicked && node_free_to_move)
         {
             BeginNodeSelection(editor, node_idx);
         }
@@ -1900,20 +1893,20 @@ void DrawNode(EditorContext& editor, const int node_idx)
 
 void DrawLink(EditorContext& editor, const int link_idx)
 {
-    const LinkData& link = editor.links.pool[link_idx];
-    const PinData& start_pin = editor.pins.pool[link.start_pin_idx];
-    const PinData& end_pin = editor.pins.pool[link.end_pin_idx];
+    const LinkData& link = editor.Links.Pool[link_idx];
+    const PinData& start_pin = editor.Pins.Pool[link.StartPinIdx];
+    const PinData& end_pin = editor.Pins.Pool[link.EndPinIdx];
 
     const LinkBezierData link_data = GetLinkRenderable(
-        start_pin.pos, end_pin.pos, start_pin.type, g->style.link_line_segments_per_length);
+        start_pin.Pos, end_pin.Pos, start_pin.Type, g->Style.LinkLineSegmentsPerLength);
 
-    const bool link_hovered = g->hovered_link_idx == link_idx &&
-                              editor.click_interaction_type != ClickInteractionType_BoxSelection;
+    const bool link_hovered = g->HoveredLinkIdx == link_idx &&
+                              editor.ClickInteractionType != ClickInteractionType_BoxSelection;
 
     if (link_hovered)
     {
-        g->hovered_link_idx = link_idx;
-        if (g->left_mouse_clicked)
+        g->HoveredLinkIdx = link_idx;
+        if (g->LeftMouseClicked)
         {
             BeginLinkInteraction(editor, link_idx);
         }
@@ -1924,33 +1917,33 @@ void DrawLink(EditorContext& editor, const int link_idx)
     // position.
     //
     // In other words, skip rendering the link if it was deleted.
-    if (g->deleted_link_idx == link_idx)
+    if (g->DeletedLinkIdx == link_idx)
     {
         return;
     }
 
-    ImU32 link_color = link.color_style.base;
-    if (editor.selected_link_indices.contains(link_idx))
+    ImU32 link_color = link.ColorStyle.Base;
+    if (editor.SelectedLinkIndices.contains(link_idx))
     {
-        link_color = link.color_style.selected;
+        link_color = link.ColorStyle.Selected;
     }
     else if (link_hovered)
     {
-        link_color = link.color_style.hovered;
+        link_color = link.ColorStyle.Hovered;
     }
 
 #if IMGUI_VERSION_NUM < 18000
-    g->canvas_draw_list->AddBezierCurve(
+    g->CanvasDrawList->AddBezierCurve(
 #else
-    g->canvas_draw_list->AddBezierCubic(
+    g->CanvasDrawList->AddBezierCubic(
 #endif
-        link_data.bezier.p0,
-        link_data.bezier.p1,
-        link_data.bezier.p2,
-        link_data.bezier.p3,
+        link_data.Bezier.P0,
+        link_data.Bezier.P1,
+        link_data.Bezier.P2,
+        link_data.Bezier.P3,
         link_color,
-        g->style.link_thickness,
-        link_data.num_segments);
+        g->Style.LinkThickness,
+        link_data.NumSegments);
 }
 
 void BeginPinAttribute(
@@ -1961,90 +1954,90 @@ void BeginPinAttribute(
 {
     // Make sure to call BeginNode() before calling
     // BeginAttribute()
-    assert(g->current_scope == Scope_Node);
-    g->current_scope = Scope_Attribute;
+    assert(g->CurrentScope == Scope_Node);
+    g->CurrentScope = Scope_Attribute;
 
     ImGui::BeginGroup();
     ImGui::PushID(id);
 
     EditorContext& editor = EditorContextGet();
 
-    g->current_attribute_id = id;
+    g->CurrentAttributeId = id;
 
-    const int pin_idx = ObjectPoolFindOrCreateIndex(editor.pins, id);
-    g->current_pin_idx = pin_idx;
-    PinData& pin = editor.pins.pool[pin_idx];
-    pin.id = id;
-    pin.parent_node_idx = node_idx;
-    pin.type = type;
-    pin.shape = shape;
-    pin.flags = g->current_attribute_flags;
-    pin.color_style.background = g->style.colors[ColorStyle_Pin];
-    pin.color_style.hovered = g->style.colors[ColorStyle_PinHovered];
+    const int pin_idx = ObjectPoolFindOrCreateIndex(editor.Pins, id);
+    g->CurrentPinIdx = pin_idx;
+    PinData& pin = editor.Pins.Pool[pin_idx];
+    pin.Id = id;
+    pin.ParentNodeIdx = node_idx;
+    pin.Type = type;
+    pin.Shape = shape;
+    pin.Flags = g->CurrentAttributeFlags;
+    pin.ColorStyle.Background = g->Style.Colors[ColorStyle_Pin];
+    pin.ColorStyle.Hovered = g->Style.Colors[ColorStyle_PinHovered];
 }
 
 void EndPinAttribute()
 {
-    assert(g->current_scope == Scope_Attribute);
-    g->current_scope = Scope_Node;
+    assert(g->CurrentScope == Scope_Attribute);
+    g->CurrentScope = Scope_Node;
 
     ImGui::PopID();
     ImGui::EndGroup();
 
     if (ImGui::IsItemActive())
     {
-        g->active_attribute = true;
-        g->active_attribute_id = g->current_attribute_id;
-        g->interactive_node_idx = g->current_node_idx;
+        g->ActiveAttribute = true;
+        g->ActiveAttributeId = g->CurrentAttributeId;
+        g->InteractiveNodeIdx = g->CurrentNodeIdx;
     }
 
     EditorContext& editor = EditorContextGet();
-    PinData& pin = editor.pins.pool[g->current_pin_idx];
-    NodeData& node = editor.nodes.pool[g->current_node_idx];
-    pin.attribute_rect = GetItemRect();
-    node.pin_indices.push_back(g->current_pin_idx);
+    PinData& pin = editor.Pins.Pool[g->CurrentPinIdx];
+    NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
+    pin.AttributeRect = GetItemRect();
+    node.PinIndices.push_back(g->CurrentPinIdx);
 }
 
 void Initialize(Context* context)
 {
-    context->canvas_origin_screen_space = ImVec2(0.0f, 0.0f);
-    context->canvas_rect_screen_space = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
-    context->current_scope = Scope_None;
+    context->CanvasOriginScreenSpace = ImVec2(0.0f, 0.0f);
+    context->CanvasRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
+    context->CurrentScope = Scope_None;
 
-    context->current_pin_idx = INT_MAX;
-    context->current_node_idx = INT_MAX;
+    context->CurrentPinIdx = INT_MAX;
+    context->CurrentNodeIdx = INT_MAX;
 
-    context->default_editor_ctx = EditorContextCreate();
-    EditorContextSet(g->default_editor_ctx);
+    context->DefaultEditorCtx = EditorContextCreate();
+    EditorContextSet(g->DefaultEditorCtx);
 
-    context->current_attribute_flags = AttributeFlags_None;
-    context->attribute_flag_stack.push_back(g->current_attribute_flags);
+    context->CurrentAttributeFlags = AttributeFlags_None;
+    context->AttributeFlagStack.push_back(g->CurrentAttributeFlags);
 
     StyleColorsDark();
 }
 
-void Shutdown(Context* ctx) { EditorContextFree(ctx->default_editor_ctx); }
+void Shutdown(Context* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
 } // namespace
 
 // [SECTION] API implementation
 
-IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : modifier(NULL) {}
+IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : Modifier(NULL) {}
 
-IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : modifier(NULL) {}
+IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : Modifier(NULL) {}
 
 IO::IO()
-    : emulate_three_button_mouse(), link_detach_with_modifier_click(),
-      alt_mouse_button(ImGuiMouseButton_Middle)
+    : EmulateThreeButtonMouse(), LinkDetachWithModifierClick(),
+      AltMouseButton(ImGuiMouseButton_Middle)
 {
 }
 
 Style::Style()
-    : grid_spacing(32.f), node_corner_rounding(4.f), node_padding_horizontal(8.f),
-      node_padding_vertical(8.f), node_border_thickness(1.f), link_thickness(3.f),
-      link_line_segments_per_length(0.1f), link_hover_distance(10.f), pin_circle_radius(4.f),
-      pin_quad_side_length(7.f), pin_triangle_side_length(9.5), pin_line_thickness(1.f),
-      pin_hover_radius(10.f), pin_offset(0.f),
-      flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), colors()
+    : GridSpacing(32.f), NodeCornerRounding(4.f), NodePaddingHorizontal(8.f),
+      NodePaddingVertical(8.f), NodeBorderThickness(1.f), LinkThickness(3.f),
+      LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f), PinCircleRadius(4.f),
+      PinQuadSideLength(7.f), PinTriangleSideLength(9.5), PinLineThickness(1.f),
+      PinHoverRadius(10.f), PinOffset(0.f),
+      Flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), Colors()
 {
 }
 
@@ -2084,154 +2077,153 @@ void EditorContextFree(EditorContext* ctx)
     ImGui::MemFree(ctx);
 }
 
-void EditorContextSet(EditorContext* ctx) { g->editor_ctx = ctx; }
+void EditorContextSet(EditorContext* ctx) { g->EditorCtx = ctx; }
 
 ImVec2 EditorContextGetPanning()
 {
     const EditorContext& editor = EditorContextGet();
-    return editor.panning;
+    return editor.Panning;
 }
 
 void EditorContextResetPanning(const ImVec2& pos)
 {
     EditorContext& editor = EditorContextGet();
-    editor.panning = pos;
+    editor.Panning = pos;
 }
 
 void EditorContextMoveToNode(const int node_id)
 {
     EditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.nodes, node_id);
+    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
 
-    editor.panning.x = -node.origin.x;
-    editor.panning.y = -node.origin.y;
+    editor.Panning.x = -node.Origin.x;
+    editor.Panning.y = -node.Origin.y;
 }
 
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
 
-IO& GetIO() { return g->io; }
+IO& GetIO() { return g->Io; }
 
-Style& GetStyle() { return g->style; }
+Style& GetStyle() { return g->Style; }
 
 void StyleColorsDark()
 {
-    g->style.colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
-    g->style.colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
-    g->style.colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
-    g->style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g->Style.Colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
+    g->Style.Colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
     // title bar colors match ImGui's titlebg colors
-    g->style.colors[ColorStyle_TitleBar] = IM_COL32(41, 74, 122, 255);
-    g->style.colors[ColorStyle_TitleBarHovered] = IM_COL32(66, 150, 250, 255);
-    g->style.colors[ColorStyle_TitleBarSelected] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ColorStyle_TitleBar] = IM_COL32(41, 74, 122, 255);
+    g->Style.Colors[ColorStyle_TitleBarHovered] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ColorStyle_TitleBarSelected] = IM_COL32(66, 150, 250, 255);
     // link colors match ImGui's slider grab colors
-    g->style.colors[ColorStyle_Link] = IM_COL32(61, 133, 224, 200);
-    g->style.colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 255);
-    g->style.colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ColorStyle_Link] = IM_COL32(61, 133, 224, 200);
+    g->Style.Colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 255);
     // pin colors match ImGui's button colors
-    g->style.colors[ColorStyle_Pin] = IM_COL32(53, 150, 250, 180);
-    g->style.colors[ColorStyle_PinHovered] = IM_COL32(53, 150, 250, 255);
+    g->Style.Colors[ColorStyle_Pin] = IM_COL32(53, 150, 250, 180);
+    g->Style.Colors[ColorStyle_PinHovered] = IM_COL32(53, 150, 250, 255);
 
-    g->style.colors[ColorStyle_BoxSelector] = IM_COL32(61, 133, 224, 30);
-    g->style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(61, 133, 224, 150);
+    g->Style.Colors[ColorStyle_BoxSelector] = IM_COL32(61, 133, 224, 30);
+    g->Style.Colors[ColorStyle_BoxSelectorOutline] = IM_COL32(61, 133, 224, 150);
 
-    g->style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
-    g->style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g->Style.Colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
+    g->Style.Colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
 }
 
 void StyleColorsClassic()
 {
-    g->style.colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
-    g->style.colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
-    g->style.colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
-    g->style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
-    g->style.colors[ColorStyle_TitleBar] = IM_COL32(69, 69, 138, 255);
-    g->style.colors[ColorStyle_TitleBarHovered] = IM_COL32(82, 82, 161, 255);
-    g->style.colors[ColorStyle_TitleBarSelected] = IM_COL32(82, 82, 161, 255);
-    g->style.colors[ColorStyle_Link] = IM_COL32(255, 255, 255, 100);
-    g->style.colors[ColorStyle_LinkHovered] = IM_COL32(105, 99, 204, 153);
-    g->style.colors[ColorStyle_LinkSelected] = IM_COL32(105, 99, 204, 153);
-    g->style.colors[ColorStyle_Pin] = IM_COL32(89, 102, 156, 170);
-    g->style.colors[ColorStyle_PinHovered] = IM_COL32(102, 122, 179, 200);
-    g->style.colors[ColorStyle_BoxSelector] = IM_COL32(82, 82, 161, 100);
-    g->style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
-    g->style.colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
-    g->style.colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g->Style.Colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
+    g->Style.Colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g->Style.Colors[ColorStyle_TitleBar] = IM_COL32(69, 69, 138, 255);
+    g->Style.Colors[ColorStyle_TitleBarHovered] = IM_COL32(82, 82, 161, 255);
+    g->Style.Colors[ColorStyle_TitleBarSelected] = IM_COL32(82, 82, 161, 255);
+    g->Style.Colors[ColorStyle_Link] = IM_COL32(255, 255, 255, 100);
+    g->Style.Colors[ColorStyle_LinkHovered] = IM_COL32(105, 99, 204, 153);
+    g->Style.Colors[ColorStyle_LinkSelected] = IM_COL32(105, 99, 204, 153);
+    g->Style.Colors[ColorStyle_Pin] = IM_COL32(89, 102, 156, 170);
+    g->Style.Colors[ColorStyle_PinHovered] = IM_COL32(102, 122, 179, 200);
+    g->Style.Colors[ColorStyle_BoxSelector] = IM_COL32(82, 82, 161, 100);
+    g->Style.Colors[ColorStyle_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
+    g->Style.Colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
+    g->Style.Colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
 }
 
 void StyleColorsLight()
 {
-    g->style.colors[ColorStyle_NodeBackground] = IM_COL32(240, 240, 240, 255);
-    g->style.colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(240, 240, 240, 255);
-    g->style.colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(240, 240, 240, 255);
-    g->style.colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
-    g->style.colors[ColorStyle_TitleBar] = IM_COL32(248, 248, 248, 255);
-    g->style.colors[ColorStyle_TitleBarHovered] = IM_COL32(209, 209, 209, 255);
-    g->style.colors[ColorStyle_TitleBarSelected] = IM_COL32(209, 209, 209, 255);
+    g->Style.Colors[ColorStyle_NodeBackground] = IM_COL32(240, 240, 240, 255);
+    g->Style.Colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(240, 240, 240, 255);
+    g->Style.Colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(240, 240, 240, 255);
+    g->Style.Colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g->Style.Colors[ColorStyle_TitleBar] = IM_COL32(248, 248, 248, 255);
+    g->Style.Colors[ColorStyle_TitleBarHovered] = IM_COL32(209, 209, 209, 255);
+    g->Style.Colors[ColorStyle_TitleBarSelected] = IM_COL32(209, 209, 209, 255);
     // original imgui values: 66, 150, 250
-    g->style.colors[ColorStyle_Link] = IM_COL32(66, 150, 250, 100);
+    g->Style.Colors[ColorStyle_Link] = IM_COL32(66, 150, 250, 100);
     // original imgui values: 117, 138, 204
-    g->style.colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 242);
-    g->style.colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 242);
+    g->Style.Colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 242);
+    g->Style.Colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 242);
     // original imgui values: 66, 150, 250
-    g->style.colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 160);
-    g->style.colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
-    g->style.colors[ColorStyle_BoxSelector] = IM_COL32(90, 170, 250, 30);
-    g->style.colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
-    g->style.colors[ColorStyle_GridBackground] = IM_COL32(225, 225, 225, 255);
-    g->style.colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 100);
-    g->style.flags = StyleFlags(StyleFlags_None);
+    g->Style.Colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 160);
+    g->Style.Colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ColorStyle_BoxSelector] = IM_COL32(90, 170, 250, 30);
+    g->Style.Colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
+    g->Style.Colors[ColorStyle_GridBackground] = IM_COL32(225, 225, 225, 255);
+    g->Style.Colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 100);
+    g->Style.Flags = StyleFlags(StyleFlags_None);
 }
 
 void BeginNodeEditor()
 {
-    assert(g->current_scope == Scope_None);
-    g->current_scope = Scope_Editor;
+    assert(g->CurrentScope == Scope_None);
+    g->CurrentScope = Scope_Editor;
 
     // Reset state from previous pass
 
     EditorContext& editor = EditorContextGet();
-    ObjectPoolReset(editor.nodes);
-    ObjectPoolReset(editor.pins);
-    ObjectPoolReset(editor.links);
+    ObjectPoolReset(editor.Nodes);
+    ObjectPoolReset(editor.Pins);
+    ObjectPoolReset(editor.Links);
 
-    g->hovered_node_idx.Reset();
-    g->interactive_node_idx.Reset();
-    g->hovered_link_idx.Reset();
-    g->hovered_pin_idx.Reset();
-    g->hovered_pin_flags = AttributeFlags_None;
-    g->deleted_link_idx.Reset();
-    g->snap_link_idx.Reset();
+    g->HoveredNodeIdx.Reset();
+    g->InteractiveNodeIdx.Reset();
+    g->HoveredLinkIdx.Reset();
+    g->HoveredPinIdx.Reset();
+    g->HoveredPinFlags = AttributeFlags_None;
+    g->DeletedLinkIdx.Reset();
+    g->SnapLinkIdx.Reset();
 
-    g->node_indices_overlapping_with_mouse.clear();
+    g->NodeIndicesOverlappingWithMouse.clear();
 
-    g->element_state_change = ElementStateChange_None;
+    g->ElementStateChange = ElementStateChange_None;
 
-    g->mouse_pos = ImGui::GetIO().MousePos;
-    g->left_mouse_clicked = ImGui::IsMouseClicked(0);
-    g->left_mouse_released = ImGui::IsMouseReleased(0);
-    g->alt_mouse_clicked = (g->io.emulate_three_button_mouse.modifier != NULL &&
-                            *g->io.emulate_three_button_mouse.modifier && g->left_mouse_clicked) ||
-                           ImGui::IsMouseClicked(g->io.alt_mouse_button);
-    g->left_mouse_dragging = ImGui::IsMouseDragging(0, 0.0f);
-    g->alt_mouse_dragging =
-        (g->io.emulate_three_button_mouse.modifier != NULL && g->left_mouse_dragging &&
-         (*g->io.emulate_three_button_mouse.modifier)) ||
-        ImGui::IsMouseDragging(g->io.alt_mouse_button, 0.0f);
+    g->MousePos = ImGui::GetIO().MousePos;
+    g->LeftMouseClicked = ImGui::IsMouseClicked(0);
+    g->LeftMouseReleased = ImGui::IsMouseReleased(0);
+    g->AltMouseClicked = (g->Io.EmulateThreeButtonMouse.Modifier != NULL &&
+                          *g->Io.EmulateThreeButtonMouse.Modifier && g->LeftMouseClicked) ||
+                         ImGui::IsMouseClicked(g->Io.AltMouseButton);
+    g->LeftMouseDragging = ImGui::IsMouseDragging(0, 0.0f);
+    g->AltMouseDragging = (g->Io.EmulateThreeButtonMouse.Modifier != NULL && g->LeftMouseDragging &&
+                           (*g->Io.EmulateThreeButtonMouse.Modifier)) ||
+                          ImGui::IsMouseDragging(g->Io.AltMouseButton, 0.0f);
 
-    g->active_attribute = false;
+    g->ActiveAttribute = false;
 
     ImGui::BeginGroup();
     {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, g->style.colors[ColorStyle_GridBackground]);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, g->Style.Colors[ColorStyle_GridBackground]);
         ImGui::BeginChild(
             "scrolling_region",
             ImVec2(0.f, 0.f),
             true,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove |
                 ImGuiWindowFlags_NoScrollWithMouse);
-        g->canvas_origin_screen_space = ImGui::GetCursorScreenPos();
+        g->CanvasOriginScreenSpace = ImGui::GetCursorScreenPos();
 
         // NOTE: we have to fetch the canvas draw list *after* we call
         // BeginChild(), otherwise the ImGui UI elements are going to be
@@ -2240,10 +2232,10 @@ void BeginNodeEditor()
 
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
-            g->canvas_rect_screen_space = ImRect(
+            g->CanvasRectScreenSpace = ImRect(
                 EditorSpaceToScreenSpace(ImVec2(0.f, 0.f)), EditorSpaceToScreenSpace(canvas_size));
 
-            if (g->style.flags & StyleFlags_GridLines)
+            if (g->Style.Flags & StyleFlags_GridLines)
             {
                 DrawGrid(editor, canvas_size);
             }
@@ -2253,8 +2245,8 @@ void BeginNodeEditor()
 
 void EndNodeEditor()
 {
-    assert(g->current_scope == Scope_Editor);
-    g->current_scope = Scope_None;
+    assert(g->CurrentScope == Scope_Editor);
+    g->CurrentScope = Scope_None;
 
     EditorContext& editor = EditorContextGet();
 
@@ -2265,27 +2257,27 @@ void EndNodeEditor()
     {
         // Pins needs some special care. We need to check the depth stack to see which pins are
         // being occluded by other nodes.
-        ResolveOccludedPins(editor, g->occluded_pin_indices);
+        ResolveOccludedPins(editor, g->OccludedPinIndices);
 
-        g->hovered_pin_idx = ResolveHoveredPin(editor.pins, g->occluded_pin_indices);
+        g->HoveredPinIdx = ResolveHoveredPin(editor.Pins, g->OccludedPinIndices);
 
-        if (!g->hovered_pin_idx.HasValue())
+        if (!g->HoveredPinIdx.HasValue())
         {
             // Resolve which node is actually on top and being hovered using the depth stack.
-            g->hovered_node_idx = ResolveHoveredNode(editor.node_depth_order);
+            g->HoveredNodeIdx = ResolveHoveredNode(editor.NodeDepthOrder);
         }
 
         // We don't need to check the depth stack for links. If a node occludes a link and is being
         // hovered, then we would not be able to detect the link anyway.
-        if (!g->hovered_node_idx.HasValue())
+        if (!g->HoveredNodeIdx.HasValue())
         {
-            g->hovered_link_idx = ResolveHoveredLink(editor.links, editor.pins);
+            g->HoveredLinkIdx = ResolveHoveredLink(editor.Links, editor.Pins);
         }
     }
 
-    for (int node_idx = 0; node_idx < editor.nodes.pool.size(); ++node_idx)
+    for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
     {
-        if (editor.nodes.in_use[node_idx])
+        if (editor.Nodes.InUse[node_idx])
         {
             DrawListActivateNodeBackground(node_idx);
             DrawNode(editor, node_idx);
@@ -2294,11 +2286,11 @@ void EndNodeEditor()
 
     // In order to render the links underneath the nodes, we want to first select the bottom draw
     // channel.
-    g->canvas_draw_list->ChannelsSetCurrent(0);
+    g->CanvasDrawList->ChannelsSetCurrent(0);
 
-    for (int link_idx = 0; link_idx < editor.links.pool.size(); ++link_idx)
+    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
     {
-        if (editor.links.in_use[link_idx])
+        if (editor.Links.InUse[link_idx])
         {
             DrawLink(editor, link_idx);
         }
@@ -2310,7 +2302,7 @@ void EndNodeEditor()
     DrawListAppendClickInteractionChannel();
     DrawListActivateClickInteractionChannel();
 
-    if (g->left_mouse_clicked || g->alt_mouse_clicked)
+    if (g->LeftMouseClicked || g->AltMouseClicked)
     {
         BeginCanvasInteraction(editor);
     }
@@ -2320,16 +2312,16 @@ void EndNodeEditor()
     // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
     // to detect unused node slots and remove those indices from the depth stack before sorting the
     // node draw commands by depth.
-    ObjectPoolUpdate(editor.nodes);
-    ObjectPoolUpdate(editor.pins);
+    ObjectPoolUpdate(editor.Nodes);
+    ObjectPoolUpdate(editor.Pins);
 
-    DrawListSortChannelsByDepth(editor.node_depth_order);
+    DrawListSortChannelsByDepth(editor.NodeDepthOrder);
 
     // After the links have been rendered, the link pool can be updated as well.
-    ObjectPoolUpdate(editor.links);
+    ObjectPoolUpdate(editor.Links);
 
     // Finally, merge the draw channels
-    g->canvas_draw_list->ChannelsMerge();
+    g->CanvasDrawList->ChannelsMerge();
 
     // pop style
     ImGui::EndChild();      // end scrolling region
@@ -2342,26 +2334,25 @@ void EndNodeEditor()
 void BeginNode(const int node_id)
 {
     // Remember to call BeginNodeEditor before calling BeginNode
-    assert(g->current_scope == Scope_Editor);
-    g->current_scope = Scope_Node;
+    assert(g->CurrentScope == Scope_Editor);
+    g->CurrentScope = Scope_Node;
 
     EditorContext& editor = EditorContextGet();
 
-    const int node_idx = ObjectPoolFindOrCreateIndex(editor.nodes, node_id);
-    g->current_node_idx = node_idx;
+    const int node_idx = ObjectPoolFindOrCreateIndex(editor.Nodes, node_id);
+    g->CurrentNodeIdx = node_idx;
 
-    NodeData& node = editor.nodes.pool[node_idx];
-    node.color_style.background = g->style.colors[ColorStyle_NodeBackground];
-    node.color_style.background_hovered = g->style.colors[ColorStyle_NodeBackgroundHovered];
-    node.color_style.background_selected = g->style.colors[ColorStyle_NodeBackgroundSelected];
-    node.color_style.outline = g->style.colors[ColorStyle_NodeOutline];
-    node.color_style.titlebar = g->style.colors[ColorStyle_TitleBar];
-    node.color_style.titlebar_hovered = g->style.colors[ColorStyle_TitleBarHovered];
-    node.color_style.titlebar_selected = g->style.colors[ColorStyle_TitleBarSelected];
-    node.layout_style.corner_rounding = g->style.node_corner_rounding;
-    node.layout_style.padding =
-        ImVec2(g->style.node_padding_horizontal, g->style.node_padding_vertical);
-    node.layout_style.border_thickness = g->style.node_border_thickness;
+    NodeData& node = editor.Nodes.Pool[node_idx];
+    node.ColorStyle.Background = g->Style.Colors[ColorStyle_NodeBackground];
+    node.ColorStyle.BackgroundHovered = g->Style.Colors[ColorStyle_NodeBackgroundHovered];
+    node.ColorStyle.BackgroundSelected = g->Style.Colors[ColorStyle_NodeBackgroundSelected];
+    node.ColorStyle.Outline = g->Style.Colors[ColorStyle_NodeOutline];
+    node.ColorStyle.Titlebar = g->Style.Colors[ColorStyle_TitleBar];
+    node.ColorStyle.TitlebarHovered = g->Style.Colors[ColorStyle_TitleBarHovered];
+    node.ColorStyle.TitlebarSelected = g->Style.Colors[ColorStyle_TitleBarSelected];
+    node.LayoutStyle.CornerRounding = g->Style.NodeCornerRounding;
+    node.LayoutStyle.Padding = ImVec2(g->Style.NodePaddingHorizontal, g->Style.NodePaddingVertical);
+    node.LayoutStyle.BorderThickness = g->Style.NodeBorderThickness;
 
     // ImGui::SetCursorPos sets the cursor position, local to the current widget
     // (in this case, the child object started in BeginNodeEditor). Use
@@ -2371,14 +2362,14 @@ void BeginNode(const int node_id)
     DrawListAddNode(node_idx);
     DrawListActivateCurrentNodeForeground();
 
-    ImGui::PushID(node.id);
+    ImGui::PushID(node.Id);
     ImGui::BeginGroup();
 }
 
 void EndNode()
 {
-    assert(g->current_scope == Scope_Node);
-    g->current_scope = Scope_Editor;
+    assert(g->CurrentScope == Scope_Node);
+    g->CurrentScope = Scope_Editor;
 
     EditorContext& editor = EditorContextGet();
 
@@ -2386,39 +2377,39 @@ void EndNode()
     ImGui::EndGroup();
     ImGui::PopID();
 
-    NodeData& node = editor.nodes.pool[g->current_node_idx];
-    node.rect = GetItemRect();
-    node.rect.Expand(node.layout_style.padding);
+    NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
+    node.Rect = GetItemRect();
+    node.Rect.Expand(node.LayoutStyle.Padding);
 
-    if (node.rect.Contains(g->mouse_pos))
+    if (node.Rect.Contains(g->MousePos))
     {
-        g->node_indices_overlapping_with_mouse.push_back(g->current_node_idx);
+        g->NodeIndicesOverlappingWithMouse.push_back(g->CurrentNodeIdx);
     }
 }
 
 ImVec2 GetNodeDimensions(int node_id)
 {
     EditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.nodes, node_id);
+    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1); // invalid node_id
-    const NodeData& node = editor.nodes.pool[node_idx];
-    return node.rect.GetSize();
+    const NodeData& node = editor.Nodes.Pool[node_idx];
+    return node.Rect.GetSize();
 }
 
 void BeginNodeTitleBar()
 {
-    assert(g->current_scope == Scope_Node);
+    assert(g->CurrentScope == Scope_Node);
     ImGui::BeginGroup();
 }
 
 void EndNodeTitleBar()
 {
-    assert(g->current_scope == Scope_Node);
+    assert(g->CurrentScope == Scope_Node);
     ImGui::EndGroup();
 
     EditorContext& editor = EditorContextGet();
-    NodeData& node = editor.nodes.pool[g->current_node_idx];
-    node.title_bar_content_rect = GetItemRect();
+    NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
+    node.TitleBarContentRect = GetItemRect();
 
     ImGui::ItemAdd(GetNodeTitleRect(node), ImGui::GetID("title_bar"));
 
@@ -2427,14 +2418,14 @@ void EndNodeTitleBar()
 
 void BeginInputAttribute(const int id, const PinShape shape)
 {
-    BeginPinAttribute(id, AttributeType_Input, shape, g->current_node_idx);
+    BeginPinAttribute(id, AttributeType_Input, shape, g->CurrentNodeIdx);
 }
 
 void EndInputAttribute() { EndPinAttribute(); }
 
 void BeginOutputAttribute(const int id, const PinShape shape)
 {
-    BeginPinAttribute(id, AttributeType_Output, shape, g->current_node_idx);
+    BeginPinAttribute(id, AttributeType_Output, shape, g->CurrentNodeIdx);
 }
 
 void EndOutputAttribute() { EndPinAttribute(); }
@@ -2442,10 +2433,10 @@ void EndOutputAttribute() { EndPinAttribute(); }
 void BeginStaticAttribute(const int id)
 {
     // Make sure to call BeginNode() before calling BeginAttribute()
-    assert(g->current_scope == Scope_Node);
-    g->current_scope = Scope_Attribute;
+    assert(g->CurrentScope == Scope_Node);
+    g->CurrentScope = Scope_Attribute;
 
-    g->current_attribute_id = id;
+    g->CurrentAttributeId = id;
 
     ImGui::BeginGroup();
     ImGui::PushID(id);
@@ -2454,73 +2445,73 @@ void BeginStaticAttribute(const int id)
 void EndStaticAttribute()
 {
     // Make sure to call BeginNode() before calling BeginAttribute()
-    assert(g->current_scope == Scope_Attribute);
-    g->current_scope = Scope_Node;
+    assert(g->CurrentScope == Scope_Attribute);
+    g->CurrentScope = Scope_Node;
 
     ImGui::PopID();
     ImGui::EndGroup();
 
     if (ImGui::IsItemActive())
     {
-        g->active_attribute = true;
-        g->active_attribute_id = g->current_attribute_id;
-        g->interactive_node_idx = g->current_node_idx;
+        g->ActiveAttribute = true;
+        g->ActiveAttributeId = g->CurrentAttributeId;
+        g->InteractiveNodeIdx = g->CurrentNodeIdx;
     }
 }
 
 void PushAttributeFlag(AttributeFlags flag)
 {
-    g->current_attribute_flags |= static_cast<int>(flag);
-    g->attribute_flag_stack.push_back(g->current_attribute_flags);
+    g->CurrentAttributeFlags |= static_cast<int>(flag);
+    g->AttributeFlagStack.push_back(g->CurrentAttributeFlags);
 }
 
 void PopAttributeFlag()
 {
     // PopAttributeFlag called without a matching PushAttributeFlag!
     // The bottom value is always the default value, pushed in Initialize().
-    assert(g->attribute_flag_stack.size() > 1);
+    assert(g->AttributeFlagStack.size() > 1);
 
-    g->attribute_flag_stack.pop_back();
-    g->current_attribute_flags = g->attribute_flag_stack.back();
+    g->AttributeFlagStack.pop_back();
+    g->CurrentAttributeFlags = g->AttributeFlagStack.back();
 }
 
 void Link(int id, const int start_attr_id, const int end_attr_id)
 {
-    assert(g->current_scope == Scope_Editor);
+    assert(g->CurrentScope == Scope_Editor);
 
     EditorContext& editor = EditorContextGet();
-    LinkData& link = ObjectPoolFindOrCreateObject(editor.links, id);
-    link.id = id;
-    link.start_pin_idx = ObjectPoolFindOrCreateIndex(editor.pins, start_attr_id);
-    link.end_pin_idx = ObjectPoolFindOrCreateIndex(editor.pins, end_attr_id);
-    link.color_style.base = g->style.colors[ColorStyle_Link];
-    link.color_style.hovered = g->style.colors[ColorStyle_LinkHovered];
-    link.color_style.selected = g->style.colors[ColorStyle_LinkSelected];
+    LinkData& link = ObjectPoolFindOrCreateObject(editor.Links, id);
+    link.Id = id;
+    link.StartPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, start_attr_id);
+    link.EndPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, end_attr_id);
+    link.ColorStyle.Base = g->Style.Colors[ColorStyle_Link];
+    link.ColorStyle.Hovered = g->Style.Colors[ColorStyle_LinkHovered];
+    link.ColorStyle.Selected = g->Style.Colors[ColorStyle_LinkSelected];
 
     // Check if this link was created by the current link event
-    if ((editor.click_interaction_type == ClickInteractionType_LinkCreation &&
-         editor.pins.pool[link.end_pin_idx].flags & AttributeFlags_EnableLinkCreationOnSnap &&
-         editor.click_interaction_state.link_creation.start_pin_idx == link.start_pin_idx &&
-         editor.click_interaction_state.link_creation.end_pin_idx == link.end_pin_idx) ||
-        (editor.click_interaction_state.link_creation.start_pin_idx == link.end_pin_idx &&
-         editor.click_interaction_state.link_creation.end_pin_idx == link.start_pin_idx))
+    if ((editor.ClickInteractionType == ClickInteractionType_LinkCreation &&
+         editor.Pins.Pool[link.EndPinIdx].Flags & AttributeFlags_EnableLinkCreationOnSnap &&
+         editor.ClickInteractionState.LinkCreation.StartPinIdx == link.StartPinIdx &&
+         editor.ClickInteractionState.LinkCreation.EndPinIdx == link.EndPinIdx) ||
+        (editor.ClickInteractionState.LinkCreation.StartPinIdx == link.EndPinIdx &&
+         editor.ClickInteractionState.LinkCreation.EndPinIdx == link.StartPinIdx))
     {
-        g->snap_link_idx = ObjectPoolFindOrCreateIndex(editor.links, id);
+        g->SnapLinkIdx = ObjectPoolFindOrCreateIndex(editor.Links, id);
     }
 }
 
 void PushColorStyle(ColorStyle item, unsigned int color)
 {
-    g->color_modifier_stack.push_back(ColorStyleElement(g->style.colors[item], item));
-    g->style.colors[item] = color;
+    g->ColorModifierStack.push_back(ColorStyleElement(g->Style.Colors[item], item));
+    g->Style.Colors[item] = color;
 }
 
 void PopColorStyle()
 {
-    assert(g->color_modifier_stack.size() > 0);
-    const ColorStyleElement elem = g->color_modifier_stack.back();
-    g->style.colors[elem.item] = elem.color;
-    g->color_modifier_stack.pop_back();
+    assert(g->ColorModifierStack.size() > 0);
+    const ColorStyleElement elem = g->ColorModifierStack.back();
+    g->Style.Colors[elem.Item] = elem.Color;
+    g->ColorModifierStack.pop_back();
 }
 
 float& LookupStyleVar(const StyleVar item)
@@ -2532,46 +2523,46 @@ float& LookupStyleVar(const StyleVar item)
     switch (item)
     {
     case StyleVar_GridSpacing:
-        style_var = &g->style.grid_spacing;
+        style_var = &g->Style.GridSpacing;
         break;
     case StyleVar_NodeCornerRounding:
-        style_var = &g->style.node_corner_rounding;
+        style_var = &g->Style.NodeCornerRounding;
         break;
     case StyleVar_NodePaddingHorizontal:
-        style_var = &g->style.node_padding_horizontal;
+        style_var = &g->Style.NodePaddingHorizontal;
         break;
     case StyleVar_NodePaddingVertical:
-        style_var = &g->style.node_padding_vertical;
+        style_var = &g->Style.NodePaddingVertical;
         break;
     case StyleVar_NodeBorderThickness:
-        style_var = &g->style.node_border_thickness;
+        style_var = &g->Style.NodeBorderThickness;
         break;
     case StyleVar_LinkThickness:
-        style_var = &g->style.link_thickness;
+        style_var = &g->Style.LinkThickness;
         break;
     case StyleVar_LinkLineSegmentsPerLength:
-        style_var = &g->style.link_line_segments_per_length;
+        style_var = &g->Style.LinkLineSegmentsPerLength;
         break;
     case StyleVar_LinkHoverDistance:
-        style_var = &g->style.link_hover_distance;
+        style_var = &g->Style.LinkHoverDistance;
         break;
     case StyleVar_PinCircleRadius:
-        style_var = &g->style.pin_circle_radius;
+        style_var = &g->Style.PinCircleRadius;
         break;
     case StyleVar_PinQuadSideLength:
-        style_var = &g->style.pin_quad_side_length;
+        style_var = &g->Style.PinQuadSideLength;
         break;
     case StyleVar_PinTriangleSideLength:
-        style_var = &g->style.pin_triangle_side_length;
+        style_var = &g->Style.PinTriangleSideLength;
         break;
     case StyleVar_PinLineThickness:
-        style_var = &g->style.pin_line_thickness;
+        style_var = &g->Style.PinLineThickness;
         break;
     case StyleVar_PinHoverRadius:
-        style_var = &g->style.pin_hover_radius;
+        style_var = &g->Style.PinHoverRadius;
         break;
     case StyleVar_PinOffset:
-        style_var = &g->style.pin_offset;
+        style_var = &g->Style.PinOffset;
         break;
     default:
         assert(!"Invalid StyleVar value!");
@@ -2583,130 +2574,130 @@ float& LookupStyleVar(const StyleVar item)
 void PushStyleVar(const StyleVar item, const float value)
 {
     float& style_var = LookupStyleVar(item);
-    g->style_modifier_stack.push_back(StyleElement(style_var, item));
+    g->StyleModifierStack.push_back(StyleElement(style_var, item));
     style_var = value;
 }
 
 void PopStyleVar()
 {
-    assert(g->style_modifier_stack.size() > 0);
-    const StyleElement style_elem = g->style_modifier_stack.back();
-    g->style_modifier_stack.pop_back();
-    float& style_var = LookupStyleVar(style_elem.item);
-    style_var = style_elem.value;
+    assert(g->StyleModifierStack.size() > 0);
+    const StyleElement style_elem = g->StyleModifierStack.back();
+    g->StyleModifierStack.pop_back();
+    float& style_var = LookupStyleVar(style_elem.Item);
+    style_var = style_elem.Value;
 }
 
 void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos)
 {
     EditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.nodes, node_id);
-    node.origin = ScreenSpaceToGridSpace(editor, screen_space_pos);
+    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    node.Origin = ScreenSpaceToGridSpace(editor, screen_space_pos);
 }
 
 void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos)
 {
     EditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.nodes, node_id);
-    node.origin = EditorSpaceToGridSpace(editor, editor_space_pos);
+    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    node.Origin = EditorSpaceToGridSpace(editor, editor_space_pos);
 }
 
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos)
 {
     EditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.nodes, node_id);
-    node.origin = grid_pos;
+    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    node.Origin = grid_pos;
 }
 
 void SetNodeDraggable(int node_id, const bool draggable)
 {
     EditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.nodes, node_id);
-    node.draggable = draggable;
+    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    node.Draggable = draggable;
 }
 
 ImVec2 GetNodeScreenSpacePos(const int node_id)
 {
     EditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.nodes, node_id);
+    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
-    NodeData& node = editor.nodes.pool[node_idx];
-    return GridSpaceToScreenSpace(editor, node.origin);
+    NodeData& node = editor.Nodes.Pool[node_idx];
+    return GridSpaceToScreenSpace(editor, node.Origin);
 }
 
 ImVec2 GetNodeEditorSpacePos(const int node_id)
 {
     EditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.nodes, node_id);
+    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
-    NodeData& node = editor.nodes.pool[node_idx];
-    return GridSpaceToEditorSpace(editor, node.origin);
+    NodeData& node = editor.Nodes.Pool[node_idx];
+    return GridSpaceToEditorSpace(editor, node.Origin);
 }
 
 ImVec2 GetNodeGridSpacePos(int node_id)
 {
     EditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.nodes, node_id);
+    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
-    NodeData& node = editor.nodes.pool[node_idx];
-    return node.origin;
+    NodeData& node = editor.Nodes.Pool[node_idx];
+    return node.Origin;
 }
 
 bool IsEditorHovered() { return MouseInCanvas(); }
 
 bool IsNodeHovered(int* const node_id)
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     assert(node_id != NULL);
 
-    const bool is_hovered = g->hovered_node_idx.HasValue();
+    const bool is_hovered = g->HoveredNodeIdx.HasValue();
     if (is_hovered)
     {
         const EditorContext& editor = EditorContextGet();
-        *node_id = editor.nodes.pool[g->hovered_node_idx.Value()].id;
+        *node_id = editor.Nodes.Pool[g->HoveredNodeIdx.Value()].Id;
     }
     return is_hovered;
 }
 
 bool IsLinkHovered(int* const link_id)
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     assert(link_id != NULL);
 
-    const bool is_hovered = g->hovered_link_idx.HasValue();
+    const bool is_hovered = g->HoveredLinkIdx.HasValue();
     if (is_hovered)
     {
         const EditorContext& editor = EditorContextGet();
-        *link_id = editor.links.pool[g->hovered_link_idx.Value()].id;
+        *link_id = editor.Links.Pool[g->HoveredLinkIdx.Value()].Id;
     }
     return is_hovered;
 }
 
 bool IsPinHovered(int* const attr)
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     assert(attr != NULL);
 
-    const bool is_hovered = g->hovered_pin_idx.HasValue();
+    const bool is_hovered = g->HoveredPinIdx.HasValue();
     if (is_hovered)
     {
         const EditorContext& editor = EditorContextGet();
-        *attr = editor.pins.pool[g->hovered_pin_idx.Value()].id;
+        *attr = editor.Pins.Pool[g->HoveredPinIdx.Value()].Id;
     }
     return is_hovered;
 }
 
 int NumSelectedNodes()
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     const EditorContext& editor = EditorContextGet();
-    return editor.selected_node_indices.size();
+    return editor.SelectedNodeIndices.size();
 }
 
 int NumSelectedLinks()
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     const EditorContext& editor = EditorContextGet();
-    return editor.selected_link_indices.size();
+    return editor.SelectedLinkIndices.size();
 }
 
 void GetSelectedNodes(int* node_ids)
@@ -2714,10 +2705,10 @@ void GetSelectedNodes(int* node_ids)
     assert(node_ids != NULL);
 
     const EditorContext& editor = EditorContextGet();
-    for (int i = 0; i < editor.selected_node_indices.size(); ++i)
+    for (int i = 0; i < editor.SelectedNodeIndices.size(); ++i)
     {
-        const int node_idx = editor.selected_node_indices[i];
-        node_ids[i] = editor.nodes.pool[node_idx].id;
+        const int node_idx = editor.SelectedNodeIndices[i];
+        node_ids[i] = editor.Nodes.Pool[node_idx].Id;
     }
 }
 
@@ -2726,49 +2717,49 @@ void GetSelectedLinks(int* link_ids)
     assert(link_ids != NULL);
 
     const EditorContext& editor = EditorContextGet();
-    for (int i = 0; i < editor.selected_link_indices.size(); ++i)
+    for (int i = 0; i < editor.SelectedLinkIndices.size(); ++i)
     {
-        const int link_idx = editor.selected_link_indices[i];
-        link_ids[i] = editor.links.pool[link_idx].id;
+        const int link_idx = editor.SelectedLinkIndices[i];
+        link_ids[i] = editor.Links.Pool[link_idx].Id;
     }
 }
 
 void ClearNodeSelection()
 {
     EditorContext& editor = EditorContextGet();
-    editor.selected_node_indices.clear();
+    editor.SelectedNodeIndices.clear();
 }
 
 void ClearLinkSelection()
 {
     EditorContext& editor = EditorContextGet();
-    editor.selected_link_indices.clear();
+    editor.SelectedLinkIndices.clear();
 }
 
 bool IsAttributeActive()
 {
-    assert((g->current_scope & Scope_Node) != 0);
+    assert((g->CurrentScope & Scope_Node) != 0);
 
-    if (!g->active_attribute)
+    if (!g->ActiveAttribute)
     {
         return false;
     }
 
-    return g->active_attribute_id == g->current_attribute_id;
+    return g->ActiveAttributeId == g->CurrentAttributeId;
 }
 
 bool IsAnyAttributeActive(int* const attribute_id)
 {
-    assert((g->current_scope & (Scope_Node | Scope_Attribute)) == 0);
+    assert((g->CurrentScope & (Scope_Node | Scope_Attribute)) == 0);
 
-    if (!g->active_attribute)
+    if (!g->ActiveAttribute)
     {
         return false;
     }
 
     if (attribute_id != NULL)
     {
-        *attribute_id = g->active_attribute_id;
+        *attribute_id = g->ActiveAttributeId;
     }
 
     return true;
@@ -2777,15 +2768,15 @@ bool IsAnyAttributeActive(int* const attribute_id)
 bool IsLinkStarted(int* const started_at_id)
 {
     // Call this function after EndNodeEditor()!
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     assert(started_at_id != NULL);
 
-    const bool is_started = (g->element_state_change & ElementStateChange_LinkStarted) != 0;
+    const bool is_started = (g->ElementStateChange & ElementStateChange_LinkStarted) != 0;
     if (is_started)
     {
         const EditorContext& editor = EditorContextGet();
-        const int pin_idx = editor.click_interaction_state.link_creation.start_pin_idx;
-        *started_at_id = editor.pins.pool[pin_idx].id;
+        const int pin_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
+        *started_at_id = editor.Pins.Pool[pin_idx].Id;
     }
 
     return is_started;
@@ -2794,19 +2785,19 @@ bool IsLinkStarted(int* const started_at_id)
 bool IsLinkDropped(int* const started_at_id, const bool including_detached_links)
 {
     // Call this function after EndNodeEditor()!
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
 
     const EditorContext& editor = EditorContextGet();
 
-    const bool link_dropped = (g->element_state_change & ElementStateChange_LinkDropped) != 0 &&
-                              (including_detached_links ||
-                               editor.click_interaction_state.link_creation.link_creation_type !=
-                                   LinkCreationType_FromDetach);
+    const bool link_dropped =
+        (g->ElementStateChange & ElementStateChange_LinkDropped) != 0 &&
+        (including_detached_links ||
+         editor.ClickInteractionState.LinkCreation.LinkCreationType != LinkCreationType_FromDetach);
 
     if (link_dropped && started_at_id)
     {
-        const int pin_idx = editor.click_interaction_state.link_creation.start_pin_idx;
-        *started_at_id = editor.pins.pool[pin_idx].id;
+        const int pin_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
+        *started_at_id = editor.Pins.Pool[pin_idx].Id;
     }
 
     return link_dropped;
@@ -2817,34 +2808,34 @@ bool IsLinkCreated(
     int* const ended_at_pin_id,
     bool* const created_from_snap)
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     assert(started_at_pin_id != NULL);
     assert(ended_at_pin_id != NULL);
 
-    const bool is_created = (g->element_state_change & ElementStateChange_LinkCreated) != 0;
+    const bool is_created = (g->ElementStateChange & ElementStateChange_LinkCreated) != 0;
 
     if (is_created)
     {
         const EditorContext& editor = EditorContextGet();
-        const int start_idx = editor.click_interaction_state.link_creation.start_pin_idx;
-        const int end_idx = editor.click_interaction_state.link_creation.end_pin_idx.Value();
-        const PinData& start_pin = editor.pins.pool[start_idx];
-        const PinData& end_pin = editor.pins.pool[end_idx];
+        const int start_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
+        const int end_idx = editor.ClickInteractionState.LinkCreation.EndPinIdx.Value();
+        const PinData& start_pin = editor.Pins.Pool[start_idx];
+        const PinData& end_pin = editor.Pins.Pool[end_idx];
 
-        if (start_pin.type == AttributeType_Output)
+        if (start_pin.Type == AttributeType_Output)
         {
-            *started_at_pin_id = start_pin.id;
-            *ended_at_pin_id = end_pin.id;
+            *started_at_pin_id = start_pin.Id;
+            *ended_at_pin_id = end_pin.Id;
         }
         else
         {
-            *started_at_pin_id = end_pin.id;
-            *ended_at_pin_id = start_pin.id;
+            *started_at_pin_id = end_pin.Id;
+            *ended_at_pin_id = start_pin.Id;
         }
 
         if (created_from_snap)
         {
-            *created_from_snap = editor.click_interaction_type == ClickInteractionType_LinkCreation;
+            *created_from_snap = editor.ClickInteractionType == ClickInteractionType_LinkCreation;
         }
     }
 
@@ -2858,42 +2849,42 @@ bool IsLinkCreated(
     int* ended_at_pin_id,
     bool* created_from_snap)
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
     assert(started_at_node_id != NULL);
     assert(started_at_pin_id != NULL);
     assert(ended_at_node_id != NULL);
     assert(ended_at_pin_id != NULL);
 
-    const bool is_created = (g->element_state_change & ElementStateChange_LinkCreated) != 0;
+    const bool is_created = (g->ElementStateChange & ElementStateChange_LinkCreated) != 0;
 
     if (is_created)
     {
         const EditorContext& editor = EditorContextGet();
-        const int start_idx = editor.click_interaction_state.link_creation.start_pin_idx;
-        const int end_idx = editor.click_interaction_state.link_creation.end_pin_idx.Value();
-        const PinData& start_pin = editor.pins.pool[start_idx];
-        const NodeData& start_node = editor.nodes.pool[start_pin.parent_node_idx];
-        const PinData& end_pin = editor.pins.pool[end_idx];
-        const NodeData& end_node = editor.nodes.pool[end_pin.parent_node_idx];
+        const int start_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
+        const int end_idx = editor.ClickInteractionState.LinkCreation.EndPinIdx.Value();
+        const PinData& start_pin = editor.Pins.Pool[start_idx];
+        const NodeData& start_node = editor.Nodes.Pool[start_pin.ParentNodeIdx];
+        const PinData& end_pin = editor.Pins.Pool[end_idx];
+        const NodeData& end_node = editor.Nodes.Pool[end_pin.ParentNodeIdx];
 
-        if (start_pin.type == AttributeType_Output)
+        if (start_pin.Type == AttributeType_Output)
         {
-            *started_at_pin_id = start_pin.id;
-            *started_at_node_id = start_node.id;
-            *ended_at_pin_id = end_pin.id;
-            *ended_at_node_id = end_node.id;
+            *started_at_pin_id = start_pin.Id;
+            *started_at_node_id = start_node.Id;
+            *ended_at_pin_id = end_pin.Id;
+            *ended_at_node_id = end_node.Id;
         }
         else
         {
-            *started_at_pin_id = end_pin.id;
-            *started_at_node_id = end_node.id;
-            *ended_at_pin_id = start_pin.id;
-            *ended_at_node_id = start_node.id;
+            *started_at_pin_id = end_pin.Id;
+            *started_at_node_id = end_node.Id;
+            *ended_at_pin_id = start_pin.Id;
+            *ended_at_node_id = start_node.Id;
         }
 
         if (created_from_snap)
         {
-            *created_from_snap = editor.click_interaction_type == ClickInteractionType_LinkCreation;
+            *created_from_snap = editor.ClickInteractionType == ClickInteractionType_LinkCreation;
         }
     }
 
@@ -2902,14 +2893,14 @@ bool IsLinkCreated(
 
 bool IsLinkDestroyed(int* const link_id)
 {
-    assert(g->current_scope == Scope_None);
+    assert(g->CurrentScope == Scope_None);
 
-    const bool link_destroyed = g->deleted_link_idx.HasValue();
+    const bool link_destroyed = g->DeletedLinkIdx.HasValue();
     if (link_destroyed)
     {
         const EditorContext& editor = EditorContextGet();
-        const int link_idx = g->deleted_link_idx.Value();
-        *link_id = editor.links.pool[link_idx].id;
+        const int link_idx = g->DeletedLinkIdx.Value();
+        *link_id = editor.Links.Pool[link_idx].Id;
     }
 
     return link_destroyed;
@@ -2923,21 +2914,21 @@ void NodeLineHandler(EditorContext& editor, const char* line)
     int x, y;
     if (sscanf(line, "[node.%i", &id) == 1)
     {
-        const int node_idx = ObjectPoolFindOrCreateIndex(editor.nodes, id);
-        g->current_node_idx = node_idx;
-        NodeData& node = editor.nodes.pool[node_idx];
-        node.id = id;
+        const int node_idx = ObjectPoolFindOrCreateIndex(editor.Nodes, id);
+        g->CurrentNodeIdx = node_idx;
+        NodeData& node = editor.Nodes.Pool[node_idx];
+        node.Id = id;
     }
     else if (sscanf(line, "origin=%i,%i", &x, &y) == 2)
     {
-        NodeData& node = editor.nodes.pool[g->current_node_idx];
-        node.origin = ImVec2((float)x, (float)y);
+        NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
+        node.Origin = ImVec2((float)x, (float)y);
     }
 }
 
 void EditorLineHandler(EditorContext& editor, const char* line)
 {
-    sscanf(line, "panning=%f,%f", &editor.panning.x, &editor.panning.y);
+    sscanf(line, "panning=%f,%f", &editor.Panning.x, &editor.Panning.y);
 }
 } // namespace
 
@@ -2953,29 +2944,29 @@ const char* SaveEditorStateToIniString(
     assert(editor_ptr != NULL);
     const EditorContext& editor = *editor_ptr;
 
-    g->text_buffer.clear();
+    g->TextBuffer.clear();
     // TODO: check to make sure that the estimate is the upper bound of element
-    g->text_buffer.reserve(64 * editor.nodes.pool.size());
+    g->TextBuffer.reserve(64 * editor.Nodes.Pool.size());
 
-    g->text_buffer.appendf(
-        "[editor]\npanning=%i,%i\n", (int)editor.panning.x, (int)editor.panning.y);
+    g->TextBuffer.appendf(
+        "[editor]\npanning=%i,%i\n", (int)editor.Panning.x, (int)editor.Panning.y);
 
-    for (int i = 0; i < editor.nodes.pool.size(); i++)
+    for (int i = 0; i < editor.Nodes.Pool.size(); i++)
     {
-        if (editor.nodes.in_use[i])
+        if (editor.Nodes.InUse[i])
         {
-            const NodeData& node = editor.nodes.pool[i];
-            g->text_buffer.appendf("\n[node.%d]\n", node.id);
-            g->text_buffer.appendf("origin=%i,%i\n", (int)node.origin.x, (int)node.origin.y);
+            const NodeData& node = editor.Nodes.Pool[i];
+            g->TextBuffer.appendf("\n[node.%d]\n", node.Id);
+            g->TextBuffer.appendf("origin=%i,%i\n", (int)node.Origin.x, (int)node.Origin.y);
         }
     }
 
     if (data_size != NULL)
     {
-        *data_size = g->text_buffer.size();
+        *data_size = g->TextBuffer.size();
     }
 
-    return g->text_buffer.c_str();
+    return g->TextBuffer.c_str();
 }
 
 void LoadCurrentEditorStateFromIniString(const char* const data, const size_t data_size)

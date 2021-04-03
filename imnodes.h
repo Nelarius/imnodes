@@ -91,8 +91,8 @@ struct IO
         // indicating the state of a modifier. For example,
         //
         // imnodes::GetIO().emulate_three_button_mouse.modifier = &ImGui::GetIO().KeyAlt;
-        const bool* modifier;
-    } emulate_three_button_mouse;
+        const bool* Modifier;
+    } EmulateThreeButtonMouse;
 
     struct LinkDetachWithModifierClick
     {
@@ -107,52 +107,52 @@ struct IO
         // Left-clicking a link with this modifier pressed will detach that link. NOTE: the user has
         // to actually delete the link for this to work. A deleted link can be detected by calling
         // IsLinkDestroyed() after EndNodeEditor().
-        const bool* modifier;
-    } link_detach_with_modifier_click;
+        const bool* Modifier;
+    } LinkDetachWithModifierClick;
 
     // Holding alt mouse button pans the node area, by default middle mouse button will be used
     // Set based on ImGuiMouseButton values
-    int alt_mouse_button;
+    int AltMouseButton;
 
     IO();
 };
 
 struct Style
 {
-    float grid_spacing;
+    float GridSpacing;
 
-    float node_corner_rounding;
-    float node_padding_horizontal;
-    float node_padding_vertical;
-    float node_border_thickness;
+    float NodeCornerRounding;
+    float NodePaddingHorizontal;
+    float NodePaddingVertical;
+    float NodeBorderThickness;
 
-    float link_thickness;
-    float link_line_segments_per_length;
-    float link_hover_distance;
+    float LinkThickness;
+    float LinkLineSegmentsPerLength;
+    float LinkHoverDistance;
 
     // The following variables control the look and behavior of the pins. The default size of each
     // pin shape is balanced to occupy approximately the same surface area on the screen.
 
     // The circle radius used when the pin shape is either PinShape_Circle or PinShape_CircleFilled.
-    float pin_circle_radius;
+    float PinCircleRadius;
     // The quad side length used when the shape is either PinShape_Quad or PinShape_QuadFilled.
-    float pin_quad_side_length;
+    float PinQuadSideLength;
     // The equilateral triangle side length used when the pin shape is either PinShape_Triangle or
     // PinShape_TriangleFilled.
-    float pin_triangle_side_length;
+    float PinTriangleSideLength;
     // The thickness of the line used when the pin shape is not filled.
-    float pin_line_thickness;
+    float PinLineThickness;
     // The radius from the pin's center position inside of which it is detected as being hovered
     // over.
-    float pin_hover_radius;
+    float PinHoverRadius;
     // Offsets the pins' positions from the edge of the node to the outside of the node.
-    float pin_offset;
+    float PinOffset;
 
     // By default, StyleFlags_NodeOutline and StyleFlags_Gridlines are enabled.
-    StyleFlags flags;
+    StyleFlags Flags;
     // Set these mid-frame using Push/PopColorStyle. You can index this color array with with a
     // ColorStyle enum value.
-    unsigned int colors[ColorStyle_Count];
+    unsigned int Colors[ColorStyle_Count];
 
     Style();
 };

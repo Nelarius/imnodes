@@ -648,7 +648,7 @@ static ColorNodeEditor color_editor;
 void NodeEditorInitialize()
 {
     imnodes::IO& io = imnodes::GetIO();
-    io.link_detach_with_modifier_click.modifier = &ImGui::GetIO().KeyCtrl;
+    io.LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
 }
 
 void NodeEditorShow() { color_editor.show(); }
