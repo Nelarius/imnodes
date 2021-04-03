@@ -78,15 +78,15 @@ struct ObjectPool
     ObjectPool() : Pool(), InUse(), FreeList(), IdMap() {}
 };
 
-// Emulates std::optional<int> using the sentinel value `invalid_index`.
+// Emulates std::optional<int> using the sentinel value `INVALID_INDEX`.
 struct OptionalIndex
 {
-    OptionalIndex() : _Index(invalid_index) {}
+    OptionalIndex() : _Index(INVALID_INDEX) {}
     OptionalIndex(const int value) : _Index(value) {}
 
     // Observers
 
-    inline bool HasValue() const { return _Index != invalid_index; }
+    inline bool HasValue() const { return _Index != INVALID_INDEX; }
 
     inline int Value() const
     {
@@ -102,7 +102,7 @@ struct OptionalIndex
         return *this;
     }
 
-    inline void Reset() { _Index = invalid_index; }
+    inline void Reset() { _Index = INVALID_INDEX; }
 
     inline bool operator==(const OptionalIndex& rhs) const { return _Index == rhs._Index; }
 
@@ -112,7 +112,7 @@ struct OptionalIndex
 
     inline bool operator!=(const int rhs) const { return _Index != rhs; }
 
-    static const int invalid_index = -1;
+    static const int INVALID_INDEX = -1;
 
 private:
     int _Index;
@@ -1702,7 +1702,7 @@ TriangleOffsets CalculateTriangleOffsets(const float side_length)
 
 void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_color)
 {
-    static const int circle_num_segments = 8;
+    static const int CIRCLE_NUM_SEGMENTS = 8;
 
     switch (pin.Shape)
     {
@@ -1712,14 +1712,14 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
             pin_pos,
             g->Style.PinCircleRadius,
             pin_color,
-            circle_num_segments,
+            CIRCLE_NUM_SEGMENTS,
             g->Style.PinLineThickness);
     }
     break;
     case PinShape_CircleFilled:
     {
         g->CanvasDrawList->AddCircleFilled(
-            pin_pos, g->Style.PinCircleRadius, pin_color, circle_num_segments);
+            pin_pos, g->Style.PinCircleRadius, pin_color, CIRCLE_NUM_SEGMENTS);
     }
     break;
     case PinShape_Quad:

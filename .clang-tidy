@@ -23,6 +23,8 @@ CheckOptions:
     value:           CamelCase
   - key:             readability-identifier-naming.PrivateMemberPrefix
     value:           '_'
+  - key:             readability-identifier-naming.StaticConstantCase
+    value:           UPPER_CASE
   - key:             readability-identifier-naming.StructCase
     value:           CamelCase
   - key:             readability-identifier-naming.VariableCase
