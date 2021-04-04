@@ -139,7 +139,7 @@ public:
         ImGui::NextColumn();
         if (ImGui::Checkbox("emulate_three_button_mouse", &emulate_three_button_mouse))
         {
-            imnodes::GetIO().emulate_three_button_mouse.modifier =
+            imnodes::GetIO().EmulateThreeButtonMouse.Modifier =
                 emulate_three_button_mouse ? &ImGui::GetIO().KeyAlt : NULL;
         }
         ImGui::Columns(1);
