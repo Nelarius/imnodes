@@ -251,7 +251,7 @@ struct ClickInteractionState
     {
         int StartPinIdx;
         OptionalIndex EndPinIdx;
-        LinkCreationType LinkCreationType;
+        LinkCreationType Type;
     } LinkCreation;
 
     struct
@@ -1033,7 +1033,7 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
         if ((g->HoveredPinFlags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
         {
             BeginLinkDetach(editor, link_idx, g->HoveredPinIdx.Value());
-            editor.ClickInteraction.LinkCreation.LinkCreationType = LinkCreationType_FromDetach;
+            editor.ClickInteraction.LinkCreation.Type = LinkCreationType_FromDetach;
         }
     }
     // If we aren't near a pin, check if we are clicking the link with the
@@ -1057,7 +1057,7 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
 
             editor.ClickInteraction.Type = ClickInteractionType_LinkCreation;
             BeginLinkDetach(editor, link_idx, closest_pin_idx);
-            editor.ClickInteraction.LinkCreation.LinkCreationType = LinkCreationType_FromDetach;
+            editor.ClickInteraction.LinkCreation.Type = LinkCreationType_FromDetach;
         }
         else
         {
@@ -1071,7 +1071,7 @@ void BeginLinkCreation(EditorContext& editor, const int hovered_pin_idx)
     editor.ClickInteraction.Type = ClickInteractionType_LinkCreation;
     editor.ClickInteraction.LinkCreation.StartPinIdx = hovered_pin_idx;
     editor.ClickInteraction.LinkCreation.EndPinIdx.Reset();
-    editor.ClickInteraction.LinkCreation.LinkCreationType = LinkCreationType_Standard;
+    editor.ClickInteraction.LinkCreation.Type = LinkCreationType_Standard;
     g->ElementStateChange |= ElementStateChange_LinkStarted;
 }
 
@@ -2793,7 +2793,7 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     const bool link_dropped =
         (g->ElementStateChange & ElementStateChange_LinkDropped) != 0 &&
         (including_detached_links ||
-         editor.ClickInteraction.LinkCreation.LinkCreationType != LinkCreationType_FromDetach);
+         editor.ClickInteraction.LinkCreation.Type != LinkCreationType_FromDetach);
 
     if (link_dropped && started_at_id)
     {
