@@ -245,6 +245,8 @@ enum LinkCreationType
 
 struct ClickInteractionState
 {
+    ClickInteractionType Type;
+
     struct
     {
         int StartPinIdx;
@@ -256,6 +258,8 @@ struct ClickInteractionState
     {
         ImRect Rect;
     } BoxSelector;
+
+    ClickInteractionState() : Type(ClickInteractionType_None) {}
 };
 
 struct ColorStyleElement
@@ -562,12 +566,11 @@ struct EditorContext
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
 
-    ClickInteractionType ClickInteractionType;
-    ClickInteractionState ClickInteractionState;
+    ClickInteractionState ClickInteraction;
 
     EditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          ClickInteractionType(ClickInteractionType_None), ClickInteractionState()
+          ClickInteraction()
     {
     }
 };
@@ -975,12 +978,12 @@ void BeginNodeSelection(EditorContext& editor, const int node_idx)
     // Don't start selecting a node if we are e.g. already creating and dragging
     // a new link! New link creation can happen when the mouse is clicked over
     // a node, but within the hover radius of a pin.
-    if (editor.ClickInteractionType != ClickInteractionType_None)
+    if (editor.ClickInteraction.Type != ClickInteractionType_None)
     {
         return;
     }
 
-    editor.ClickInteractionType = ClickInteractionType_Node;
+    editor.ClickInteraction.Type = ClickInteractionType_Node;
     // If the node is not already contained in the selection, then we want only
     // the interaction node to be selected, effective immediately.
     //
@@ -1003,7 +1006,7 @@ void BeginNodeSelection(EditorContext& editor, const int node_idx)
 
 void BeginLinkSelection(EditorContext& editor, const int link_idx)
 {
-    editor.ClickInteractionType = ClickInteractionType_Link;
+    editor.ClickInteraction.Type = ClickInteractionType_Link;
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
     editor.SelectedNodeIndices.clear();
@@ -1014,7 +1017,7 @@ void BeginLinkSelection(EditorContext& editor, const int link_idx)
 void BeginLinkDetach(EditorContext& editor, const int link_idx, const int detach_pin_idx)
 {
     const LinkData& link = editor.Links.Pool[link_idx];
-    ClickInteractionState& state = editor.ClickInteractionState;
+    ClickInteractionState& state = editor.ClickInteraction;
     state.LinkCreation.EndPinIdx.Reset();
     state.LinkCreation.StartPinIdx =
         detach_pin_idx == link.StartPinIdx ? link.EndPinIdx : link.StartPinIdx;
@@ -1025,13 +1028,12 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
 {
     // First check if we are clicking a link in the vicinity of a pin.
     // This may result in a link detach via click and drag.
-    if (editor.ClickInteractionType == ClickInteractionType_LinkCreation)
+    if (editor.ClickInteraction.Type == ClickInteractionType_LinkCreation)
     {
         if ((g->HoveredPinFlags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
         {
             BeginLinkDetach(editor, link_idx, g->HoveredPinIdx.Value());
-            editor.ClickInteractionState.LinkCreation.LinkCreationType =
-                LinkCreationType_FromDetach;
+            editor.ClickInteraction.LinkCreation.LinkCreationType = LinkCreationType_FromDetach;
         }
     }
     // If we aren't near a pin, check if we are clicking the link with the
@@ -1053,10 +1055,9 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
             const int closest_pin_idx =
                 dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
 
-            editor.ClickInteractionType = ClickInteractionType_LinkCreation;
+            editor.ClickInteraction.Type = ClickInteractionType_LinkCreation;
             BeginLinkDetach(editor, link_idx, closest_pin_idx);
-            editor.ClickInteractionState.LinkCreation.LinkCreationType =
-                LinkCreationType_FromDetach;
+            editor.ClickInteraction.LinkCreation.LinkCreationType = LinkCreationType_FromDetach;
         }
         else
         {
@@ -1067,10 +1068,10 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
 
 void BeginLinkCreation(EditorContext& editor, const int hovered_pin_idx)
 {
-    editor.ClickInteractionType = ClickInteractionType_LinkCreation;
-    editor.ClickInteractionState.LinkCreation.StartPinIdx = hovered_pin_idx;
-    editor.ClickInteractionState.LinkCreation.EndPinIdx.Reset();
-    editor.ClickInteractionState.LinkCreation.LinkCreationType = LinkCreationType_Standard;
+    editor.ClickInteraction.Type = ClickInteractionType_LinkCreation;
+    editor.ClickInteraction.LinkCreation.StartPinIdx = hovered_pin_idx;
+    editor.ClickInteraction.LinkCreation.EndPinIdx.Reset();
+    editor.ClickInteraction.LinkCreation.LinkCreationType = LinkCreationType_Standard;
     g->ElementStateChange |= ElementStateChange_LinkStarted;
 }
 
@@ -1082,7 +1083,7 @@ void BeginCanvasInteraction(EditorContext& editor)
 
     const bool mouse_not_in_canvas = !MouseInCanvas();
 
-    if (editor.ClickInteractionType != ClickInteractionType_None || any_ui_element_hovered ||
+    if (editor.ClickInteraction.Type != ClickInteractionType_None || any_ui_element_hovered ||
         mouse_not_in_canvas)
     {
         return;
@@ -1092,12 +1093,12 @@ void BeginCanvasInteraction(EditorContext& editor)
 
     if (started_panning)
     {
-        editor.ClickInteractionType = ClickInteractionType_Panning;
+        editor.ClickInteraction.Type = ClickInteractionType_Panning;
     }
     else if (g->LeftMouseClicked)
     {
-        editor.ClickInteractionType = ClickInteractionType_BoxSelection;
-        editor.ClickInteractionState.BoxSelector.Rect.Min = g->MousePos;
+        editor.ClickInteraction.Type = ClickInteractionType_BoxSelection;
+        editor.ClickInteraction.BoxSelector.Rect.Min = g->MousePos;
     }
 }
 
@@ -1234,11 +1235,11 @@ bool ShouldLinkSnapToPin(
 
 void ClickInteractionUpdate(EditorContext& editor)
 {
-    switch (editor.ClickInteractionType)
+    switch (editor.ClickInteraction.Type)
     {
     case ClickInteractionType_BoxSelection:
     {
-        ImRect& box_rect = editor.ClickInteractionState.BoxSelector.Rect;
+        ImRect& box_rect = editor.ClickInteraction.BoxSelector.Rect;
         box_rect.Max = g->MousePos;
 
         BoxSelectorUpdateSelection(editor, box_rect);
@@ -1277,7 +1278,7 @@ void ClickInteractionUpdate(EditorContext& editor)
                 }
             }
 
-            editor.ClickInteractionType = ClickInteractionType_None;
+            editor.ClickInteraction.Type = ClickInteractionType_None;
         }
     }
     break;
@@ -1287,7 +1288,7 @@ void ClickInteractionUpdate(EditorContext& editor)
 
         if (g->LeftMouseReleased)
         {
-            editor.ClickInteractionType = ClickInteractionType_None;
+            editor.ClickInteraction.Type = ClickInteractionType_None;
         }
     }
     break;
@@ -1295,19 +1296,19 @@ void ClickInteractionUpdate(EditorContext& editor)
     {
         if (g->LeftMouseReleased)
         {
-            editor.ClickInteractionType = ClickInteractionType_None;
+            editor.ClickInteraction.Type = ClickInteractionType_None;
         }
     }
     break;
     case ClickInteractionType_LinkCreation:
     {
         const PinData& start_pin =
-            editor.Pins.Pool[editor.ClickInteractionState.LinkCreation.StartPinIdx];
+            editor.Pins.Pool[editor.ClickInteraction.LinkCreation.StartPinIdx];
 
         const OptionalIndex maybe_duplicate_link_idx =
             g->HoveredPinIdx.HasValue() ? FindDuplicateLink(
                                               editor,
-                                              editor.ClickInteractionState.LinkCreation.StartPinIdx,
+                                              editor.ClickInteraction.LinkCreation.StartPinIdx,
                                               g->HoveredPinIdx.Value())
                                         : OptionalIndex();
 
@@ -1319,8 +1320,8 @@ void ClickInteractionUpdate(EditorContext& editor)
         // If we created on snap and the hovered pin is empty or changed, then we need signal that
         // the link's state has changed.
         const bool snapping_pin_changed =
-            editor.ClickInteractionState.LinkCreation.EndPinIdx.HasValue() &&
-            !(g->HoveredPinIdx == editor.ClickInteractionState.LinkCreation.EndPinIdx);
+            editor.ClickInteraction.LinkCreation.EndPinIdx.HasValue() &&
+            !(g->HoveredPinIdx == editor.ClickInteraction.LinkCreation.EndPinIdx);
 
         // Detach the link that was created by this link event if it's no longer in snap range
         if (snapping_pin_changed && g->SnapLinkIdx.HasValue())
@@ -1328,7 +1329,7 @@ void ClickInteractionUpdate(EditorContext& editor)
             BeginLinkDetach(
                 editor,
                 g->SnapLinkIdx.Value(),
-                editor.ClickInteractionState.LinkCreation.EndPinIdx.Value());
+                editor.ClickInteraction.LinkCreation.EndPinIdx.Value());
         }
 
         const ImVec2 start_pos = GetScreenSpacePinCoordinates(editor, start_pin);
@@ -1360,7 +1361,7 @@ void ClickInteractionUpdate(EditorContext& editor)
 
         if (!should_snap)
         {
-            editor.ClickInteractionState.LinkCreation.EndPinIdx.Reset();
+            editor.ClickInteraction.LinkCreation.EndPinIdx.Reset();
         }
 
         const bool create_link = should_snap && (g->LeftMouseReleased || link_creation_on_snap);
@@ -1370,18 +1371,18 @@ void ClickInteractionUpdate(EditorContext& editor)
             // Avoid send OnLinkCreated() events every frame if the snap link is not saved
             // (only applies for EnableLinkCreationOnSnap)
             if (!g->LeftMouseReleased &&
-                editor.ClickInteractionState.LinkCreation.EndPinIdx == g->HoveredPinIdx)
+                editor.ClickInteraction.LinkCreation.EndPinIdx == g->HoveredPinIdx)
             {
                 break;
             }
 
             g->ElementStateChange |= ElementStateChange_LinkCreated;
-            editor.ClickInteractionState.LinkCreation.EndPinIdx = g->HoveredPinIdx.Value();
+            editor.ClickInteraction.LinkCreation.EndPinIdx = g->HoveredPinIdx.Value();
         }
 
         if (g->LeftMouseReleased)
         {
-            editor.ClickInteractionType = ClickInteractionType_None;
+            editor.ClickInteraction.Type = ClickInteractionType_None;
             if (!create_link)
             {
                 g->ElementStateChange |= ElementStateChange_LinkDropped;
@@ -1399,7 +1400,7 @@ void ClickInteractionUpdate(EditorContext& editor)
         }
         else
         {
-            editor.ClickInteractionType = ClickInteractionType_None;
+            editor.ClickInteraction.Type = ClickInteractionType_None;
         }
     }
     break;
@@ -1786,7 +1787,7 @@ void DrawPin(EditorContext& editor, const int pin_idx, const bool left_mouse_cli
     ImU32 pin_color = pin.ColorStyle.Background;
 
     const bool pin_hovered = g->HoveredPinIdx == pin_idx &&
-                             editor.ClickInteractionType != ClickInteractionType_BoxSelection;
+                             editor.ClickInteraction.Type != ClickInteractionType_BoxSelection;
 
     if (pin_hovered)
     {
@@ -1809,7 +1810,7 @@ void DrawNode(EditorContext& editor, const int node_idx)
     ImGui::SetCursorPos(node.Origin + editor.Panning);
 
     const bool node_hovered = g->HoveredNodeIdx == node_idx &&
-                              editor.ClickInteractionType != ClickInteractionType_BoxSelection;
+                              editor.ClickInteraction.Type != ClickInteractionType_BoxSelection;
 
     ImU32 node_background = node.ColorStyle.Background;
     ImU32 titlebar_background = node.ColorStyle.Titlebar;
@@ -1901,7 +1902,7 @@ void DrawLink(EditorContext& editor, const int link_idx)
         start_pin.Pos, end_pin.Pos, start_pin.Type, g->Style.LinkLineSegmentsPerLength);
 
     const bool link_hovered = g->HoveredLinkIdx == link_idx &&
-                              editor.ClickInteractionType != ClickInteractionType_BoxSelection;
+                              editor.ClickInteraction.Type != ClickInteractionType_BoxSelection;
 
     if (link_hovered)
     {
@@ -2489,12 +2490,12 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
     link.ColorStyle.Selected = g->Style.Colors[ColorStyle_LinkSelected];
 
     // Check if this link was created by the current link event
-    if ((editor.ClickInteractionType == ClickInteractionType_LinkCreation &&
+    if ((editor.ClickInteraction.Type == ClickInteractionType_LinkCreation &&
          editor.Pins.Pool[link.EndPinIdx].Flags & AttributeFlags_EnableLinkCreationOnSnap &&
-         editor.ClickInteractionState.LinkCreation.StartPinIdx == link.StartPinIdx &&
-         editor.ClickInteractionState.LinkCreation.EndPinIdx == link.EndPinIdx) ||
-        (editor.ClickInteractionState.LinkCreation.StartPinIdx == link.EndPinIdx &&
-         editor.ClickInteractionState.LinkCreation.EndPinIdx == link.StartPinIdx))
+         editor.ClickInteraction.LinkCreation.StartPinIdx == link.StartPinIdx &&
+         editor.ClickInteraction.LinkCreation.EndPinIdx == link.EndPinIdx) ||
+        (editor.ClickInteraction.LinkCreation.StartPinIdx == link.EndPinIdx &&
+         editor.ClickInteraction.LinkCreation.EndPinIdx == link.StartPinIdx))
     {
         g->SnapLinkIdx = ObjectPoolFindOrCreateIndex(editor.Links, id);
     }
@@ -2775,7 +2776,7 @@ bool IsLinkStarted(int* const started_at_id)
     if (is_started)
     {
         const EditorContext& editor = EditorContextGet();
-        const int pin_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
+        const int pin_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
         *started_at_id = editor.Pins.Pool[pin_idx].Id;
     }
 
@@ -2792,11 +2793,11 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     const bool link_dropped =
         (g->ElementStateChange & ElementStateChange_LinkDropped) != 0 &&
         (including_detached_links ||
-         editor.ClickInteractionState.LinkCreation.LinkCreationType != LinkCreationType_FromDetach);
+         editor.ClickInteraction.LinkCreation.LinkCreationType != LinkCreationType_FromDetach);
 
     if (link_dropped && started_at_id)
     {
-        const int pin_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
+        const int pin_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
         *started_at_id = editor.Pins.Pool[pin_idx].Id;
     }
 
@@ -2817,8 +2818,8 @@ bool IsLinkCreated(
     if (is_created)
     {
         const EditorContext& editor = EditorContextGet();
-        const int start_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
-        const int end_idx = editor.ClickInteractionState.LinkCreation.EndPinIdx.Value();
+        const int start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
+        const int end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
         const PinData& start_pin = editor.Pins.Pool[start_idx];
         const PinData& end_pin = editor.Pins.Pool[end_idx];
 
@@ -2835,7 +2836,7 @@ bool IsLinkCreated(
 
         if (created_from_snap)
         {
-            *created_from_snap = editor.ClickInteractionType == ClickInteractionType_LinkCreation;
+            *created_from_snap = editor.ClickInteraction.Type == ClickInteractionType_LinkCreation;
         }
     }
 
@@ -2860,8 +2861,8 @@ bool IsLinkCreated(
     if (is_created)
     {
         const EditorContext& editor = EditorContextGet();
-        const int start_idx = editor.ClickInteractionState.LinkCreation.StartPinIdx;
-        const int end_idx = editor.ClickInteractionState.LinkCreation.EndPinIdx.Value();
+        const int start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
+        const int end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
         const PinData& start_pin = editor.Pins.Pool[start_idx];
         const NodeData& start_node = editor.Nodes.Pool[start_pin.ParentNodeIdx];
         const PinData& end_pin = editor.Pins.Pool[end_idx];
@@ -2884,7 +2885,7 @@ bool IsLinkCreated(
 
         if (created_from_snap)
         {
-            *created_from_snap = editor.ClickInteractionType == ClickInteractionType_LinkCreation;
+            *created_from_snap = editor.ClickInteraction.Type == ClickInteractionType_LinkCreation;
         }
     }
 
