@@ -359,11 +359,9 @@ public:
             case UiNodeType::output:
             {
                 const float node_width = 100.0f;
-                imnodes::PushColorStyle(imnodes::ColorStyle_TitleBar, IM_COL32(11, 109, 191, 255));
-                imnodes::PushColorStyle(
-                    imnodes::ColorStyle_TitleBarHovered, IM_COL32(45, 126, 194, 255));
-                imnodes::PushColorStyle(
-                    imnodes::ColorStyle_TitleBarSelected, IM_COL32(81, 148, 204, 255));
+                imnodes::PushColorStyle(ImNodesCol_TitleBar, IM_COL32(11, 109, 191, 255));
+                imnodes::PushColorStyle(ImNodesCol_TitleBarHovered, IM_COL32(45, 126, 194, 255));
+                imnodes::PushColorStyle(ImNodesCol_TitleBarSelected, IM_COL32(81, 148, 204, 255));
                 imnodes::BeginNode(node.id);
 
                 imnodes::BeginNodeTitleBar();
@@ -647,7 +645,7 @@ static ColorNodeEditor color_editor;
 
 void NodeEditorInitialize()
 {
-    imnodes::IO& io = imnodes::GetIO();
+    ImNodesIO& io = imnodes::GetIO();
     io.LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
 }
 

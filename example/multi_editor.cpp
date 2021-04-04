@@ -26,7 +26,7 @@ struct Link
 
 struct Editor
 {
-    imnodes::EditorContext* context = nullptr;
+    ImNodesEditorContext* context = nullptr;
     std::vector<Node> nodes;
     std::vector<Link> links;
     int current_id = 0;
@@ -116,9 +116,9 @@ void NodeEditorInitialize()
 {
     editor1.context = imnodes::EditorContextCreate();
     editor2.context = imnodes::EditorContextCreate();
-    imnodes::PushAttributeFlag(imnodes::AttributeFlags_EnableLinkDetachWithDragClick);
+    imnodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
 
-    imnodes::IO& io = imnodes::GetIO();
+    ImNodesIO& io = imnodes::GetIO();
     io.LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
 }
 

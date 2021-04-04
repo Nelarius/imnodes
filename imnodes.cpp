@@ -157,7 +157,7 @@ struct PinData
     int ParentNodeIdx;
     ImRect AttributeRect;
     AttributeType Type;
-    PinShape Shape;
+    ImNodesPinShape Shape;
     ImVec2 Pos; // screen-space coordinates
     int Flags;
 
@@ -168,7 +168,8 @@ struct PinData
 
     PinData(const int pin_id)
         : Id(pin_id), ParentNodeIdx(), AttributeRect(), Type(AttributeType_None),
-          Shape(PinShape_CircleFilled), Pos(), Flags(AttributeFlags_None), ColorStyle()
+          Shape(ImNodesPinShape_CircleFilled), Pos(), Flags(ImNodesAttributeFlags_None),
+          ColorStyle()
     {
     }
 };
@@ -265,25 +266,29 @@ struct ClickInteractionState
 struct ColorStyleElement
 {
     ImU32 Color;
-    ColorStyle Item;
+    ImNodesCol Item;
 
-    ColorStyleElement(const ImU32 c, const ColorStyle s) : Color(c), Item(s) {}
+    ColorStyleElement(const ImU32 c, const ImNodesCol s) : Color(c), Item(s) {}
 };
 
 struct StyleElement
 {
-    StyleVar Item;
+    ImNodesStyleVar Item;
     float Value;
 
-    StyleElement(const float value, const StyleVar variable) : Item(variable), Value(value) {}
+    StyleElement(const float value, const ImNodesStyleVar variable) : Item(variable), Value(value)
+    {
+    }
 };
 } // namespace
+} // namespace imnodes
+
 // [SECTION] global struct
 // this stores data which only lives for one frame
-struct Context
+struct ImNodesContext
 {
-    EditorContext* DefaultEditorCtx;
-    EditorContext* EditorCtx;
+    ImNodesEditorContext* DefaultEditorCtx;
+    ImNodesEditorContext* EditorCtx;
 
     // Canvas draw list and helper state
     ImDrawList* CanvasDrawList;
@@ -297,13 +302,13 @@ struct Context
     ImRect CanvasRectScreenSpace;
 
     // Debug helpers
-    ScopeFlags CurrentScope;
+    imnodes::ScopeFlags CurrentScope;
 
     // Configuration state
-    IO Io;
-    Style Style;
-    ImVector<ColorStyleElement> ColorModifierStack;
-    ImVector<StyleElement> StyleModifierStack;
+    ImNodesIO Io;
+    ImNodesStyle Style;
+    ImVector<imnodes::ColorStyleElement> ColorModifierStack;
+    ImVector<imnodes::StyleElement> StyleModifierStack;
     ImGuiTextBuffer TextBuffer;
 
     int CurrentAttributeFlags;
@@ -314,14 +319,14 @@ struct Context
     int CurrentPinIdx;
     int CurrentAttributeId;
 
-    OptionalIndex HoveredNodeIdx;
-    OptionalIndex InteractiveNodeIdx;
-    OptionalIndex HoveredLinkIdx;
-    OptionalIndex HoveredPinIdx;
+    imnodes::OptionalIndex HoveredNodeIdx;
+    imnodes::OptionalIndex InteractiveNodeIdx;
+    imnodes::OptionalIndex HoveredLinkIdx;
+    imnodes::OptionalIndex HoveredPinIdx;
     int HoveredPinFlags;
 
-    OptionalIndex DeletedLinkIdx;
-    OptionalIndex SnapLinkIdx;
+    imnodes::OptionalIndex DeletedLinkIdx;
+    imnodes::OptionalIndex SnapLinkIdx;
 
     // Event helper state
     int ElementStateChange;
@@ -340,14 +345,15 @@ struct Context
     bool AltMouseDragging;
 };
 
-Context* g = NULL;
+namespace imnodes
+{
+ImNodesContext* g = NULL;
 
 namespace
 {
-
-EditorContext& EditorContextGet()
+ImNodesEditorContext& EditorContextGet()
 {
-    // No editor context was set! Did you forget to call imnodes::Initialize?
+    // No editor context was set! Did you forget to call imnodes::CreateContext()?
     assert(g->EditorCtx != NULL);
     return *g->EditorCtx;
 }
@@ -549,14 +555,15 @@ inline bool RectangleOverlapsLink(
     return false;
 }
 } // namespace
+} // namespace imnodes
 
 // [SECTION] editor context definition
 
-struct EditorContext
+struct ImNodesEditorContext
 {
-    ObjectPool<NodeData> Nodes;
-    ObjectPool<PinData> Pins;
-    ObjectPool<LinkData> Links;
+    imnodes::ObjectPool<imnodes::NodeData> Nodes;
+    imnodes::ObjectPool<imnodes::PinData> Pins;
+    imnodes::ObjectPool<imnodes::LinkData> Links;
 
     ImVector<int> NodeDepthOrder;
 
@@ -566,15 +573,17 @@ struct EditorContext
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
 
-    ClickInteractionState ClickInteraction;
+    imnodes::ClickInteractionState ClickInteraction;
 
-    EditorContext()
+    ImNodesEditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
           ClickInteraction()
     {
     }
 };
 
+namespace imnodes
+{
 namespace
 {
 // [SECTION] draw list helper
@@ -929,7 +938,7 @@ int ObjectPoolFindOrCreateIndex(ObjectPool<NodeData>& nodes, const int node_id)
         IM_PLACEMENT_NEW(nodes.Pool.Data + node_idx) NodeData(node_id);
         nodes.IdMap.SetInt(static_cast<ImGuiID>(node_id), node_idx);
 
-        EditorContext& editor = EditorContextGet();
+        ImNodesEditorContext& editor = EditorContextGet();
         editor.NodeDepthOrder.push_back(node_idx);
     }
 
@@ -959,7 +968,7 @@ ImVec2 GetScreenSpacePinCoordinates(
     return ImVec2(x, 0.5f * (attribute_rect.Min.y + attribute_rect.Max.y));
 }
 
-ImVec2 GetScreenSpacePinCoordinates(const EditorContext& editor, const PinData& pin)
+ImVec2 GetScreenSpacePinCoordinates(const ImNodesEditorContext& editor, const PinData& pin)
 {
     const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
     return GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
@@ -973,7 +982,7 @@ bool MouseInCanvas()
     return is_window_hovered_or_focused && g->CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
 }
 
-void BeginNodeSelection(EditorContext& editor, const int node_idx)
+void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
 {
     // Don't start selecting a node if we are e.g. already creating and dragging
     // a new link! New link creation can happen when the mouse is clicked over
@@ -1004,7 +1013,7 @@ void BeginNodeSelection(EditorContext& editor, const int node_idx)
     }
 }
 
-void BeginLinkSelection(EditorContext& editor, const int link_idx)
+void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
 {
     editor.ClickInteraction.Type = ClickInteractionType_Link;
     // When a link is selected, clear all other selections, and insert the link
@@ -1014,7 +1023,7 @@ void BeginLinkSelection(EditorContext& editor, const int link_idx)
     editor.SelectedLinkIndices.push_back(link_idx);
 }
 
-void BeginLinkDetach(EditorContext& editor, const int link_idx, const int detach_pin_idx)
+void BeginLinkDetach(ImNodesEditorContext& editor, const int link_idx, const int detach_pin_idx)
 {
     const LinkData& link = editor.Links.Pool[link_idx];
     ClickInteractionState& state = editor.ClickInteraction;
@@ -1024,13 +1033,13 @@ void BeginLinkDetach(EditorContext& editor, const int link_idx, const int detach
     g->DeletedLinkIdx = link_idx;
 }
 
-void BeginLinkInteraction(EditorContext& editor, const int link_idx)
+void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx)
 {
     // First check if we are clicking a link in the vicinity of a pin.
     // This may result in a link detach via click and drag.
     if (editor.ClickInteraction.Type == ClickInteractionType_LinkCreation)
     {
-        if ((g->HoveredPinFlags & AttributeFlags_EnableLinkDetachWithDragClick) != 0)
+        if ((g->HoveredPinFlags & ImNodesAttributeFlags_EnableLinkDetachWithDragClick) != 0)
         {
             BeginLinkDetach(editor, link_idx, g->HoveredPinIdx.Value());
             editor.ClickInteraction.LinkCreation.Type = LinkCreationType_FromDetach;
@@ -1066,7 +1075,7 @@ void BeginLinkInteraction(EditorContext& editor, const int link_idx)
     }
 }
 
-void BeginLinkCreation(EditorContext& editor, const int hovered_pin_idx)
+void BeginLinkCreation(ImNodesEditorContext& editor, const int hovered_pin_idx)
 {
     editor.ClickInteraction.Type = ClickInteractionType_LinkCreation;
     editor.ClickInteraction.LinkCreation.StartPinIdx = hovered_pin_idx;
@@ -1075,7 +1084,7 @@ void BeginLinkCreation(EditorContext& editor, const int hovered_pin_idx)
     g->ElementStateChange |= ElementStateChange_LinkStarted;
 }
 
-void BeginCanvasInteraction(EditorContext& editor)
+void BeginCanvasInteraction(ImNodesEditorContext& editor)
 {
     const bool any_ui_element_hovered = g->HoveredNodeIdx.HasValue() ||
                                         g->HoveredLinkIdx.HasValue() ||
@@ -1102,7 +1111,7 @@ void BeginCanvasInteraction(EditorContext& editor)
     }
 }
 
-void BoxSelectorUpdateSelection(EditorContext& editor, ImRect box_rect)
+void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
 {
     // Invert box selector coordinates as needed
 
@@ -1165,7 +1174,7 @@ void BoxSelectorUpdateSelection(EditorContext& editor, ImRect box_rect)
     }
 }
 
-void TranslateSelectedNodes(EditorContext& editor)
+void TranslateSelectedNodes(ImNodesEditorContext& editor)
 {
     if (g->LeftMouseDragging)
     {
@@ -1183,7 +1192,7 @@ void TranslateSelectedNodes(EditorContext& editor)
 }
 
 OptionalIndex FindDuplicateLink(
-    const EditorContext& editor,
+    const ImNodesEditorContext& editor,
     const int start_pin_idx,
     const int end_pin_idx)
 {
@@ -1203,7 +1212,7 @@ OptionalIndex FindDuplicateLink(
 }
 
 bool ShouldLinkSnapToPin(
-    const EditorContext& editor,
+    const ImNodesEditorContext& editor,
     const PinData& start_pin,
     const int hovered_pin_idx,
     const OptionalIndex duplicate_link)
@@ -1233,7 +1242,7 @@ bool ShouldLinkSnapToPin(
     return true;
 }
 
-void ClickInteractionUpdate(EditorContext& editor)
+void ClickInteractionUpdate(ImNodesEditorContext& editor)
 {
     switch (editor.ClickInteraction.Type)
     {
@@ -1244,8 +1253,8 @@ void ClickInteractionUpdate(EditorContext& editor)
 
         BoxSelectorUpdateSelection(editor, box_rect);
 
-        const ImU32 box_selector_color = g->Style.Colors[ColorStyle_BoxSelector];
-        const ImU32 box_selector_outline = g->Style.Colors[ColorStyle_BoxSelectorOutline];
+        const ImU32 box_selector_color = g->Style.Colors[ImNodesCol_BoxSelector];
+        const ImU32 box_selector_outline = g->Style.Colors[ImNodesCol_BoxSelectorOutline];
         g->CanvasDrawList->AddRectFilled(box_rect.Min, box_rect.Max, box_selector_color);
         g->CanvasDrawList->AddRect(box_rect.Min, box_rect.Max, box_selector_outline);
 
@@ -1351,13 +1360,13 @@ void ClickInteractionUpdate(EditorContext& editor)
             link_data.Bezier.P1,
             link_data.Bezier.P2,
             link_data.Bezier.P3,
-            g->Style.Colors[ColorStyle_Link],
+            g->Style.Colors[ImNodesCol_Link],
             g->Style.LinkThickness,
             link_data.NumSegments);
 
         const bool link_creation_on_snap =
             g->HoveredPinIdx.HasValue() && (editor.Pins.Pool[g->HoveredPinIdx.Value()].Flags &
-                                            AttributeFlags_EnableLinkCreationOnSnap);
+                                            ImNodesAttributeFlags_EnableLinkCreationOnSnap);
 
         if (!should_snap)
         {
@@ -1412,7 +1421,7 @@ void ClickInteractionUpdate(EditorContext& editor)
     }
 }
 
-void ResolveOccludedPins(const EditorContext& editor, ImVector<int>& occluded_pin_indices)
+void ResolveOccludedPins(const ImNodesEditorContext& editor, ImVector<int>& occluded_pin_indices)
 {
     const ImVector<int>& depth_stack = editor.NodeDepthOrder;
 
@@ -1583,22 +1592,22 @@ OptionalIndex ResolveHoveredLink(const ObjectPool<LinkData>& links, const Object
 
 // [SECTION] render helpers
 
-inline ImVec2 ScreenSpaceToGridSpace(const EditorContext& editor, const ImVec2& v)
+inline ImVec2 ScreenSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
     return v - g->CanvasOriginScreenSpace - editor.Panning;
 }
 
-inline ImVec2 GridSpaceToScreenSpace(const EditorContext& editor, const ImVec2& v)
+inline ImVec2 GridSpaceToScreenSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
     return v + g->CanvasOriginScreenSpace + editor.Panning;
 }
 
-inline ImVec2 GridSpaceToEditorSpace(const EditorContext& editor, const ImVec2& v)
+inline ImVec2 GridSpaceToEditorSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
     return v + editor.Panning;
 }
 
-inline ImVec2 EditorSpaceToGridSpace(const EditorContext& editor, const ImVec2& v)
+inline ImVec2 EditorSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
     return v - editor.Panning;
 }
@@ -1630,7 +1639,7 @@ inline ImRect GetNodeTitleRect(const NodeData& node)
             ImVec2(0.f, expanded_title_rect.GetHeight()));
 }
 
-void DrawGrid(EditorContext& editor, const ImVec2& canvas_size)
+void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
 {
     const ImVec2 offset = editor.Panning;
 
@@ -1640,7 +1649,7 @@ void DrawGrid(EditorContext& editor, const ImVec2& canvas_size)
         g->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(x, 0.0f)),
             EditorSpaceToScreenSpace(ImVec2(x, canvas_size.y)),
-            g->Style.Colors[ColorStyle_GridLine]);
+            g->Style.Colors[ImNodesCol_GridLine]);
     }
 
     for (float y = fmodf(offset.y, g->Style.GridSpacing); y < canvas_size.y;
@@ -1649,7 +1658,7 @@ void DrawGrid(EditorContext& editor, const ImVec2& canvas_size)
         g->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(0.0f, y)),
             EditorSpaceToScreenSpace(ImVec2(canvas_size.x, y)),
-            g->Style.Colors[ColorStyle_GridLine]);
+            g->Style.Colors[ImNodesCol_GridLine]);
     }
 }
 
@@ -1707,7 +1716,7 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
 
     switch (pin.Shape)
     {
-    case PinShape_Circle:
+    case ImNodesPinShape_Circle:
     {
         g->CanvasDrawList->AddCircle(
             pin_pos,
@@ -1717,13 +1726,13 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
             g->Style.PinLineThickness);
     }
     break;
-    case PinShape_CircleFilled:
+    case ImNodesPinShape_CircleFilled:
     {
         g->CanvasDrawList->AddCircleFilled(
             pin_pos, g->Style.PinCircleRadius, pin_color, CIRCLE_NUM_SEGMENTS);
     }
     break;
-    case PinShape_Quad:
+    case ImNodesPinShape_Quad:
     {
         const QuadOffsets offset = CalculateQuadOffsets(g->Style.PinQuadSideLength);
         g->CanvasDrawList->AddQuad(
@@ -1735,7 +1744,7 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
             g->Style.PinLineThickness);
     }
     break;
-    case PinShape_QuadFilled:
+    case ImNodesPinShape_QuadFilled:
     {
         const QuadOffsets offset = CalculateQuadOffsets(g->Style.PinQuadSideLength);
         g->CanvasDrawList->AddQuadFilled(
@@ -1746,7 +1755,7 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
             pin_color);
     }
     break;
-    case PinShape_Triangle:
+    case ImNodesPinShape_Triangle:
     {
         const TriangleOffsets offset = CalculateTriangleOffsets(g->Style.PinTriangleSideLength);
         g->CanvasDrawList->AddTriangle(
@@ -1761,7 +1770,7 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
             2.f * g->Style.PinLineThickness);
     }
     break;
-    case PinShape_TriangleFilled:
+    case ImNodesPinShape_TriangleFilled:
     {
         const TriangleOffsets offset = CalculateTriangleOffsets(g->Style.PinTriangleSideLength);
         g->CanvasDrawList->AddTriangleFilled(
@@ -1777,7 +1786,7 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
     }
 }
 
-void DrawPin(EditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
+void DrawPin(ImNodesEditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
 {
     PinData& pin = editor.Pins.Pool[pin_idx];
     const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
@@ -1804,7 +1813,7 @@ void DrawPin(EditorContext& editor, const int pin_idx, const bool left_mouse_cli
     DrawPinShape(pin.Pos, pin, pin_color);
 }
 
-void DrawNode(EditorContext& editor, const int node_idx)
+void DrawNode(ImNodesEditorContext& editor, const int node_idx)
 {
     const NodeData& node = editor.Nodes.Pool[node_idx];
     ImGui::SetCursorPos(node.Origin + editor.Panning);
@@ -1854,7 +1863,7 @@ void DrawNode(EditorContext& editor, const int node_idx)
 #endif
         }
 
-        if ((g->Style.Flags & StyleFlags_NodeOutline) != 0)
+        if ((g->Style.Flags & ImNodesStyleFlags_NodeOutline) != 0)
         {
 #if IMGUI_VERSION_NUM < 18200
             g->CanvasDrawList->AddRect(
@@ -1892,7 +1901,7 @@ void DrawNode(EditorContext& editor, const int node_idx)
     }
 }
 
-void DrawLink(EditorContext& editor, const int link_idx)
+void DrawLink(ImNodesEditorContext& editor, const int link_idx)
 {
     const LinkData& link = editor.Links.Pool[link_idx];
     const PinData& start_pin = editor.Pins.Pool[link.StartPinIdx];
@@ -1950,7 +1959,7 @@ void DrawLink(EditorContext& editor, const int link_idx)
 void BeginPinAttribute(
     const int id,
     const AttributeType type,
-    const PinShape shape,
+    const ImNodesPinShape shape,
     const int node_idx)
 {
     // Make sure to call BeginNode() before calling
@@ -1961,7 +1970,7 @@ void BeginPinAttribute(
     ImGui::BeginGroup();
     ImGui::PushID(id);
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
 
     g->CurrentAttributeId = id;
 
@@ -1973,8 +1982,8 @@ void BeginPinAttribute(
     pin.Type = type;
     pin.Shape = shape;
     pin.Flags = g->CurrentAttributeFlags;
-    pin.ColorStyle.Background = g->Style.Colors[ColorStyle_Pin];
-    pin.ColorStyle.Hovered = g->Style.Colors[ColorStyle_PinHovered];
+    pin.ColorStyle.Background = g->Style.Colors[ImNodesCol_Pin];
+    pin.ColorStyle.Hovered = g->Style.Colors[ImNodesCol_PinHovered];
 }
 
 void EndPinAttribute()
@@ -1992,14 +2001,14 @@ void EndPinAttribute()
         g->InteractiveNodeIdx = g->CurrentNodeIdx;
     }
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     PinData& pin = editor.Pins.Pool[g->CurrentPinIdx];
     NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
     pin.AttributeRect = GetItemRect();
     node.PinIndices.push_back(g->CurrentPinIdx);
 }
 
-void Initialize(Context* context)
+void Initialize(ImNodesContext* context)
 {
     context->CanvasOriginScreenSpace = ImVec2(0.0f, 0.0f);
     context->CanvasRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
@@ -2011,47 +2020,50 @@ void Initialize(Context* context)
     context->DefaultEditorCtx = EditorContextCreate();
     EditorContextSet(g->DefaultEditorCtx);
 
-    context->CurrentAttributeFlags = AttributeFlags_None;
+    context->CurrentAttributeFlags = ImNodesAttributeFlags_None;
     context->AttributeFlagStack.push_back(g->CurrentAttributeFlags);
 
     StyleColorsDark();
 }
 
-void Shutdown(Context* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
+void Shutdown(ImNodesContext* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
 } // namespace
+} // namespace imnodes
 
 // [SECTION] API implementation
 
-IO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : Modifier(NULL) {}
+ImNodesIO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : Modifier(NULL) {}
 
-IO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : Modifier(NULL) {}
+ImNodesIO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : Modifier(NULL) {}
 
-IO::IO()
+ImNodesIO::ImNodesIO()
     : EmulateThreeButtonMouse(), LinkDetachWithModifierClick(),
       AltMouseButton(ImGuiMouseButton_Middle)
 {
 }
 
-Style::Style()
+ImNodesStyle::ImNodesStyle()
     : GridSpacing(32.f), NodeCornerRounding(4.f), NodePaddingHorizontal(8.f),
       NodePaddingVertical(8.f), NodeBorderThickness(1.f), LinkThickness(3.f),
       LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f), PinCircleRadius(4.f),
       PinQuadSideLength(7.f), PinTriangleSideLength(9.5), PinLineThickness(1.f),
       PinHoverRadius(10.f), PinOffset(0.f),
-      Flags(StyleFlags(StyleFlags_NodeOutline | StyleFlags_GridLines)), Colors()
+      Flags(ImNodesStyleFlags_NodeOutline | ImNodesStyleFlags_GridLines), Colors()
 {
 }
 
-Context* CreateContext()
+namespace imnodes
 {
-    Context* ctx = IM_NEW(Context)();
+ImNodesContext* CreateContext()
+{
+    ImNodesContext* ctx = IM_NEW(ImNodesContext)();
     if (g == NULL)
         SetCurrentContext(ctx);
     Initialize(ctx);
     return ctx;
 }
 
-void DestroyContext(Context* ctx)
+void DestroyContext(ImNodesContext* ctx)
 {
     if (ctx == NULL)
         ctx = g;
@@ -2061,40 +2073,40 @@ void DestroyContext(Context* ctx)
     IM_DELETE(ctx);
 }
 
-Context* GetCurrentContext() { return g; }
+ImNodesContext* GetCurrentContext() { return g; }
 
-void SetCurrentContext(Context* ctx) { g = ctx; }
+void SetCurrentContext(ImNodesContext* ctx) { g = ctx; }
 
-EditorContext* EditorContextCreate()
+ImNodesEditorContext* EditorContextCreate()
 {
-    void* mem = ImGui::MemAlloc(sizeof(EditorContext));
-    new (mem) EditorContext();
-    return (EditorContext*)mem;
+    void* mem = ImGui::MemAlloc(sizeof(ImNodesEditorContext));
+    new (mem) ImNodesEditorContext();
+    return (ImNodesEditorContext*)mem;
 }
 
-void EditorContextFree(EditorContext* ctx)
+void EditorContextFree(ImNodesEditorContext* ctx)
 {
-    ctx->~EditorContext();
+    ctx->~ImNodesEditorContext();
     ImGui::MemFree(ctx);
 }
 
-void EditorContextSet(EditorContext* ctx) { g->EditorCtx = ctx; }
+void EditorContextSet(ImNodesEditorContext* ctx) { g->EditorCtx = ctx; }
 
 ImVec2 EditorContextGetPanning()
 {
-    const EditorContext& editor = EditorContextGet();
+    const ImNodesEditorContext& editor = EditorContextGet();
     return editor.Panning;
 }
 
 void EditorContextResetPanning(const ImVec2& pos)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     editor.Panning = pos;
 }
 
 void EditorContextMoveToNode(const int node_id)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
 
     editor.Panning.x = -node.Origin.x;
@@ -2103,77 +2115,77 @@ void EditorContextMoveToNode(const int node_id)
 
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
 
-IO& GetIO() { return g->Io; }
+ImNodesIO& GetIO() { return g->Io; }
 
-Style& GetStyle() { return g->Style; }
+ImNodesStyle& GetStyle() { return g->Style; }
 
 void StyleColorsDark()
 {
-    g->Style.Colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
-    g->Style.Colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
-    g->Style.Colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
-    g->Style.Colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g->Style.Colors[ImNodesCol_NodeBackground] = IM_COL32(50, 50, 50, 255);
+    g->Style.Colors[ImNodesCol_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ImNodesCol_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ImNodesCol_NodeOutline] = IM_COL32(100, 100, 100, 255);
     // title bar colors match ImGui's titlebg colors
-    g->Style.Colors[ColorStyle_TitleBar] = IM_COL32(41, 74, 122, 255);
-    g->Style.Colors[ColorStyle_TitleBarHovered] = IM_COL32(66, 150, 250, 255);
-    g->Style.Colors[ColorStyle_TitleBarSelected] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ImNodesCol_TitleBar] = IM_COL32(41, 74, 122, 255);
+    g->Style.Colors[ImNodesCol_TitleBarHovered] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ImNodesCol_TitleBarSelected] = IM_COL32(66, 150, 250, 255);
     // link colors match ImGui's slider grab colors
-    g->Style.Colors[ColorStyle_Link] = IM_COL32(61, 133, 224, 200);
-    g->Style.Colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 255);
-    g->Style.Colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ImNodesCol_Link] = IM_COL32(61, 133, 224, 200);
+    g->Style.Colors[ImNodesCol_LinkHovered] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ImNodesCol_LinkSelected] = IM_COL32(66, 150, 250, 255);
     // pin colors match ImGui's button colors
-    g->Style.Colors[ColorStyle_Pin] = IM_COL32(53, 150, 250, 180);
-    g->Style.Colors[ColorStyle_PinHovered] = IM_COL32(53, 150, 250, 255);
+    g->Style.Colors[ImNodesCol_Pin] = IM_COL32(53, 150, 250, 180);
+    g->Style.Colors[ImNodesCol_PinHovered] = IM_COL32(53, 150, 250, 255);
 
-    g->Style.Colors[ColorStyle_BoxSelector] = IM_COL32(61, 133, 224, 30);
-    g->Style.Colors[ColorStyle_BoxSelectorOutline] = IM_COL32(61, 133, 224, 150);
+    g->Style.Colors[ImNodesCol_BoxSelector] = IM_COL32(61, 133, 224, 30);
+    g->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(61, 133, 224, 150);
 
-    g->Style.Colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
-    g->Style.Colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(40, 40, 50, 200);
+    g->Style.Colors[ImNodesCol_GridLine] = IM_COL32(200, 200, 200, 40);
 }
 
 void StyleColorsClassic()
 {
-    g->Style.Colors[ColorStyle_NodeBackground] = IM_COL32(50, 50, 50, 255);
-    g->Style.Colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
-    g->Style.Colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
-    g->Style.Colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
-    g->Style.Colors[ColorStyle_TitleBar] = IM_COL32(69, 69, 138, 255);
-    g->Style.Colors[ColorStyle_TitleBarHovered] = IM_COL32(82, 82, 161, 255);
-    g->Style.Colors[ColorStyle_TitleBarSelected] = IM_COL32(82, 82, 161, 255);
-    g->Style.Colors[ColorStyle_Link] = IM_COL32(255, 255, 255, 100);
-    g->Style.Colors[ColorStyle_LinkHovered] = IM_COL32(105, 99, 204, 153);
-    g->Style.Colors[ColorStyle_LinkSelected] = IM_COL32(105, 99, 204, 153);
-    g->Style.Colors[ColorStyle_Pin] = IM_COL32(89, 102, 156, 170);
-    g->Style.Colors[ColorStyle_PinHovered] = IM_COL32(102, 122, 179, 200);
-    g->Style.Colors[ColorStyle_BoxSelector] = IM_COL32(82, 82, 161, 100);
-    g->Style.Colors[ColorStyle_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
-    g->Style.Colors[ColorStyle_GridBackground] = IM_COL32(40, 40, 50, 200);
-    g->Style.Colors[ColorStyle_GridLine] = IM_COL32(200, 200, 200, 40);
+    g->Style.Colors[ImNodesCol_NodeBackground] = IM_COL32(50, 50, 50, 255);
+    g->Style.Colors[ImNodesCol_NodeBackgroundHovered] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ImNodesCol_NodeBackgroundSelected] = IM_COL32(75, 75, 75, 255);
+    g->Style.Colors[ImNodesCol_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g->Style.Colors[ImNodesCol_TitleBar] = IM_COL32(69, 69, 138, 255);
+    g->Style.Colors[ImNodesCol_TitleBarHovered] = IM_COL32(82, 82, 161, 255);
+    g->Style.Colors[ImNodesCol_TitleBarSelected] = IM_COL32(82, 82, 161, 255);
+    g->Style.Colors[ImNodesCol_Link] = IM_COL32(255, 255, 255, 100);
+    g->Style.Colors[ImNodesCol_LinkHovered] = IM_COL32(105, 99, 204, 153);
+    g->Style.Colors[ImNodesCol_LinkSelected] = IM_COL32(105, 99, 204, 153);
+    g->Style.Colors[ImNodesCol_Pin] = IM_COL32(89, 102, 156, 170);
+    g->Style.Colors[ImNodesCol_PinHovered] = IM_COL32(102, 122, 179, 200);
+    g->Style.Colors[ImNodesCol_BoxSelector] = IM_COL32(82, 82, 161, 100);
+    g->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
+    g->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(40, 40, 50, 200);
+    g->Style.Colors[ImNodesCol_GridLine] = IM_COL32(200, 200, 200, 40);
 }
 
 void StyleColorsLight()
 {
-    g->Style.Colors[ColorStyle_NodeBackground] = IM_COL32(240, 240, 240, 255);
-    g->Style.Colors[ColorStyle_NodeBackgroundHovered] = IM_COL32(240, 240, 240, 255);
-    g->Style.Colors[ColorStyle_NodeBackgroundSelected] = IM_COL32(240, 240, 240, 255);
-    g->Style.Colors[ColorStyle_NodeOutline] = IM_COL32(100, 100, 100, 255);
-    g->Style.Colors[ColorStyle_TitleBar] = IM_COL32(248, 248, 248, 255);
-    g->Style.Colors[ColorStyle_TitleBarHovered] = IM_COL32(209, 209, 209, 255);
-    g->Style.Colors[ColorStyle_TitleBarSelected] = IM_COL32(209, 209, 209, 255);
+    g->Style.Colors[ImNodesCol_NodeBackground] = IM_COL32(240, 240, 240, 255);
+    g->Style.Colors[ImNodesCol_NodeBackgroundHovered] = IM_COL32(240, 240, 240, 255);
+    g->Style.Colors[ImNodesCol_NodeBackgroundSelected] = IM_COL32(240, 240, 240, 255);
+    g->Style.Colors[ImNodesCol_NodeOutline] = IM_COL32(100, 100, 100, 255);
+    g->Style.Colors[ImNodesCol_TitleBar] = IM_COL32(248, 248, 248, 255);
+    g->Style.Colors[ImNodesCol_TitleBarHovered] = IM_COL32(209, 209, 209, 255);
+    g->Style.Colors[ImNodesCol_TitleBarSelected] = IM_COL32(209, 209, 209, 255);
     // original imgui values: 66, 150, 250
-    g->Style.Colors[ColorStyle_Link] = IM_COL32(66, 150, 250, 100);
+    g->Style.Colors[ImNodesCol_Link] = IM_COL32(66, 150, 250, 100);
     // original imgui values: 117, 138, 204
-    g->Style.Colors[ColorStyle_LinkHovered] = IM_COL32(66, 150, 250, 242);
-    g->Style.Colors[ColorStyle_LinkSelected] = IM_COL32(66, 150, 250, 242);
+    g->Style.Colors[ImNodesCol_LinkHovered] = IM_COL32(66, 150, 250, 242);
+    g->Style.Colors[ImNodesCol_LinkSelected] = IM_COL32(66, 150, 250, 242);
     // original imgui values: 66, 150, 250
-    g->Style.Colors[ColorStyle_Pin] = IM_COL32(66, 150, 250, 160);
-    g->Style.Colors[ColorStyle_PinHovered] = IM_COL32(66, 150, 250, 255);
-    g->Style.Colors[ColorStyle_BoxSelector] = IM_COL32(90, 170, 250, 30);
-    g->Style.Colors[ColorStyle_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
-    g->Style.Colors[ColorStyle_GridBackground] = IM_COL32(225, 225, 225, 255);
-    g->Style.Colors[ColorStyle_GridLine] = IM_COL32(180, 180, 180, 100);
-    g->Style.Flags = StyleFlags(StyleFlags_None);
+    g->Style.Colors[ImNodesCol_Pin] = IM_COL32(66, 150, 250, 160);
+    g->Style.Colors[ImNodesCol_PinHovered] = IM_COL32(66, 150, 250, 255);
+    g->Style.Colors[ImNodesCol_BoxSelector] = IM_COL32(90, 170, 250, 30);
+    g->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
+    g->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(225, 225, 225, 255);
+    g->Style.Colors[ImNodesCol_GridLine] = IM_COL32(180, 180, 180, 100);
+    g->Style.Flags = ImNodesStyleFlags_None;
 }
 
 void BeginNodeEditor()
@@ -2183,7 +2195,7 @@ void BeginNodeEditor()
 
     // Reset state from previous pass
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     ObjectPoolReset(editor.Nodes);
     ObjectPoolReset(editor.Pins);
     ObjectPoolReset(editor.Links);
@@ -2192,7 +2204,7 @@ void BeginNodeEditor()
     g->InteractiveNodeIdx.Reset();
     g->HoveredLinkIdx.Reset();
     g->HoveredPinIdx.Reset();
-    g->HoveredPinFlags = AttributeFlags_None;
+    g->HoveredPinFlags = ImNodesAttributeFlags_None;
     g->DeletedLinkIdx.Reset();
     g->SnapLinkIdx.Reset();
 
@@ -2217,7 +2229,7 @@ void BeginNodeEditor()
     {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, g->Style.Colors[ColorStyle_GridBackground]);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, g->Style.Colors[ImNodesCol_GridBackground]);
         ImGui::BeginChild(
             "scrolling_region",
             ImVec2(0.f, 0.f),
@@ -2236,7 +2248,7 @@ void BeginNodeEditor()
             g->CanvasRectScreenSpace = ImRect(
                 EditorSpaceToScreenSpace(ImVec2(0.f, 0.f)), EditorSpaceToScreenSpace(canvas_size));
 
-            if (g->Style.Flags & StyleFlags_GridLines)
+            if (g->Style.Flags & ImNodesStyleFlags_GridLines)
             {
                 DrawGrid(editor, canvas_size);
             }
@@ -2249,7 +2261,7 @@ void EndNodeEditor()
     assert(g->CurrentScope == Scope_Editor);
     g->CurrentScope = Scope_None;
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
 
     // Detect which UI element is being hovered over. Detection is done in a hierarchical fashion,
     // because a UI element being hovered excludes any other as being hovered over.
@@ -2338,19 +2350,19 @@ void BeginNode(const int node_id)
     assert(g->CurrentScope == Scope_Editor);
     g->CurrentScope = Scope_Node;
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
 
     const int node_idx = ObjectPoolFindOrCreateIndex(editor.Nodes, node_id);
     g->CurrentNodeIdx = node_idx;
 
     NodeData& node = editor.Nodes.Pool[node_idx];
-    node.ColorStyle.Background = g->Style.Colors[ColorStyle_NodeBackground];
-    node.ColorStyle.BackgroundHovered = g->Style.Colors[ColorStyle_NodeBackgroundHovered];
-    node.ColorStyle.BackgroundSelected = g->Style.Colors[ColorStyle_NodeBackgroundSelected];
-    node.ColorStyle.Outline = g->Style.Colors[ColorStyle_NodeOutline];
-    node.ColorStyle.Titlebar = g->Style.Colors[ColorStyle_TitleBar];
-    node.ColorStyle.TitlebarHovered = g->Style.Colors[ColorStyle_TitleBarHovered];
-    node.ColorStyle.TitlebarSelected = g->Style.Colors[ColorStyle_TitleBarSelected];
+    node.ColorStyle.Background = g->Style.Colors[ImNodesCol_NodeBackground];
+    node.ColorStyle.BackgroundHovered = g->Style.Colors[ImNodesCol_NodeBackgroundHovered];
+    node.ColorStyle.BackgroundSelected = g->Style.Colors[ImNodesCol_NodeBackgroundSelected];
+    node.ColorStyle.Outline = g->Style.Colors[ImNodesCol_NodeOutline];
+    node.ColorStyle.Titlebar = g->Style.Colors[ImNodesCol_TitleBar];
+    node.ColorStyle.TitlebarHovered = g->Style.Colors[ImNodesCol_TitleBarHovered];
+    node.ColorStyle.TitlebarSelected = g->Style.Colors[ImNodesCol_TitleBarSelected];
     node.LayoutStyle.CornerRounding = g->Style.NodeCornerRounding;
     node.LayoutStyle.Padding = ImVec2(g->Style.NodePaddingHorizontal, g->Style.NodePaddingVertical);
     node.LayoutStyle.BorderThickness = g->Style.NodeBorderThickness;
@@ -2372,7 +2384,7 @@ void EndNode()
     assert(g->CurrentScope == Scope_Node);
     g->CurrentScope = Scope_Editor;
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
 
     // The node's rectangle depends on the ImGui UI group size.
     ImGui::EndGroup();
@@ -2390,7 +2402,7 @@ void EndNode()
 
 ImVec2 GetNodeDimensions(int node_id)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1); // invalid node_id
     const NodeData& node = editor.Nodes.Pool[node_idx];
@@ -2408,7 +2420,7 @@ void EndNodeTitleBar()
     assert(g->CurrentScope == Scope_Node);
     ImGui::EndGroup();
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
     node.TitleBarContentRect = GetItemRect();
 
@@ -2417,14 +2429,14 @@ void EndNodeTitleBar()
     ImGui::SetCursorPos(GridSpaceToEditorSpace(editor, GetNodeContentOrigin(node)));
 }
 
-void BeginInputAttribute(const int id, const PinShape shape)
+void BeginInputAttribute(const int id, const ImNodesPinShape shape)
 {
     BeginPinAttribute(id, AttributeType_Input, shape, g->CurrentNodeIdx);
 }
 
 void EndInputAttribute() { EndPinAttribute(); }
 
-void BeginOutputAttribute(const int id, const PinShape shape)
+void BeginOutputAttribute(const int id, const ImNodesPinShape shape)
 {
     BeginPinAttribute(id, AttributeType_Output, shape, g->CurrentNodeIdx);
 }
@@ -2460,9 +2472,9 @@ void EndStaticAttribute()
     }
 }
 
-void PushAttributeFlag(AttributeFlags flag)
+void PushAttributeFlag(const ImNodesAttributeFlags flag)
 {
-    g->CurrentAttributeFlags |= static_cast<int>(flag);
+    g->CurrentAttributeFlags |= flag;
     g->AttributeFlagStack.push_back(g->CurrentAttributeFlags);
 }
 
@@ -2476,22 +2488,22 @@ void PopAttributeFlag()
     g->CurrentAttributeFlags = g->AttributeFlagStack.back();
 }
 
-void Link(int id, const int start_attr_id, const int end_attr_id)
+void Link(const int id, const int start_attr_id, const int end_attr_id)
 {
     assert(g->CurrentScope == Scope_Editor);
 
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     LinkData& link = ObjectPoolFindOrCreateObject(editor.Links, id);
     link.Id = id;
     link.StartPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, start_attr_id);
     link.EndPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, end_attr_id);
-    link.ColorStyle.Base = g->Style.Colors[ColorStyle_Link];
-    link.ColorStyle.Hovered = g->Style.Colors[ColorStyle_LinkHovered];
-    link.ColorStyle.Selected = g->Style.Colors[ColorStyle_LinkSelected];
+    link.ColorStyle.Base = g->Style.Colors[ImNodesCol_Link];
+    link.ColorStyle.Hovered = g->Style.Colors[ImNodesCol_LinkHovered];
+    link.ColorStyle.Selected = g->Style.Colors[ImNodesCol_LinkSelected];
 
     // Check if this link was created by the current link event
     if ((editor.ClickInteraction.Type == ClickInteractionType_LinkCreation &&
-         editor.Pins.Pool[link.EndPinIdx].Flags & AttributeFlags_EnableLinkCreationOnSnap &&
+         editor.Pins.Pool[link.EndPinIdx].Flags & ImNodesAttributeFlags_EnableLinkCreationOnSnap &&
          editor.ClickInteraction.LinkCreation.StartPinIdx == link.StartPinIdx &&
          editor.ClickInteraction.LinkCreation.EndPinIdx == link.EndPinIdx) ||
         (editor.ClickInteraction.LinkCreation.StartPinIdx == link.EndPinIdx &&
@@ -2501,7 +2513,7 @@ void Link(int id, const int start_attr_id, const int end_attr_id)
     }
 }
 
-void PushColorStyle(ColorStyle item, unsigned int color)
+void PushColorStyle(const ImNodesCol item, unsigned int color)
 {
     g->ColorModifierStack.push_back(ColorStyleElement(g->Style.Colors[item], item));
     g->Style.Colors[item] = color;
@@ -2515,7 +2527,7 @@ void PopColorStyle()
     g->ColorModifierStack.pop_back();
 }
 
-float& LookupStyleVar(const StyleVar item)
+float& LookupStyleVar(const ImNodesStyleVar item)
 {
     // TODO: once the switch gets too big and unwieldy to work with, we could do
     // a byte-offset lookup into the Style struct, using the StyleVar as an
@@ -2523,46 +2535,46 @@ float& LookupStyleVar(const StyleVar item)
     float* style_var = 0;
     switch (item)
     {
-    case StyleVar_GridSpacing:
+    case ImNodesStyleVar_GridSpacing:
         style_var = &g->Style.GridSpacing;
         break;
-    case StyleVar_NodeCornerRounding:
+    case ImNodesStyleVar_NodeCornerRounding:
         style_var = &g->Style.NodeCornerRounding;
         break;
-    case StyleVar_NodePaddingHorizontal:
+    case ImNodesStyleVar_NodePaddingHorizontal:
         style_var = &g->Style.NodePaddingHorizontal;
         break;
-    case StyleVar_NodePaddingVertical:
+    case ImNodesStyleVar_NodePaddingVertical:
         style_var = &g->Style.NodePaddingVertical;
         break;
-    case StyleVar_NodeBorderThickness:
+    case ImNodesStyleVar_NodeBorderThickness:
         style_var = &g->Style.NodeBorderThickness;
         break;
-    case StyleVar_LinkThickness:
+    case ImNodesStyleVar_LinkThickness:
         style_var = &g->Style.LinkThickness;
         break;
-    case StyleVar_LinkLineSegmentsPerLength:
+    case ImNodesStyleVar_LinkLineSegmentsPerLength:
         style_var = &g->Style.LinkLineSegmentsPerLength;
         break;
-    case StyleVar_LinkHoverDistance:
+    case ImNodesStyleVar_LinkHoverDistance:
         style_var = &g->Style.LinkHoverDistance;
         break;
-    case StyleVar_PinCircleRadius:
+    case ImNodesStyleVar_PinCircleRadius:
         style_var = &g->Style.PinCircleRadius;
         break;
-    case StyleVar_PinQuadSideLength:
+    case ImNodesStyleVar_PinQuadSideLength:
         style_var = &g->Style.PinQuadSideLength;
         break;
-    case StyleVar_PinTriangleSideLength:
+    case ImNodesStyleVar_PinTriangleSideLength:
         style_var = &g->Style.PinTriangleSideLength;
         break;
-    case StyleVar_PinLineThickness:
+    case ImNodesStyleVar_PinLineThickness:
         style_var = &g->Style.PinLineThickness;
         break;
-    case StyleVar_PinHoverRadius:
+    case ImNodesStyleVar_PinHoverRadius:
         style_var = &g->Style.PinHoverRadius;
         break;
-    case StyleVar_PinOffset:
+    case ImNodesStyleVar_PinOffset:
         style_var = &g->Style.PinOffset;
         break;
     default:
@@ -2572,7 +2584,7 @@ float& LookupStyleVar(const StyleVar item)
     return *style_var;
 }
 
-void PushStyleVar(const StyleVar item, const float value)
+void PushStyleVar(const ImNodesStyleVar item, const float value)
 {
     float& style_var = LookupStyleVar(item);
     g->StyleModifierStack.push_back(StyleElement(style_var, item));
@@ -2588,37 +2600,37 @@ void PopStyleVar()
     style_var = style_elem.Value;
 }
 
-void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos)
+void SetNodeScreenSpacePos(const int node_id, const ImVec2& screen_space_pos)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = ScreenSpaceToGridSpace(editor, screen_space_pos);
 }
 
-void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos)
+void SetNodeEditorSpacePos(const int node_id, const ImVec2& editor_space_pos)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = EditorSpaceToGridSpace(editor, editor_space_pos);
 }
 
-void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos)
+void SetNodeGridSpacePos(const int node_id, const ImVec2& grid_pos)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = grid_pos;
 }
 
-void SetNodeDraggable(int node_id, const bool draggable)
+void SetNodeDraggable(const int node_id, const bool draggable)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Draggable = draggable;
 }
 
 ImVec2 GetNodeScreenSpacePos(const int node_id)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.Nodes.Pool[node_idx];
@@ -2627,16 +2639,16 @@ ImVec2 GetNodeScreenSpacePos(const int node_id)
 
 ImVec2 GetNodeEditorSpacePos(const int node_id)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.Nodes.Pool[node_idx];
     return GridSpaceToEditorSpace(editor, node.Origin);
 }
 
-ImVec2 GetNodeGridSpacePos(int node_id)
+ImVec2 GetNodeGridSpacePos(const int node_id)
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.Nodes.Pool[node_idx];
@@ -2653,7 +2665,7 @@ bool IsNodeHovered(int* const node_id)
     const bool is_hovered = g->HoveredNodeIdx.HasValue();
     if (is_hovered)
     {
-        const EditorContext& editor = EditorContextGet();
+        const ImNodesEditorContext& editor = EditorContextGet();
         *node_id = editor.Nodes.Pool[g->HoveredNodeIdx.Value()].Id;
     }
     return is_hovered;
@@ -2667,7 +2679,7 @@ bool IsLinkHovered(int* const link_id)
     const bool is_hovered = g->HoveredLinkIdx.HasValue();
     if (is_hovered)
     {
-        const EditorContext& editor = EditorContextGet();
+        const ImNodesEditorContext& editor = EditorContextGet();
         *link_id = editor.Links.Pool[g->HoveredLinkIdx.Value()].Id;
     }
     return is_hovered;
@@ -2681,7 +2693,7 @@ bool IsPinHovered(int* const attr)
     const bool is_hovered = g->HoveredPinIdx.HasValue();
     if (is_hovered)
     {
-        const EditorContext& editor = EditorContextGet();
+        const ImNodesEditorContext& editor = EditorContextGet();
         *attr = editor.Pins.Pool[g->HoveredPinIdx.Value()].Id;
     }
     return is_hovered;
@@ -2690,14 +2702,14 @@ bool IsPinHovered(int* const attr)
 int NumSelectedNodes()
 {
     assert(g->CurrentScope == Scope_None);
-    const EditorContext& editor = EditorContextGet();
+    const ImNodesEditorContext& editor = EditorContextGet();
     return editor.SelectedNodeIndices.size();
 }
 
 int NumSelectedLinks()
 {
     assert(g->CurrentScope == Scope_None);
-    const EditorContext& editor = EditorContextGet();
+    const ImNodesEditorContext& editor = EditorContextGet();
     return editor.SelectedLinkIndices.size();
 }
 
@@ -2705,7 +2717,7 @@ void GetSelectedNodes(int* node_ids)
 {
     assert(node_ids != NULL);
 
-    const EditorContext& editor = EditorContextGet();
+    const ImNodesEditorContext& editor = EditorContextGet();
     for (int i = 0; i < editor.SelectedNodeIndices.size(); ++i)
     {
         const int node_idx = editor.SelectedNodeIndices[i];
@@ -2717,7 +2729,7 @@ void GetSelectedLinks(int* link_ids)
 {
     assert(link_ids != NULL);
 
-    const EditorContext& editor = EditorContextGet();
+    const ImNodesEditorContext& editor = EditorContextGet();
     for (int i = 0; i < editor.SelectedLinkIndices.size(); ++i)
     {
         const int link_idx = editor.SelectedLinkIndices[i];
@@ -2727,13 +2739,13 @@ void GetSelectedLinks(int* link_ids)
 
 void ClearNodeSelection()
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     editor.SelectedNodeIndices.clear();
 }
 
 void ClearLinkSelection()
 {
-    EditorContext& editor = EditorContextGet();
+    ImNodesEditorContext& editor = EditorContextGet();
     editor.SelectedLinkIndices.clear();
 }
 
@@ -2775,7 +2787,7 @@ bool IsLinkStarted(int* const started_at_id)
     const bool is_started = (g->ElementStateChange & ElementStateChange_LinkStarted) != 0;
     if (is_started)
     {
-        const EditorContext& editor = EditorContextGet();
+        const ImNodesEditorContext& editor = EditorContextGet();
         const int pin_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
         *started_at_id = editor.Pins.Pool[pin_idx].Id;
     }
@@ -2788,7 +2800,7 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     // Call this function after EndNodeEditor()!
     assert(g->CurrentScope == Scope_None);
 
-    const EditorContext& editor = EditorContextGet();
+    const ImNodesEditorContext& editor = EditorContextGet();
 
     const bool link_dropped =
         (g->ElementStateChange & ElementStateChange_LinkDropped) != 0 &&
@@ -2817,7 +2829,7 @@ bool IsLinkCreated(
 
     if (is_created)
     {
-        const EditorContext& editor = EditorContextGet();
+        const ImNodesEditorContext& editor = EditorContextGet();
         const int start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
         const int end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
         const PinData& start_pin = editor.Pins.Pool[start_idx];
@@ -2860,7 +2872,7 @@ bool IsLinkCreated(
 
     if (is_created)
     {
-        const EditorContext& editor = EditorContextGet();
+        const ImNodesEditorContext& editor = EditorContextGet();
         const int start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
         const int end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
         const PinData& start_pin = editor.Pins.Pool[start_idx];
@@ -2899,7 +2911,7 @@ bool IsLinkDestroyed(int* const link_id)
     const bool link_destroyed = g->DeletedLinkIdx.HasValue();
     if (link_destroyed)
     {
-        const EditorContext& editor = EditorContextGet();
+        const ImNodesEditorContext& editor = EditorContextGet();
         const int link_idx = g->DeletedLinkIdx.Value();
         *link_id = editor.Links.Pool[link_idx].Id;
     }
@@ -2909,7 +2921,7 @@ bool IsLinkDestroyed(int* const link_id)
 
 namespace
 {
-void NodeLineHandler(EditorContext& editor, const char* line)
+void NodeLineHandler(ImNodesEditorContext& editor, const char* const line)
 {
     int id;
     int x, y;
@@ -2927,7 +2939,7 @@ void NodeLineHandler(EditorContext& editor, const char* line)
     }
 }
 
-void EditorLineHandler(EditorContext& editor, const char* line)
+void EditorLineHandler(ImNodesEditorContext& editor, const char* const line)
 {
     sscanf(line, "panning=%f,%f", &editor.Panning.x, &editor.Panning.y);
 }
@@ -2939,11 +2951,11 @@ const char* SaveCurrentEditorStateToIniString(size_t* const data_size)
 }
 
 const char* SaveEditorStateToIniString(
-    const EditorContext* const editor_ptr,
+    const ImNodesEditorContext* const editor_ptr,
     size_t* const data_size)
 {
     assert(editor_ptr != NULL);
-    const EditorContext& editor = *editor_ptr;
+    const ImNodesEditorContext& editor = *editor_ptr;
 
     g->TextBuffer.clear();
     // TODO: check to make sure that the estimate is the upper bound of element
@@ -2976,7 +2988,7 @@ void LoadCurrentEditorStateFromIniString(const char* const data, const size_t da
 }
 
 void LoadEditorStateFromIniString(
-    EditorContext* const editor_ptr,
+    ImNodesEditorContext* const editor_ptr,
     const char* const data,
     const size_t data_size)
 {
@@ -2985,14 +2997,14 @@ void LoadEditorStateFromIniString(
         return;
     }
 
-    EditorContext& editor = editor_ptr == NULL ? EditorContextGet() : *editor_ptr;
+    ImNodesEditorContext& editor = editor_ptr == NULL ? EditorContextGet() : *editor_ptr;
 
     char* buf = (char*)ImGui::MemAlloc(data_size + 1);
     const char* buf_end = buf + data_size;
     memcpy(buf, data, data_size);
     buf[data_size] = 0;
 
-    void (*line_handler)(EditorContext&, const char*);
+    void (*line_handler)(ImNodesEditorContext&, const char*);
     line_handler = NULL;
     char* line_end = NULL;
     for (char* line = buf; line < buf_end; line = line_end + 1)
@@ -3039,7 +3051,7 @@ void SaveCurrentEditorStateToIniFile(const char* const file_name)
     SaveEditorStateToIniFile(&EditorContextGet(), file_name);
 }
 
-void SaveEditorStateToIniFile(const EditorContext* const editor, const char* const file_name)
+void SaveEditorStateToIniFile(const ImNodesEditorContext* const editor, const char* const file_name)
 {
     size_t data_size = 0u;
     const char* data = SaveEditorStateToIniString(editor, &data_size);
@@ -3058,7 +3070,7 @@ void LoadCurrentEditorStateFromIniFile(const char* const file_name)
     LoadEditorStateFromIniFile(&EditorContextGet(), file_name);
 }
 
-void LoadEditorStateFromIniFile(EditorContext* const editor, const char* const file_name)
+void LoadEditorStateFromIniFile(ImNodesEditorContext* const editor, const char* const file_name)
 {
     size_t data_size = 0u;
     char* file_data = (char*)ImFileLoadToMemory(file_name, "rb", &data_size);

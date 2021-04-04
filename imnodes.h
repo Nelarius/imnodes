@@ -2,85 +2,85 @@
 
 #include <stddef.h>
 
-struct ImGuiContext;
-struct ImVec2;
+typedef int ImNodesCol;            // -> enum ImNodesCol_
+typedef int ImNodesStyleVar;       // -> enum ImNodesStyleVar_
+typedef int ImNodesStyleFlags;     // -> enum ImNodesStyleFlags_
+typedef int ImNodesPinShape;       // -> enum ImNodesPinShape_
+typedef int ImNodesAttributeFlags; // -> enum ImNodesAttributeFlags_
 
-namespace imnodes
+enum ImNodesCol_
 {
-enum ColorStyle
-{
-    ColorStyle_NodeBackground = 0,
-    ColorStyle_NodeBackgroundHovered,
-    ColorStyle_NodeBackgroundSelected,
-    ColorStyle_NodeOutline,
-    ColorStyle_TitleBar,
-    ColorStyle_TitleBarHovered,
-    ColorStyle_TitleBarSelected,
-    ColorStyle_Link,
-    ColorStyle_LinkHovered,
-    ColorStyle_LinkSelected,
-    ColorStyle_Pin,
-    ColorStyle_PinHovered,
-    ColorStyle_BoxSelector,
-    ColorStyle_BoxSelectorOutline,
-    ColorStyle_GridBackground,
-    ColorStyle_GridLine,
-    ColorStyle_Count
+    ImNodesCol_NodeBackground = 0,
+    ImNodesCol_NodeBackgroundHovered,
+    ImNodesCol_NodeBackgroundSelected,
+    ImNodesCol_NodeOutline,
+    ImNodesCol_TitleBar,
+    ImNodesCol_TitleBarHovered,
+    ImNodesCol_TitleBarSelected,
+    ImNodesCol_Link,
+    ImNodesCol_LinkHovered,
+    ImNodesCol_LinkSelected,
+    ImNodesCol_Pin,
+    ImNodesCol_PinHovered,
+    ImNodesCol_BoxSelector,
+    ImNodesCol_BoxSelectorOutline,
+    ImNodesCol_GridBackground,
+    ImNodesCol_GridLine,
+    ImNodesCol_COUNT
 };
 
-enum StyleVar
+enum ImNodesStyleVar_
 {
-    StyleVar_GridSpacing = 0,
-    StyleVar_NodeCornerRounding,
-    StyleVar_NodePaddingHorizontal,
-    StyleVar_NodePaddingVertical,
-    StyleVar_NodeBorderThickness,
-    StyleVar_LinkThickness,
-    StyleVar_LinkLineSegmentsPerLength,
-    StyleVar_LinkHoverDistance,
-    StyleVar_PinCircleRadius,
-    StyleVar_PinQuadSideLength,
-    StyleVar_PinTriangleSideLength,
-    StyleVar_PinLineThickness,
-    StyleVar_PinHoverRadius,
-    StyleVar_PinOffset
+    ImNodesStyleVar_GridSpacing = 0,
+    ImNodesStyleVar_NodeCornerRounding,
+    ImNodesStyleVar_NodePaddingHorizontal,
+    ImNodesStyleVar_NodePaddingVertical,
+    ImNodesStyleVar_NodeBorderThickness,
+    ImNodesStyleVar_LinkThickness,
+    ImNodesStyleVar_LinkLineSegmentsPerLength,
+    ImNodesStyleVar_LinkHoverDistance,
+    ImNodesStyleVar_PinCircleRadius,
+    ImNodesStyleVar_PinQuadSideLength,
+    ImNodesStyleVar_PinTriangleSideLength,
+    ImNodesStyleVar_PinLineThickness,
+    ImNodesStyleVar_PinHoverRadius,
+    ImNodesStyleVar_PinOffset
 };
 
-enum StyleFlags
+enum ImNodesStyleFlags_
 {
-    StyleFlags_None = 0,
-    StyleFlags_NodeOutline = 1 << 0,
-    StyleFlags_GridLines = 1 << 2
+    ImNodesStyleFlags_None = 0,
+    ImNodesStyleFlags_NodeOutline = 1 << 0,
+    ImNodesStyleFlags_GridLines = 1 << 2
 };
 
-// This enum controls the way attribute pins look.
-enum PinShape
+enum ImNodesPinShape_
 {
-    PinShape_Circle,
-    PinShape_CircleFilled,
-    PinShape_Triangle,
-    PinShape_TriangleFilled,
-    PinShape_Quad,
-    PinShape_QuadFilled
+    ImNodesPinShape_Circle,
+    ImNodesPinShape_CircleFilled,
+    ImNodesPinShape_Triangle,
+    ImNodesPinShape_TriangleFilled,
+    ImNodesPinShape_Quad,
+    ImNodesPinShape_QuadFilled
 };
 
 // This enum controls the way the attribute pins behave.
-enum AttributeFlags
+enum ImNodesAttributeFlags_
 {
-    AttributeFlags_None = 0,
+    ImNodesAttributeFlags_None = 0,
     // Allow detaching a link by left-clicking and dragging the link at a pin it is connected to.
     // NOTE: the user has to actually delete the link for this to work. A deleted link can be
     // detected by calling IsLinkDestroyed() after EndNodeEditor().
-    AttributeFlags_EnableLinkDetachWithDragClick = 1 << 0,
+    ImNodesAttributeFlags_EnableLinkDetachWithDragClick = 1 << 0,
     // Visual snapping of an in progress link will trigger IsLink Created/Destroyed events. Allows
     // for previewing the creation of a link while dragging it across attributes. See here for demo:
     // https://github.com/Nelarius/imnodes/issues/41#issuecomment-647132113 NOTE: the user has to
     // actually delete the link for this to work. A deleted link can be detected by calling
     // IsLinkDestroyed() after EndNodeEditor().
-    AttributeFlags_EnableLinkCreationOnSnap = 1 << 1
+    ImNodesAttributeFlags_EnableLinkCreationOnSnap = 1 << 1
 };
 
-struct IO
+struct ImNodesIO
 {
     struct EmulateThreeButtonMouse
     {
@@ -114,10 +114,10 @@ struct IO
     // Set based on ImGuiMouseButton values
     int AltMouseButton;
 
-    IO();
+    ImNodesIO();
 };
 
-struct Style
+struct ImNodesStyle
 {
     float GridSpacing;
 
@@ -149,43 +149,48 @@ struct Style
     float PinOffset;
 
     // By default, StyleFlags_NodeOutline and StyleFlags_Gridlines are enabled.
-    StyleFlags Flags;
+    ImNodesStyleFlags Flags;
     // Set these mid-frame using Push/PopColorStyle. You can index this color array with with a
     // ColorStyle enum value.
-    unsigned int Colors[ColorStyle_Count];
+    unsigned int Colors[ImNodesCol_COUNT];
 
-    Style();
+    ImNodesStyle();
 };
 
-struct Context;
+struct ImGuiContext;
+struct ImVec2;
 
-// Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
-// function sets the GImGui global variable, which is not shared across dll boundaries.
-void SetImGuiContext(ImGuiContext* ctx);
-
-Context* CreateContext();
-void DestroyContext(Context* ctx = NULL); // NULL = destroy current context
-Context* GetCurrentContext();
-void SetCurrentContext(Context* ctx);
+struct ImNodesContext;
 
 // An editor context corresponds to a set of nodes in a single workspace (created with a single
 // Begin/EndNodeEditor pair)
 //
 // By default, the library creates an editor context behind the scenes, so using any of the imnodes
 // functions doesn't require you to explicitly create a context.
-struct EditorContext;
+struct ImNodesEditorContext;
 
-EditorContext* EditorContextCreate();
-void EditorContextFree(EditorContext*);
-void EditorContextSet(EditorContext*);
+namespace imnodes
+{
+// Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
+// function sets the GImGui global variable, which is not shared across dll boundaries.
+void SetImGuiContext(ImGuiContext* ctx);
+
+ImNodesContext* CreateContext();
+void DestroyContext(ImNodesContext* ctx = NULL); // NULL = destroy current context
+ImNodesContext* GetCurrentContext();
+void SetCurrentContext(ImNodesContext* ctx);
+
+ImNodesEditorContext* EditorContextCreate();
+void EditorContextFree(ImNodesEditorContext*);
+void EditorContextSet(ImNodesEditorContext*);
 ImVec2 EditorContextGetPanning();
 void EditorContextResetPanning(const ImVec2& pos);
 void EditorContextMoveToNode(const int node_id);
 
-IO& GetIO();
+ImNodesIO& GetIO();
 
 // Returns the global style struct. See the struct declaration for default values.
-Style& GetStyle();
+ImNodesStyle& GetStyle();
 // Style presets matching the dear imgui styles of the same name.
 void StyleColorsDark(); // on by default
 void StyleColorsClassic();
@@ -197,9 +202,9 @@ void BeginNodeEditor();
 void EndNodeEditor();
 
 // Use PushColorStyle and PopColorStyle to modify Style::colors mid-frame.
-void PushColorStyle(ColorStyle item, unsigned int color);
+void PushColorStyle(ImNodesCol item, unsigned int color);
 void PopColorStyle();
-void PushStyleVar(StyleVar style_item, float value);
+void PushStyleVar(ImNodesStyleVar style_item, float value);
 void PopStyleVar();
 
 // id can be any positive or negative integer, but INT_MIN is currently reserved for internal use.
@@ -224,10 +229,10 @@ void EndNodeTitleBar();
 // Each attribute id must be unique.
 
 // Create an input attribute block. The pin is rendered on left side.
-void BeginInputAttribute(int id, PinShape shape = PinShape_CircleFilled);
+void BeginInputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
 void EndInputAttribute();
 // Create an output attribute block. The pin is rendered on the right side.
-void BeginOutputAttribute(int id, PinShape shape = PinShape_CircleFilled);
+void BeginOutputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
 void EndOutputAttribute();
 // Create a static attribute block. A static attribute has no pin, and therefore can't be linked to
 // anything. However, you can still use IsAttributeActive() and IsAnyAttributeActive() to check for
@@ -236,7 +241,7 @@ void BeginStaticAttribute(int id);
 void EndStaticAttribute();
 
 // Push a single AttributeFlags value. By default, only AttributeFlags_None is set.
-void PushAttributeFlag(AttributeFlags flag);
+void PushAttributeFlag(ImNodesAttributeFlags flag);
 void PopAttributeFlag();
 
 // Render a link between attributes.
@@ -326,14 +331,16 @@ bool IsLinkDestroyed(int* link_id);
 // file. The editor context is serialized in the INI file format.
 
 const char* SaveCurrentEditorStateToIniString(size_t* data_size = NULL);
-const char* SaveEditorStateToIniString(const EditorContext* editor, size_t* data_size = NULL);
+const char* SaveEditorStateToIniString(
+    const ImNodesEditorContext* editor,
+    size_t* data_size = NULL);
 
 void LoadCurrentEditorStateFromIniString(const char* data, size_t data_size);
-void LoadEditorStateFromIniString(EditorContext* editor, const char* data, size_t data_size);
+void LoadEditorStateFromIniString(ImNodesEditorContext* editor, const char* data, size_t data_size);
 
 void SaveCurrentEditorStateToIniFile(const char* file_name);
-void SaveEditorStateToIniFile(const EditorContext* editor, const char* file_name);
+void SaveEditorStateToIniFile(const ImNodesEditorContext* editor, const char* file_name);
 
 void LoadCurrentEditorStateFromIniFile(const char* file_name);
-void LoadEditorStateFromIniFile(EditorContext* editor, const char* file_name);
+void LoadEditorStateFromIniFile(ImNodesEditorContext* editor, const char* file_name);
 } // namespace imnodes
