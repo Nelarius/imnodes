@@ -90,7 +90,7 @@ struct ImNodesIO
         // Set to NULL by default. To enable this feature, set the modifier to point to a boolean
         // indicating the state of a modifier. For example,
         //
-        // imnodes::GetIO().emulate_three_button_mouse.modifier = &ImGui::GetIO().KeyAlt;
+        // ImNodes::GetIO().EmulateThreeButtonMouse.Modifier = &ImGui::GetIO().KeyAlt;
         const bool* Modifier;
     } EmulateThreeButtonMouse;
 
@@ -102,7 +102,7 @@ struct ImNodesIO
         // by default. To enable the feature, set the modifier to point to a boolean indicating the
         // state of a modifier. For example,
         //
-        // imnodes::GetIO().link_detach_with_modifier_click.modifier = &ImGui::GetIO().KeyCtrl;
+        // ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
         //
         // Left-clicking a link with this modifier pressed will detach that link. NOTE: the user has
         // to actually delete the link for this to work. A deleted link can be detected by calling
@@ -133,12 +133,14 @@ struct ImNodesStyle
     // The following variables control the look and behavior of the pins. The default size of each
     // pin shape is balanced to occupy approximately the same surface area on the screen.
 
-    // The circle radius used when the pin shape is either PinShape_Circle or PinShape_CircleFilled.
+    // The circle radius used when the pin shape is either ImNodesPinShape_Circle or
+    // ImNodesPinShape_CircleFilled.
     float PinCircleRadius;
-    // The quad side length used when the shape is either PinShape_Quad or PinShape_QuadFilled.
+    // The quad side length used when the shape is either ImNodesPinShape_Quad or
+    // ImNodesPinShape_QuadFilled.
     float PinQuadSideLength;
-    // The equilateral triangle side length used when the pin shape is either PinShape_Triangle or
-    // PinShape_TriangleFilled.
+    // The equilateral triangle side length used when the pin shape is either
+    // ImNodesPinShape_Triangle or ImNodesPinShape_TriangleFilled.
     float PinTriangleSideLength;
     // The thickness of the line used when the pin shape is not filled.
     float PinLineThickness;
@@ -148,10 +150,10 @@ struct ImNodesStyle
     // Offsets the pins' positions from the edge of the node to the outside of the node.
     float PinOffset;
 
-    // By default, StyleFlags_NodeOutline and StyleFlags_Gridlines are enabled.
+    // By default, ImNodesStyleFlags_NodeOutline and ImNodesStyleFlags_Gridlines are enabled.
     ImNodesStyleFlags Flags;
     // Set these mid-frame using Push/PopColorStyle. You can index this color array with with a
-    // ColorStyle enum value.
+    // ImNodesCol value.
     unsigned int Colors[ImNodesCol_COUNT];
 
     ImNodesStyle();
@@ -201,7 +203,7 @@ void StyleColorsLight();
 void BeginNodeEditor();
 void EndNodeEditor();
 
-// Use PushColorStyle and PopColorStyle to modify Style::colors mid-frame.
+// Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
 void PushColorStyle(ImNodesCol item, unsigned int color);
 void PopColorStyle();
 void PushStyleVar(ImNodesStyleVar style_item, float value);
