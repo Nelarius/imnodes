@@ -182,7 +182,7 @@ If the style is not being set mid-frame, `ImNodes::GetStyle` can be called inste
 
 ```cpp
 // set the titlebar color for all nodes
-ImNodes::Style& style = ImNodes::GetStyle();
+ImNodesStyle& style = ImNodes::GetStyle();
 style.colors[ImNodesCol_TitleBar] = IM_COL32(232, 27, 86, 255);
 style.colors[ImNodesCol_TitleBarSelected] = IM_COL32(241, 108, 146, 255);
 ```
