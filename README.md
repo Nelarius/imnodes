@@ -46,10 +46,10 @@ Before anything can be done, the library must be initialized. This can be done a
 
 ```cpp
 ImGui::CreateContext();
-imnodes::CreateContext();
+ImNodes::CreateContext();
 
 // elsewhere in the code...
-imnodes::DestroyContext();
+ImNodes::DestroyContext();
 ImGui::DestroyContext();
 ```
 
@@ -58,8 +58,8 @@ The node editor is a workspace which contains nodes. The node editor must be ins
 ```cpp
 ImGui::Begin("node editor");
 
-imnodes::BeginNodeEditor();
-imnodes::EndNodeEditor();
+ImNodes::BeginNodeEditor();
+ImNodes::EndNodeEditor();
 
 ImGui::End();
 ```
@@ -69,11 +69,11 @@ Now you should have a workspace with a grid visible in the window. An empty node
 ```cpp
 const int hardcoded_node_id = 1;
 
-imnodes::BeginNodeEditor();
+ImNodes::BeginNodeEditor();
 
-imnodes::BeginNode(hardcoded_node_id);
+ImNodes::BeginNode(hardcoded_node_id);
 ImGui::Dummy(ImVec2(80.0f, 45.0f));
-imnodes::EndNode();
+ImNodes::EndNode();
 
 imnode::EndNodeEditor();
 ```
@@ -83,16 +83,16 @@ Nodes, like windows in `dear imgui` must be uniquely identified. But we can't us
 Attributes are the UI content of the node. An attribute will have a pin (the little circle) on either side of the node. There are two types of attributes: input, and output attributes. Input attribute pins are on the left side of the node, and output attribute pins are on the right. Like nodes, pins must be uniquely identified.
 
 ```cpp
-imnodes::BeginNode(hardcoded_node_id);
+ImNodes::BeginNode(hardcoded_node_id);
 
 const int output_attr_id = 2;
-imnodes::BeginOutputAttribute(output_attr_id);
+ImNodes::BeginOutputAttribute(output_attr_id);
 // in between Begin|EndAttribute calls, you can call ImGui
 // UI functions
 ImGui::Text("output pin");
-imnodes::EndOutputAttribute();
+ImNodes::EndOutputAttribute();
 
-imnodes::EndNode();
+ImNodes::EndNode();
 ```
 
 The extension doesn't really care what is in the attribute. It just renders the pin for the attribute, and allows the user to create links between pins.
@@ -100,15 +100,15 @@ The extension doesn't really care what is in the attribute. It just renders the 
 A title bar can be added to the node using `BeginNodeTitleBar` and `EndNodeTitleBar`. Like attributes, you place your title bar's content between the function calls. Note that these functions have to be called before adding attributes or other `dear imgui` UI elements to the node, since the node's layout is built in order, top-to-bottom.
 
 ```cpp
-imnodes::BeginNode(hardcoded_node_id);
+ImNodes::BeginNode(hardcoded_node_id);
 
-imnodes::BeginNodeTitleBar();
+ImNodes::BeginNodeTitleBar();
 ImGui::TextUnformatted("output node");
-imnodes::EndNodeTitleBar();
+ImNodes::EndNodeTitleBar();
 
 // pins and other node UI content omitted...
 
-imnodes::EndNode();
+ImNodes::EndNode();
 ```
 
 The user has to render their own links between nodes as well. A link is a curve which connects two attributes. A link is just a pair of attribute ids. And like nodes and attributes, links too have to be identified by unique integer values:
@@ -121,7 +121,7 @@ for (int i = 0; i < links.size(); ++i)
   const std::pair<int, int> p = links[i];
   // in this case, we just use the array index of the link
   // as the unique identifier
-  imnodes::Link(i, p.first, p.second);
+  ImNodes::Link(i, p.first, p.second);
 }
 ```
 
@@ -129,7 +129,7 @@ After `EndNodeEditor` has been called, you can check if a link was created durin
 
 ```cpp
 int start_attr, end_attr;
-if (imnodes::IsLinkCreated(&start_attr, &end_attr))
+if (ImNodes::IsLinkCreated(&start_attr, &end_attr))
 {
   links.push_back(std::make_pair(start_attr, end_attr));
 }
@@ -139,7 +139,7 @@ In addition to checking for new links, you can also check whether UI elements ar
 
 ```cpp
 int node_id;
-if (imnodes::IsNodeHovered(&node_id))
+if (ImNodes::IsNodeHovered(&node_id))
 {
   node_hovered = node_id;
 }
@@ -150,41 +150,41 @@ You can also check to see if any node has been selected. Nodes can be clicked on
 ```cpp
 // Note that since many nodes can be selected at once, we first need to query the number of
 // selected nodes before getting them.
-const int num_selected_nodes = imnodes::NumSelectedNodes();
+const int num_selected_nodes = ImNodes::NumSelectedNodes();
 if (num_selected_nodes > 0)
 {
   std::vector<int> selected_nodes;
   selected_nodes.resize(num_selected_nodes);
-  imnodes::GetSelectedNodes(selected_nodes.data());
+  ImNodes::GetSelectedNodes(selected_nodes.data());
 }
 ```
 
 See `imnodes.h` for more UI event-related functions.
 
-Like `dear imgui`, the style of the UI can be changed. You can set the color style of individual nodes, pins, and links mid-frame by calling `imnodes::PushColorStyle` and `imnodes::PopColorStyle`.
+Like `dear imgui`, the style of the UI can be changed. You can set the color style of individual nodes, pins, and links mid-frame by calling `ImNodes::PushColorStyle` and `ImNodes::PopColorStyle`.
 
 ```cpp
 // set the titlebar color of an individual node
-imnodes::PushColorStyle(
-  imnodes::ColorStyle_TitleBar, IM_COL32(11, 109, 191, 255));
-imnodes::PushColorStyle(
-  imnodes::ColorStyle_TitleBarSelected, IM_COL32(81, 148, 204, 255));
+ImNodes::PushColorStyle(
+  ImNodesCol_TitleBar, IM_COL32(11, 109, 191, 255));
+ImNodes::PushColorStyle(
+  ImNodesCol_TitleBarSelected, IM_COL32(81, 148, 204, 255));
 
-imnodes::BeginNode(hardcoded_node_id);
+ImNodes::BeginNode(hardcoded_node_id);
 // node internals here...
-imnodes::EndNode();
+ImNodes::EndNode();
 
-imnodes::PopColorStyle();
-imnodes::PopColorStyle();
+ImNodes::PopColorStyle();
+ImNodes::PopColorStyle();
 ```
 
-If the style is not being set mid-frame, `imnodes::GetStyle` can be called instead, and the values can be set into the style array directly.
+If the style is not being set mid-frame, `ImNodes::GetStyle` can be called instead, and the values can be set into the style array directly.
 
 ```cpp
 // set the titlebar color for all nodes
-imnodes::Style& style = imnodes::GetStyle();
-style.colors[imnodes::ColorStyle_TitleBar] = IM_COL32(232, 27, 86, 255);
-style.colors[imnodes::ColorStyle_TitleBarSelected] = IM_COL32(241, 108, 146, 255);
+ImNodes::Style& style = ImNodes::GetStyle();
+style.colors[ImNodesCol_TitleBar] = IM_COL32(232, 27, 86, 255);
+style.colors[ImNodesCol_TitleBarSelected] = IM_COL32(241, 108, 146, 255);
 ```
 
 ## Known issues
