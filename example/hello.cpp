@@ -13,24 +13,24 @@ public:
     {
         ImGui::Begin("simple node editor");
 
-        imnodes::BeginNodeEditor();
-        imnodes::BeginNode(1);
+        ImNodes::BeginNodeEditor();
+        ImNodes::BeginNode(1);
 
-        imnodes::BeginNodeTitleBar();
+        ImNodes::BeginNodeTitleBar();
         ImGui::TextUnformatted("simple node :)");
-        imnodes::EndNodeTitleBar();
+        ImNodes::EndNodeTitleBar();
 
-        imnodes::BeginInputAttribute(2);
+        ImNodes::BeginInputAttribute(2);
         ImGui::Text("input");
-        imnodes::EndInputAttribute();
+        ImNodes::EndInputAttribute();
 
-        imnodes::BeginOutputAttribute(3);
+        ImNodes::BeginOutputAttribute(3);
         ImGui::Indent(40);
         ImGui::Text("output");
-        imnodes::EndOutputAttribute();
+        ImNodes::EndOutputAttribute();
 
-        imnodes::EndNode();
-        imnodes::EndNodeEditor();
+        ImNodes::EndNode();
+        ImNodes::EndNodeEditor();
 
         ImGui::End();
     }
@@ -39,7 +39,7 @@ public:
 static HelloWorldNodeEditor editor;
 } // namespace
 
-void NodeEditorInitialize() { imnodes::SetNodeGridSpacePos(1, ImVec2(200.0f, 200.0f)); }
+void NodeEditorInitialize() { ImNodes::SetNodeGridSpacePos(1, ImVec2(200.0f, 200.0f)); }
 
 void NodeEditorShow() { editor.show(); }
 

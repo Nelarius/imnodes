@@ -44,53 +44,53 @@ public:
             "Close the executable and rerun it -- your nodes should be exactly "
             "where you left them!");
 
-        imnodes::BeginNodeEditor();
+        ImNodes::BeginNodeEditor();
 
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-            imnodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A))
+            ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A))
         {
             const int node_id = ++current_id_;
-            imnodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
+            ImNodes::SetNodeScreenSpacePos(node_id, ImGui::GetMousePos());
             nodes_.push_back(Node(node_id, 0.f));
         }
 
         for (Node& node : nodes_)
         {
-            imnodes::BeginNode(node.id);
+            ImNodes::BeginNode(node.id);
 
-            imnodes::BeginNodeTitleBar();
+            ImNodes::BeginNodeTitleBar();
             ImGui::TextUnformatted("node");
-            imnodes::EndNodeTitleBar();
+            ImNodes::EndNodeTitleBar();
 
-            imnodes::BeginInputAttribute(node.id << 8);
+            ImNodes::BeginInputAttribute(node.id << 8);
             ImGui::TextUnformatted("input");
-            imnodes::EndInputAttribute();
+            ImNodes::EndInputAttribute();
 
-            imnodes::BeginStaticAttribute(node.id << 16);
+            ImNodes::BeginStaticAttribute(node.id << 16);
             ImGui::PushItemWidth(120.f);
             ImGui::DragFloat("value", &node.value, 0.01f);
             ImGui::PopItemWidth();
-            imnodes::EndStaticAttribute();
+            ImNodes::EndStaticAttribute();
 
-            imnodes::BeginOutputAttribute(node.id << 24);
+            ImNodes::BeginOutputAttribute(node.id << 24);
             const float text_width = ImGui::CalcTextSize("output").x;
             ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
             ImGui::TextUnformatted("output");
-            imnodes::EndOutputAttribute();
+            ImNodes::EndOutputAttribute();
 
-            imnodes::EndNode();
+            ImNodes::EndNode();
         }
 
         for (const Link& link : links_)
         {
-            imnodes::Link(link.id, link.start_attr, link.end_attr);
+            ImNodes::Link(link.id, link.start_attr, link.end_attr);
         }
 
-        imnodes::EndNodeEditor();
+        ImNodes::EndNodeEditor();
 
         {
             Link link;
-            if (imnodes::IsLinkCreated(&link.start_attr, &link.end_attr))
+            if (ImNodes::IsLinkCreated(&link.start_attr, &link.end_attr))
             {
                 link.id = ++current_id_;
                 links_.push_back(link);
@@ -99,7 +99,7 @@ public:
 
         {
             int link_id;
-            if (imnodes::IsLinkDestroyed(&link_id))
+            if (ImNodes::IsLinkDestroyed(&link_id))
             {
                 auto iter =
                     std::find_if(links_.begin(), links_.end(), [link_id](const Link& link) -> bool {
@@ -116,7 +116,7 @@ public:
     void save()
     {
         // Save the internal imnodes state
-        imnodes::SaveCurrentEditorStateToIniFile("save_load.ini");
+        ImNodes::SaveCurrentEditorStateToIniFile("save_load.ini");
 
         // Dump our editor state as bytes into a file
 
@@ -149,7 +149,7 @@ public:
     void load()
     {
         // Load the internal imnodes state
-        imnodes::LoadCurrentEditorStateFromIniFile("save_load.ini");
+        ImNodes::LoadCurrentEditorStateFromIniFile("save_load.ini");
 
         // Load our editor state into memory
 
@@ -191,8 +191,8 @@ static SaveLoadEditor editor;
 
 void NodeEditorInitialize()
 {
-    imnodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
-    imnodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
+    ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
+    ImNodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
     editor.load();
 }
 
@@ -200,7 +200,7 @@ void NodeEditorShow() { editor.show(); }
 
 void NodeEditorShutdown()
 {
-    imnodes::PopAttributeFlag();
+    ImNodes::PopAttributeFlag();
     editor.save();
 }
 } // namespace example

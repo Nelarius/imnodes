@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h> // strlen, strncmp
 
-namespace imnodes
+namespace ImNodes
 {
 namespace
 {
@@ -281,7 +281,7 @@ struct StyleElement
     }
 };
 } // namespace
-} // namespace imnodes
+} // namespace ImNodes
 
 // [SECTION] global struct
 // this stores data which only lives for one frame
@@ -302,13 +302,13 @@ struct ImNodesContext
     ImRect CanvasRectScreenSpace;
 
     // Debug helpers
-    imnodes::ScopeFlags CurrentScope;
+    ImNodes::ScopeFlags CurrentScope;
 
     // Configuration state
     ImNodesIO Io;
     ImNodesStyle Style;
-    ImVector<imnodes::ColorStyleElement> ColorModifierStack;
-    ImVector<imnodes::StyleElement> StyleModifierStack;
+    ImVector<ImNodes::ColorStyleElement> ColorModifierStack;
+    ImVector<ImNodes::StyleElement> StyleModifierStack;
     ImGuiTextBuffer TextBuffer;
 
     int CurrentAttributeFlags;
@@ -319,14 +319,14 @@ struct ImNodesContext
     int CurrentPinIdx;
     int CurrentAttributeId;
 
-    imnodes::OptionalIndex HoveredNodeIdx;
-    imnodes::OptionalIndex InteractiveNodeIdx;
-    imnodes::OptionalIndex HoveredLinkIdx;
-    imnodes::OptionalIndex HoveredPinIdx;
+    ImNodes::OptionalIndex HoveredNodeIdx;
+    ImNodes::OptionalIndex InteractiveNodeIdx;
+    ImNodes::OptionalIndex HoveredLinkIdx;
+    ImNodes::OptionalIndex HoveredPinIdx;
     int HoveredPinFlags;
 
-    imnodes::OptionalIndex DeletedLinkIdx;
-    imnodes::OptionalIndex SnapLinkIdx;
+    ImNodes::OptionalIndex DeletedLinkIdx;
+    ImNodes::OptionalIndex SnapLinkIdx;
 
     // Event helper state
     int ElementStateChange;
@@ -345,7 +345,7 @@ struct ImNodesContext
     bool AltMouseDragging;
 };
 
-namespace imnodes
+namespace ImNodes
 {
 ImNodesContext* g = NULL;
 
@@ -353,7 +353,7 @@ namespace
 {
 ImNodesEditorContext& EditorContextGet()
 {
-    // No editor context was set! Did you forget to call imnodes::CreateContext()?
+    // No editor context was set! Did you forget to call ImNodes::CreateContext()?
     assert(g->EditorCtx != NULL);
     return *g->EditorCtx;
 }
@@ -555,15 +555,15 @@ inline bool RectangleOverlapsLink(
     return false;
 }
 } // namespace
-} // namespace imnodes
+} // namespace ImNodes
 
 // [SECTION] editor context definition
 
 struct ImNodesEditorContext
 {
-    imnodes::ObjectPool<imnodes::NodeData> Nodes;
-    imnodes::ObjectPool<imnodes::PinData> Pins;
-    imnodes::ObjectPool<imnodes::LinkData> Links;
+    ImNodes::ObjectPool<ImNodes::NodeData> Nodes;
+    ImNodes::ObjectPool<ImNodes::PinData> Pins;
+    ImNodes::ObjectPool<ImNodes::LinkData> Links;
 
     ImVector<int> NodeDepthOrder;
 
@@ -573,7 +573,7 @@ struct ImNodesEditorContext
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
 
-    imnodes::ClickInteractionState ClickInteraction;
+    ImNodes::ClickInteractionState ClickInteraction;
 
     ImNodesEditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
@@ -582,7 +582,7 @@ struct ImNodesEditorContext
     }
 };
 
-namespace imnodes
+namespace ImNodes
 {
 namespace
 {
@@ -1575,7 +1575,7 @@ OptionalIndex ResolveHoveredLink(const ObjectPool<LinkData>& links, const Object
                     GetDistanceToCubicBezier(g->MousePos, link_data.Bezier, link_data.NumSegments);
 
                 // TODO: g->Style.LinkHoverDistance could be also copied into LinkData, since
-                // we're not calling this function in the same scope as imnodes::Link(). The
+                // we're not calling this function in the same scope as ImNodes::Link(). The
                 // rendered/detected link might have a different hover distance than what the user
                 // had specified when calling Link()
                 if (distance < g->Style.LinkHoverDistance)
@@ -2028,7 +2028,7 @@ void Initialize(ImNodesContext* context)
 
 void Shutdown(ImNodesContext* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
 } // namespace
-} // namespace imnodes
+} // namespace ImNodes
 
 // [SECTION] API implementation
 
@@ -2052,7 +2052,7 @@ ImNodesStyle::ImNodesStyle()
 {
 }
 
-namespace imnodes
+namespace ImNodes
 {
 ImNodesContext* CreateContext()
 {
@@ -3083,4 +3083,4 @@ void LoadEditorStateFromIniFile(ImNodesEditorContext* const editor, const char* 
     LoadEditorStateFromIniString(editor, file_data, data_size);
     ImGui::MemFree(file_data);
 }
-} // namespace imnodes
+} // namespace ImNodes

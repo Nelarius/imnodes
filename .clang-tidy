@@ -17,6 +17,8 @@ CheckOptions:
     value:           CamelCase
   - key:             readability-identifier-naming.MethodCase
     value:           CamelCase
+  - key:             readability-identifier-naming.NamespaceCase
+    value:           CamelCase
   - key:             readability-identifier-naming.ParameterCase
     value:           lower_case
   - key:             readability-identifier-naming.PrivateMemberCase

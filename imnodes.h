@@ -169,7 +169,7 @@ struct ImNodesContext;
 // functions doesn't require you to explicitly create a context.
 struct ImNodesEditorContext;
 
-namespace imnodes
+namespace ImNodes
 {
 // Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
 // function sets the GImGui global variable, which is not shared across dll boundaries.
@@ -343,4 +343,4 @@ void SaveEditorStateToIniFile(const ImNodesEditorContext* editor, const char* fi
 
 void LoadCurrentEditorStateFromIniFile(const char* file_name);
 void LoadEditorStateFromIniFile(ImNodesEditorContext* editor, const char* file_name);
-} // namespace imnodes
+} // namespace ImNodes
