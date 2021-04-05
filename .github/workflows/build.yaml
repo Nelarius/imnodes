@@ -17,3 +17,7 @@ jobs:
         run: make all config=debug -j
       - name: make-release
         run: make all config=release -j
+      # - name: meson # needs meson and ninja
+      #   run: meson build
+      # - name: mesoncompile
+      #   run: meson compile -C build
