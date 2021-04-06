@@ -178,16 +178,16 @@ namespace ImNodes
 void SetImGuiContext(ImGuiContext* ctx);
 
 ImNodesContext* CreateContext();
-void DestroyContext(ImNodesContext* ctx = NULL); // NULL = destroy current context
+void            DestroyContext(ImNodesContext* ctx = NULL); // NULL = destroy current context
 ImNodesContext* GetCurrentContext();
-void SetCurrentContext(ImNodesContext* ctx);
+void            SetCurrentContext(ImNodesContext* ctx);
 
 ImNodesEditorContext* EditorContextCreate();
-void EditorContextFree(ImNodesEditorContext*);
-void EditorContextSet(ImNodesEditorContext*);
-ImVec2 EditorContextGetPanning();
-void EditorContextResetPanning(const ImVec2& pos);
-void EditorContextMoveToNode(const int node_id);
+void                  EditorContextFree(ImNodesEditorContext*);
+void                  EditorContextSet(ImNodesEditorContext*);
+ImVec2                EditorContextGetPanning();
+void                  EditorContextResetPanning(const ImVec2& pos);
+void                  EditorContextMoveToNode(const int node_id);
 
 ImNodesIO& GetIO();
 
@@ -315,14 +315,14 @@ bool IsLinkStarted(int* started_at_attribute_id);
 bool IsLinkDropped(int* started_at_attribute_id = NULL, bool including_detached_links = true);
 // Did the user finish creating a new link?
 bool IsLinkCreated(
-    int* started_at_attribute_id,
-    int* ended_at_attribute_id,
+    int*  started_at_attribute_id,
+    int*  ended_at_attribute_id,
     bool* created_from_snap = NULL);
 bool IsLinkCreated(
-    int* started_at_node_id,
-    int* started_at_attribute_id,
-    int* ended_at_node_id,
-    int* ended_at_attribute_id,
+    int*  started_at_node_id,
+    int*  started_at_attribute_id,
+    int*  ended_at_node_id,
+    int*  ended_at_attribute_id,
     bool* created_from_snap = NULL);
 
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
@@ -335,7 +335,7 @@ bool IsLinkDestroyed(int* link_id);
 const char* SaveCurrentEditorStateToIniString(size_t* data_size = NULL);
 const char* SaveEditorStateToIniString(
     const ImNodesEditorContext* editor,
-    size_t* data_size = NULL);
+    size_t*                     data_size = NULL);
 
 void LoadCurrentEditorStateFromIniString(const char* data, size_t data_size);
 void LoadEditorStateFromIniString(ImNodesEditorContext* editor, const char* data, size_t data_size);

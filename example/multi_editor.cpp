@@ -12,7 +12,7 @@ namespace
 {
 struct Node
 {
-    int id;
+    int   id;
     float value;
 
     Node(const int i, const float v) : id(i), value(v) {}
@@ -27,9 +27,9 @@ struct Link
 struct Editor
 {
     ImNodesEditorContext* context = nullptr;
-    std::vector<Node> nodes;
-    std::vector<Link> links;
-    int current_id = 0;
+    std::vector<Node>     nodes;
+    std::vector<Link>     links;
+    int                   current_id = 0;
 };
 
 void show_editor(const char* editor_name, Editor& editor)

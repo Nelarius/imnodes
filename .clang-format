@@ -1,6 +1,7 @@
 ---
 AccessModifierOffset: -4
 AlignAfterOpenBracket: 'AlwaysBreak'
+AlignConsecutiveDeclarations: 'true'
 AllowAllParametersOfDeclarationOnNextLine: 'false'
 AllowShortFunctionsOnASingleLine: 'true'
 AlwaysBreakBeforeMultilineStrings: 'true'

@@ -29,7 +29,7 @@ enum class NodeType
 struct Node
 {
     NodeType type;
-    float value;
+    float    value;
 
     explicit Node(const NodeType t) : type(t), value(0.f) {}
 
@@ -43,7 +43,7 @@ T clamp(T x, T a, T b)
 }
 
 static float current_time_seconds = 0.f;
-static bool emulate_three_button_mouse = false;
+static bool  emulate_three_button_mouse = false;
 
 ImU32 evaluate(const Graph<Node>& graph, const int root_node)
 {
@@ -635,9 +635,9 @@ private:
         };
     };
 
-    Graph<Node> graph_;
+    Graph<Node>         graph_;
     std::vector<UiNode> nodes_;
-    int root_node_id_;
+    int                 root_node_id_;
 };
 
 static ColorNodeEditor color_editor;

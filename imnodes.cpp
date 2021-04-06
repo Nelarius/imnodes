@@ -70,10 +70,10 @@ enum ElementStateChange
 template<typename T>
 struct ObjectPool
 {
-    ImVector<T> Pool;
+    ImVector<T>    Pool;
     ImVector<bool> InUse;
-    ImVector<int> FreeList;
-    ImGuiStorage IdMap;
+    ImVector<int>  FreeList;
+    ImGuiStorage   IdMap;
 
     ObjectPool() : Pool(), InUse(), FreeList(), IdMap() {}
 };
@@ -120,7 +120,7 @@ private:
 
 struct NodeData
 {
-    int Id;
+    int    Id;
     ImVec2 Origin; // The node origin is in editor space
     ImRect TitleBarContentRect;
     ImRect Rect;
@@ -133,13 +133,13 @@ struct NodeData
 
     struct
     {
-        float CornerRounding;
+        float  CornerRounding;
         ImVec2 Padding;
-        float BorderThickness;
+        float  BorderThickness;
     } LayoutStyle;
 
     ImVector<int> PinIndices;
-    bool Draggable;
+    bool          Draggable;
 
     NodeData(const int node_id)
         : Id(node_id), Origin(100.0f, 100.0f), TitleBarContentRect(),
@@ -153,13 +153,13 @@ struct NodeData
 
 struct PinData
 {
-    int Id;
-    int ParentNodeIdx;
-    ImRect AttributeRect;
-    AttributeType Type;
+    int             Id;
+    int             ParentNodeIdx;
+    ImRect          AttributeRect;
+    AttributeType   Type;
     ImNodesPinShape Shape;
-    ImVec2 Pos; // screen-space coordinates
-    int Flags;
+    ImVec2          Pos; // screen-space coordinates
+    int             Flags;
 
     struct
     {
@@ -225,7 +225,7 @@ struct BezierCurve
 struct LinkBezierData
 {
     BezierCurve Bezier;
-    int NumSegments;
+    int         NumSegments;
 };
 
 enum ClickInteractionType
@@ -250,8 +250,8 @@ struct ClickInteractionState
 
     struct
     {
-        int StartPinIdx;
-        OptionalIndex EndPinIdx;
+        int              StartPinIdx;
+        OptionalIndex    EndPinIdx;
         LinkCreationType Type;
     } LinkCreation;
 
@@ -265,7 +265,7 @@ struct ClickInteractionState
 
 struct ColorStyleElement
 {
-    ImU32 Color;
+    ImU32      Color;
     ImNodesCol Item;
 
     ColorStyleElement(const ImU32 c, const ImNodesCol s) : Color(c), Item(s) {}
@@ -274,7 +274,7 @@ struct ColorStyleElement
 struct StyleElement
 {
     ImNodesStyleVar Item;
-    float Value;
+    float           Value;
 
     StyleElement(const float value, const ImNodesStyleVar variable) : Item(variable), Value(value)
     {
@@ -291,8 +291,8 @@ struct ImNodesContext
     ImNodesEditorContext* EditorCtx;
 
     // Canvas draw list and helper state
-    ImDrawList* CanvasDrawList;
-    ImGuiStorage NodeIdxToSubmissionIdx;
+    ImDrawList*   CanvasDrawList;
+    ImGuiStorage  NodeIdxToSubmissionIdx;
     ImVector<int> NodeIdxSubmissionOrder;
     ImVector<int> NodeIndicesOverlappingWithMouse;
     ImVector<int> OccludedPinIndices;
@@ -305,13 +305,13 @@ struct ImNodesContext
     ImNodes::ScopeFlags CurrentScope;
 
     // Configuration state
-    ImNodesIO Io;
-    ImNodesStyle Style;
+    ImNodesIO                            Io;
+    ImNodesStyle                         Style;
     ImVector<ImNodes::ColorStyleElement> ColorModifierStack;
-    ImVector<ImNodes::StyleElement> StyleModifierStack;
-    ImGuiTextBuffer TextBuffer;
+    ImVector<ImNodes::StyleElement>      StyleModifierStack;
+    ImGuiTextBuffer                      TextBuffer;
 
-    int CurrentAttributeFlags;
+    int           CurrentAttributeFlags;
     ImVector<int> AttributeFlagStack;
 
     // UI element state
@@ -323,7 +323,7 @@ struct ImNodesContext
     ImNodes::OptionalIndex InteractiveNodeIdx;
     ImNodes::OptionalIndex HoveredLinkIdx;
     ImNodes::OptionalIndex HoveredPinIdx;
-    int HoveredPinFlags;
+    int                    HoveredPinFlags;
 
     ImNodes::OptionalIndex DeletedLinkIdx;
     ImNodes::OptionalIndex SnapLinkIdx;
@@ -331,7 +331,7 @@ struct ImNodesContext
     // Event helper state
     int ElementStateChange;
 
-    int ActiveAttributeId;
+    int  ActiveAttributeId;
     bool ActiveAttribute;
 
     // ImGui::IO cache
@@ -370,20 +370,20 @@ inline ImVec2 EvalBezier(float t, const BezierCurve& bezier)
 
 // Calculates the closest point along each bezier curve segment.
 ImVec2 GetClosestPointOnCubicBezier(
-    const int num_segments,
-    const ImVec2& p,
+    const int          num_segments,
+    const ImVec2&      p,
     const BezierCurve& bezier)
 {
     IM_ASSERT(num_segments > 0);
     ImVec2 p_last = bezier.P0;
     ImVec2 p_closest;
-    float p_closest_dist = FLT_MAX;
-    float t_step = 1.0f / (float)num_segments;
+    float  p_closest_dist = FLT_MAX;
+    float  t_step = 1.0f / (float)num_segments;
     for (int i = 1; i <= num_segments; ++i)
     {
         ImVec2 p_current = EvalBezier(t_step * i, bezier);
         ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
-        float dist = ImLengthSqr(p - p_line);
+        float  dist = ImLengthSqr(p - p_line);
         if (dist < p_closest_dist)
         {
             p_closest = p_line;
@@ -395,9 +395,9 @@ ImVec2 GetClosestPointOnCubicBezier(
 }
 
 inline float GetDistanceToCubicBezier(
-    const ImVec2& pos,
+    const ImVec2&      pos,
     const BezierCurve& bezier,
-    const int num_segments)
+    const int          num_segments)
 {
     const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(num_segments, pos, bezier);
 
@@ -421,10 +421,10 @@ inline ImRect GetContainingRectForBezierCurve(const BezierCurve& bezier)
 }
 
 inline LinkBezierData GetLinkRenderable(
-    ImVec2 start,
-    ImVec2 end,
+    ImVec2              start,
+    ImVec2              end,
     const AttributeType start_type,
-    const float line_segments_per_length)
+    const float         line_segments_per_length)
 {
     assert((start_type == AttributeType_Input) || (start_type == AttributeType_Output));
     if (start_type == AttributeType_Input)
@@ -432,8 +432,8 @@ inline LinkBezierData GetLinkRenderable(
         ImSwap(start, end);
     }
 
-    const float link_length = ImSqrt(ImLengthSqr(end - start));
-    const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
+    const float    link_length = ImSqrt(ImLengthSqr(end - start));
+    const ImVec2   offset = ImVec2(0.25f * link_length, 0.f);
     LinkBezierData link_data;
     link_data.Bezier.P0 = start;
     link_data.Bezier.P1 = start + offset;
@@ -501,7 +501,7 @@ inline bool RectangleOverlapsLineSegment(const ImRect& rect, const ImVec2& p1, c
 
 inline bool RectangleOverlapsBezier(const ImRect& rectangle, const LinkBezierData& link_data)
 {
-    ImVec2 current = EvalBezier(0.f, link_data.Bezier);
+    ImVec2      current = EvalBezier(0.f, link_data.Bezier);
     const float dt = 1.0f / link_data.NumSegments;
     for (int s = 0; s < link_data.NumSegments; ++s)
     {
@@ -516,9 +516,9 @@ inline bool RectangleOverlapsBezier(const ImRect& rectangle, const LinkBezierDat
 }
 
 inline bool RectangleOverlapsLink(
-    const ImRect& rectangle,
-    const ImVec2& start,
-    const ImVec2& end,
+    const ImRect&       rectangle,
+    const ImVec2&       start,
+    const ImVec2&       end,
     const AttributeType start_type)
 {
     // First level: simple rejection test via rectangle overlap:
@@ -562,7 +562,7 @@ inline bool RectangleOverlapsLink(
 struct ImNodesEditorContext
 {
     ImNodes::ObjectPool<ImNodes::NodeData> Nodes;
-    ImNodes::ObjectPool<ImNodes::PinData> Pins;
+    ImNodes::ObjectPool<ImNodes::PinData>  Pins;
     ImNodes::ObjectPool<ImNodes::LinkData> Links;
 
     ImVector<int> NodeDepthOrder;
@@ -642,8 +642,8 @@ void ImDrawListGrowChannels(ImDrawList* draw_list, const int num_channels)
 
 void ImDrawListSplitterSwapChannels(
     ImDrawListSplitter& splitter,
-    const int lhs_idx,
-    const int rhs_idx)
+    const int           lhs_idx,
+    const int           rhs_idx)
 {
     if (lhs_idx == rhs_idx)
     {
@@ -861,7 +861,7 @@ void ObjectPoolUpdate(ObjectPool<NodeData>& nodes)
                 assert(previous_idx == i);
                 // Remove node idx form depth stack the first time we detect that this idx slot is
                 // unused
-                ImVector<int>& depth_stack = EditorContextGet().NodeDepthOrder;
+                ImVector<int>&   depth_stack = EditorContextGet().NodeDepthOrder;
                 const int* const elem = depth_stack.find(i);
                 assert(elem != depth_stack.end());
                 depth_stack.erase(elem);
@@ -958,8 +958,8 @@ T& ObjectPoolFindOrCreateObject(ObjectPool<T>& objects, const int id)
 // [SECTION] ui state logic
 
 ImVec2 GetScreenSpacePinCoordinates(
-    const ImRect& node_rect,
-    const ImRect& attribute_rect,
+    const ImRect&       node_rect,
+    const ImRect&       attribute_rect,
     const AttributeType type)
 {
     assert(type == AttributeType_Input || type == AttributeType_Output);
@@ -1005,7 +1005,7 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
         editor.SelectedNodeIndices.push_back(node_idx);
 
         // Ensure that individually selected nodes get rendered on top
-        ImVector<int>& depth_stack = editor.NodeDepthOrder;
+        ImVector<int>&   depth_stack = editor.NodeDepthOrder;
         const int* const elem = depth_stack.find(node_idx);
         assert(elem != depth_stack.end());
         depth_stack.erase(elem);
@@ -1025,7 +1025,7 @@ void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
 
 void BeginLinkDetach(ImNodesEditorContext& editor, const int link_idx, const int detach_pin_idx)
 {
-    const LinkData& link = editor.Links.Pool[link_idx];
+    const LinkData&        link = editor.Links.Pool[link_idx];
     ClickInteractionState& state = editor.ClickInteraction;
     state.LinkCreation.EndPinIdx.Reset();
     state.LinkCreation.StartPinIdx =
@@ -1056,12 +1056,12 @@ void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx)
         if (modifier_pressed)
         {
             const LinkData& link = editor.Links.Pool[link_idx];
-            const PinData& start_pin = editor.Pins.Pool[link.StartPinIdx];
-            const PinData& end_pin = editor.Pins.Pool[link.EndPinIdx];
-            const ImVec2& mouse_pos = g->MousePos;
-            const float dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
-            const float dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
-            const int closest_pin_idx =
+            const PinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
+            const PinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
+            const ImVec2&   mouse_pos = g->MousePos;
+            const float     dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
+            const float     dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
+            const int       closest_pin_idx =
                 dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
 
             editor.ClickInteraction.Type = ClickInteractionType_LinkCreation;
@@ -1157,8 +1157,8 @@ void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
 
             const PinData& pin_start = editor.Pins.Pool[link.StartPinIdx];
             const PinData& pin_end = editor.Pins.Pool[link.EndPinIdx];
-            const ImRect& node_start_rect = editor.Nodes.Pool[pin_start.ParentNodeIdx].Rect;
-            const ImRect& node_end_rect = editor.Nodes.Pool[pin_end.ParentNodeIdx].Rect;
+            const ImRect&  node_start_rect = editor.Nodes.Pool[pin_start.ParentNodeIdx].Rect;
+            const ImRect&  node_end_rect = editor.Nodes.Pool[pin_end.ParentNodeIdx].Rect;
 
             const ImVec2 start = GetScreenSpacePinCoordinates(
                 node_start_rect, pin_start.AttributeRect, pin_start.Type);
@@ -1193,8 +1193,8 @@ void TranslateSelectedNodes(ImNodesEditorContext& editor)
 
 OptionalIndex FindDuplicateLink(
     const ImNodesEditorContext& editor,
-    const int start_pin_idx,
-    const int end_pin_idx)
+    const int                   start_pin_idx,
+    const int                   end_pin_idx)
 {
     LinkData test_link(0);
     test_link.StartPinIdx = start_pin_idx;
@@ -1213,9 +1213,9 @@ OptionalIndex FindDuplicateLink(
 
 bool ShouldLinkSnapToPin(
     const ImNodesEditorContext& editor,
-    const PinData& start_pin,
-    const int hovered_pin_idx,
-    const OptionalIndex duplicate_link)
+    const PinData&              start_pin,
+    const int                   hovered_pin_idx,
+    const OptionalIndex         duplicate_link)
 {
     const PinData& end_pin = editor.Pins.Pool[hovered_pin_idx];
 
@@ -1260,7 +1260,7 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
 
         if (g->LeftMouseReleased)
         {
-            ImVector<int>& depth_stack = editor.NodeDepthOrder;
+            ImVector<int>&       depth_stack = editor.NodeDepthOrder;
             const ImVector<int>& selected_idxs = editor.SelectedNodeIndices;
 
             // Bump the selected node indices, in order, to the top of the depth stack.
@@ -1446,7 +1446,7 @@ void ResolveOccludedPins(const ImNodesEditorContext& editor, ImVector<int>& occl
             // Iterate over each pin
             for (int idx = 0; idx < node_below.PinIndices.Size; ++idx)
             {
-                const int pin_idx = node_below.PinIndices[idx];
+                const int     pin_idx = node_below.PinIndices[idx];
                 const ImVec2& pin_pos = editor.Pins.Pool[pin_idx].Pos;
 
                 if (rect_above.Contains(pin_pos))
@@ -1460,9 +1460,9 @@ void ResolveOccludedPins(const ImNodesEditorContext& editor, ImVector<int>& occl
 
 OptionalIndex ResolveHoveredPin(
     const ObjectPool<PinData>& pins,
-    const ImVector<int>& occluded_pin_indices)
+    const ImVector<int>&       occluded_pin_indices)
 {
-    float smallest_distance = FLT_MAX;
+    float         smallest_distance = FLT_MAX;
     OptionalIndex pin_idx_with_smallest_distance;
 
     const float hover_radius_sqr = g->Style.PinHoverRadius * g->Style.PinHoverRadius;
@@ -1480,7 +1480,7 @@ OptionalIndex ResolveHoveredPin(
         }
 
         const ImVec2& pin_pos = pins.Pool[idx].Pos;
-        const float distance_sqr = ImLengthSqr(pin_pos - g->MousePos);
+        const float   distance_sqr = ImLengthSqr(pin_pos - g->MousePos);
 
         // TODO: g->Style.PinHoverRadius needs to be copied into pin data and the pin-local value
         // used here. This is no longer called in BeginAttribute/EndAttribute scope and the detected
@@ -1530,7 +1530,7 @@ OptionalIndex ResolveHoveredNode(const ImVector<int>& depth_stack)
 
 OptionalIndex ResolveHoveredLink(const ObjectPool<LinkData>& links, const ObjectPool<PinData>& pins)
 {
-    float smallest_distance = FLT_MAX;
+    float         smallest_distance = FLT_MAX;
     OptionalIndex link_idx_with_smallest_distance;
 
     // There are two ways a link can be detected as "hovered".
@@ -1549,8 +1549,8 @@ OptionalIndex ResolveHoveredLink(const ObjectPool<LinkData>& links, const Object
         }
 
         const LinkData& link = links.Pool[idx];
-        const PinData& start_pin = pins.Pool[link.StartPinIdx];
-        const PinData& end_pin = pins.Pool[link.EndPinIdx];
+        const PinData&  start_pin = pins.Pool[link.StartPinIdx];
+        const PinData&  end_pin = pins.Pool[link.EndPinIdx];
 
         if (g->HoveredPinIdx == link.StartPinIdx || g->HoveredPinIdx == link.EndPinIdx)
         {
@@ -1788,7 +1788,7 @@ void DrawPinShape(const ImVec2& pin_pos, const PinData& pin, const ImU32 pin_col
 
 void DrawPin(ImNodesEditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
 {
-    PinData& pin = editor.Pins.Pool[pin_idx];
+    PinData&      pin = editor.Pins.Pool[pin_idx];
     const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
 
     pin.Pos = GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
@@ -1904,8 +1904,8 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
 void DrawLink(ImNodesEditorContext& editor, const int link_idx)
 {
     const LinkData& link = editor.Links.Pool[link_idx];
-    const PinData& start_pin = editor.Pins.Pool[link.StartPinIdx];
-    const PinData& end_pin = editor.Pins.Pool[link.EndPinIdx];
+    const PinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
+    const PinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
 
     const LinkBezierData link_data = GetLinkRenderable(
         start_pin.Pos, end_pin.Pos, start_pin.Type, g->Style.LinkLineSegmentsPerLength);
@@ -1957,10 +1957,10 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
 }
 
 void BeginPinAttribute(
-    const int id,
-    const AttributeType type,
+    const int             id,
+    const AttributeType   type,
     const ImNodesPinShape shape,
-    const int node_idx)
+    const int             node_idx)
 {
     // Make sure to call BeginNode() before calling
     // BeginAttribute()
@@ -2002,8 +2002,8 @@ void EndPinAttribute()
     }
 
     ImNodesEditorContext& editor = EditorContextGet();
-    PinData& pin = editor.Pins.Pool[g->CurrentPinIdx];
-    NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
+    PinData&              pin = editor.Pins.Pool[g->CurrentPinIdx];
+    NodeData&             node = editor.Nodes.Pool[g->CurrentNodeIdx];
     pin.AttributeRect = GetItemRect();
     node.PinIndices.push_back(g->CurrentPinIdx);
 }
@@ -2107,7 +2107,7 @@ void EditorContextResetPanning(const ImVec2& pos)
 void EditorContextMoveToNode(const int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    NodeData&             node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
 
     editor.Panning.x = -node.Origin.x;
     editor.Panning.y = -node.Origin.y;
@@ -2403,7 +2403,7 @@ void EndNode()
 ImVec2 GetNodeDimensions(int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
+    const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1); // invalid node_id
     const NodeData& node = editor.Nodes.Pool[node_idx];
     return node.Rect.GetSize();
@@ -2421,7 +2421,7 @@ void EndNodeTitleBar()
     ImGui::EndGroup();
 
     ImNodesEditorContext& editor = EditorContextGet();
-    NodeData& node = editor.Nodes.Pool[g->CurrentNodeIdx];
+    NodeData&             node = editor.Nodes.Pool[g->CurrentNodeIdx];
     node.TitleBarContentRect = GetItemRect();
 
     ImGui::ItemAdd(GetNodeTitleRect(node), ImGui::GetID("title_bar"));
@@ -2493,7 +2493,7 @@ void Link(const int id, const int start_attr_id, const int end_attr_id)
     assert(g->CurrentScope == Scope_Editor);
 
     ImNodesEditorContext& editor = EditorContextGet();
-    LinkData& link = ObjectPoolFindOrCreateObject(editor.Links, id);
+    LinkData&             link = ObjectPoolFindOrCreateObject(editor.Links, id);
     link.Id = id;
     link.StartPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, start_attr_id);
     link.EndPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, end_attr_id);
@@ -2603,35 +2603,35 @@ void PopStyleVar()
 void SetNodeScreenSpacePos(const int node_id, const ImVec2& screen_space_pos)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    NodeData&             node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = ScreenSpaceToGridSpace(editor, screen_space_pos);
 }
 
 void SetNodeEditorSpacePos(const int node_id, const ImVec2& editor_space_pos)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    NodeData&             node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = EditorSpaceToGridSpace(editor, editor_space_pos);
 }
 
 void SetNodeGridSpacePos(const int node_id, const ImVec2& grid_pos)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    NodeData&             node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = grid_pos;
 }
 
 void SetNodeDraggable(const int node_id, const bool draggable)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    NodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    NodeData&             node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Draggable = draggable;
 }
 
 ImVec2 GetNodeScreenSpacePos(const int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
+    const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.Nodes.Pool[node_idx];
     return GridSpaceToScreenSpace(editor, node.Origin);
@@ -2640,7 +2640,7 @@ ImVec2 GetNodeScreenSpacePos(const int node_id)
 ImVec2 GetNodeEditorSpacePos(const int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
+    const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.Nodes.Pool[node_idx];
     return GridSpaceToEditorSpace(editor, node.Origin);
@@ -2649,7 +2649,7 @@ ImVec2 GetNodeEditorSpacePos(const int node_id)
 ImVec2 GetNodeGridSpacePos(const int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    const int node_idx = ObjectPoolFind(editor.Nodes, node_id);
+    const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
     assert(node_idx != -1);
     NodeData& node = editor.Nodes.Pool[node_idx];
     return node.Origin;
@@ -2788,7 +2788,7 @@ bool IsLinkStarted(int* const started_at_id)
     if (is_started)
     {
         const ImNodesEditorContext& editor = EditorContextGet();
-        const int pin_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
+        const int                   pin_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
         *started_at_id = editor.Pins.Pool[pin_idx].Id;
     }
 
@@ -2817,8 +2817,8 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
 }
 
 bool IsLinkCreated(
-    int* const started_at_pin_id,
-    int* const ended_at_pin_id,
+    int* const  started_at_pin_id,
+    int* const  ended_at_pin_id,
     bool* const created_from_snap)
 {
     assert(g->CurrentScope == Scope_None);
@@ -2830,8 +2830,8 @@ bool IsLinkCreated(
     if (is_created)
     {
         const ImNodesEditorContext& editor = EditorContextGet();
-        const int start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
-        const int end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
+        const int                   start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
+        const int      end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
         const PinData& start_pin = editor.Pins.Pool[start_idx];
         const PinData& end_pin = editor.Pins.Pool[end_idx];
 
@@ -2856,10 +2856,10 @@ bool IsLinkCreated(
 }
 
 bool IsLinkCreated(
-    int* started_at_node_id,
-    int* started_at_pin_id,
-    int* ended_at_node_id,
-    int* ended_at_pin_id,
+    int*  started_at_node_id,
+    int*  started_at_pin_id,
+    int*  ended_at_node_id,
+    int*  ended_at_pin_id,
     bool* created_from_snap)
 {
     assert(g->CurrentScope == Scope_None);
@@ -2873,11 +2873,11 @@ bool IsLinkCreated(
     if (is_created)
     {
         const ImNodesEditorContext& editor = EditorContextGet();
-        const int start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
-        const int end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
-        const PinData& start_pin = editor.Pins.Pool[start_idx];
+        const int                   start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
+        const int       end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
+        const PinData&  start_pin = editor.Pins.Pool[start_idx];
         const NodeData& start_node = editor.Nodes.Pool[start_pin.ParentNodeIdx];
-        const PinData& end_pin = editor.Pins.Pool[end_idx];
+        const PinData&  end_pin = editor.Pins.Pool[end_idx];
         const NodeData& end_node = editor.Nodes.Pool[end_pin.ParentNodeIdx];
 
         if (start_pin.Type == AttributeType_Output)
@@ -2912,7 +2912,7 @@ bool IsLinkDestroyed(int* const link_id)
     if (link_destroyed)
     {
         const ImNodesEditorContext& editor = EditorContextGet();
-        const int link_idx = g->DeletedLinkIdx.Value();
+        const int                   link_idx = g->DeletedLinkIdx.Value();
         *link_id = editor.Links.Pool[link_idx].Id;
     }
 
@@ -2952,7 +2952,7 @@ const char* SaveCurrentEditorStateToIniString(size_t* const data_size)
 
 const char* SaveEditorStateToIniString(
     const ImNodesEditorContext* const editor_ptr,
-    size_t* const data_size)
+    size_t* const                     data_size)
 {
     assert(editor_ptr != NULL);
     const ImNodesEditorContext& editor = *editor_ptr;
@@ -2989,8 +2989,8 @@ void LoadCurrentEditorStateFromIniString(const char* const data, const size_t da
 
 void LoadEditorStateFromIniString(
     ImNodesEditorContext* const editor_ptr,
-    const char* const data,
-    const size_t data_size)
+    const char* const           data,
+    const size_t                data_size)
 {
     if (data_size == 0u)
     {
@@ -2999,7 +2999,7 @@ void LoadEditorStateFromIniString(
 
     ImNodesEditorContext& editor = editor_ptr == NULL ? EditorContextGet() : *editor_ptr;
 
-    char* buf = (char*)ImGui::MemAlloc(data_size + 1);
+    char*       buf = (char*)ImGui::MemAlloc(data_size + 1);
     const char* buf_end = buf + data_size;
     memcpy(buf, data, data_size);
     buf[data_size] = 0;
@@ -3053,9 +3053,9 @@ void SaveCurrentEditorStateToIniFile(const char* const file_name)
 
 void SaveEditorStateToIniFile(const ImNodesEditorContext* const editor, const char* const file_name)
 {
-    size_t data_size = 0u;
+    size_t      data_size = 0u;
     const char* data = SaveEditorStateToIniString(editor, &data_size);
-    FILE* file = ImFileOpen(file_name, "wt");
+    FILE*       file = ImFileOpen(file_name, "wt");
     if (!file)
     {
         return;
@@ -3073,7 +3073,7 @@ void LoadCurrentEditorStateFromIniFile(const char* const file_name)
 void LoadEditorStateFromIniFile(ImNodesEditorContext* const editor, const char* const file_name)
 {
     size_t data_size = 0u;
-    char* file_data = (char*)ImFileLoadToMemory(file_name, "rb", &data_size);
+    char*  file_data = (char*)ImFileLoadToMemory(file_name, "rb", &data_size);
 
     if (!file_data)
     {

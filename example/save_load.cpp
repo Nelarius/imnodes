@@ -17,7 +17,7 @@ namespace
 {
 struct Node
 {
-    int id;
+    int   id;
     float value;
 
     Node() = default;
@@ -183,7 +183,7 @@ public:
 private:
     std::vector<Node> nodes_;
     std::vector<Link> links_;
-    int current_id_;
+    int               current_id_;
 };
 
 static SaveLoadEditor editor;

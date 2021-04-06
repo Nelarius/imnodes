@@ -46,30 +46,30 @@ public:
 
     // Capacity
 
-    bool empty() const { return sorted_ids_.empty(); }
+    bool   empty() const { return sorted_ids_.empty(); }
     size_t size() const { return sorted_ids_.size(); }
 
     // Modifiers
 
     std::pair<iterator, bool> insert(int id, const ElementType& element);
     std::pair<iterator, bool> insert(int id, ElementType&& element);
-    size_t erase(int id);
-    void clear();
+    size_t                    erase(int id);
+    void                      clear();
 
     // Lookup
 
-    iterator find(int id);
+    iterator       find(int id);
     const_iterator find(int id) const;
-    bool contains(int id) const;
+    bool           contains(int id) const;
 
 private:
     std::vector<ElementType> elements_;
-    std::vector<int> sorted_ids_;
+    std::vector<int>         sorted_ids_;
 };
 
 template<typename ElementType>
 std::pair<typename IdMap<ElementType>::iterator, bool> IdMap<ElementType>::insert(
-    const int id,
+    const int          id,
     const ElementType& element)
 {
     auto lower_bound = std::lower_bound(sorted_ids_.begin(), sorted_ids_.end(), id);
@@ -89,7 +89,7 @@ std::pair<typename IdMap<ElementType>::iterator, bool> IdMap<ElementType>::inser
 
 template<typename ElementType>
 std::pair<typename IdMap<ElementType>::iterator, bool> IdMap<ElementType>::insert(
-    const int id,
+    const int     id,
     ElementType&& element)
 {
     auto lower_bound = std::lower_bound(sorted_ids_.begin(), sorted_ids_.end(), id);
@@ -179,15 +179,15 @@ public:
         Edge() = default;
         Edge(const int id, const int f, const int t) : id(id), from(f), to(t) {}
 
-        inline int opposite(const int n) const { return n == from ? to : from; }
+        inline int  opposite(const int n) const { return n == from ? to : from; }
         inline bool contains(const int n) const { return n == from || n == to; }
     };
 
     // Element access
 
-    NodeType& node(int node_id);
-    const NodeType& node(int node_id) const;
-    Span<const int> neighbors(int node_id) const;
+    NodeType&        node(int node_id);
+    const NodeType&  node(int node_id) const;
+    Span<const int>  neighbors(int node_id) const;
     Span<const Edge> edges() const;
 
     // Capacity
@@ -196,17 +196,17 @@ public:
 
     // Modifiers
 
-    int insert_node(const NodeType& node);
+    int  insert_node(const NodeType& node);
     void erase_node(int node_id);
 
-    int insert_edge(int from, int to);
+    int  insert_edge(int from, int to);
     void erase_edge(int edge_id);
 
 private:
     int current_id_;
     // These contains map to the node id
-    IdMap<NodeType> nodes_;
-    IdMap<int> edges_from_node_;
+    IdMap<NodeType>         nodes_;
+    IdMap<int>              edges_from_node_;
     IdMap<std::vector<int>> node_neighbors_;
 
     // This container maps to the edge id
