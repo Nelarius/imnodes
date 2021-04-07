@@ -187,7 +187,7 @@ void                  EditorContextFree(ImNodesEditorContext*);
 void                  EditorContextSet(ImNodesEditorContext*);
 ImVec2                EditorContextGetPanning();
 void                  EditorContextResetPanning(const ImVec2& pos);
-void                  EditorContextMoveToNode(const int node_id);
+void                  EditorContextMoveToNodeIfFound(const int node_id);
 
 ImNodesIO& GetIO();
 
@@ -213,6 +213,7 @@ void PopStyleVar();
 void BeginNode(int id);
 void EndNode();
 
+// TODO: yikes, this became O(N) in time complexity.
 ImVec2 GetNodeDimensions(int id);
 
 // Place your node title bar content (such as the node title, using ImGui::Text) between the
@@ -283,6 +284,7 @@ bool IsPinHovered(int* attribute_id);
 
 // Use The following two functions to query the number of selected nodes or links in the current
 // editor. Use after calling EndNodeEditor().
+// TODO: some kind of note about this not being retained state?
 int NumSelectedNodes();
 int NumSelectedLinks();
 // Get the selected node/link ids. The pointer argument should point to an integer array with at
