@@ -75,7 +75,7 @@ ImNodes::BeginNode(hardcoded_node_id);
 ImGui::Dummy(ImVec2(80.0f, 45.0f));
 ImNodes::EndNode();
 
-imnode::EndNodeEditor();
+ImNodes::EndNodeEditor();
 ```
 
 Nodes, like windows in `dear imgui` must be uniquely identified. But we can't use the node titles for identification, because it should be possible to have many nodes of the same name in the workspace. Instead, you just use integers for identification.
