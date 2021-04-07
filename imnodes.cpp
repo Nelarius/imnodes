@@ -1362,6 +1362,8 @@ void DrawPin(ImNodesEditorContext& editor, const int pin_idx, const bool left_mo
     ImPinData&    pin = editor.Pins.Pool[pin_idx];
     const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
 
+    // TODO: This could be computed in EndNode() and stored directly in the pin data. There is only
+    // one pin being constructed at a time, no need to store this and pass it around.
     pin.Pos = GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
 
     ImU32 pin_color = pin.ColorStyle.Background;
@@ -1578,6 +1580,7 @@ void EndPinAttribute()
     ImNodesEditorContext& editor = EditorContextGet();
     ImPinData&            pin = editor.Pins.Pool[GImNodes->CurrentPinIdx];
     ImNodeData&           node = editor.Nodes.Pool[GImNodes->CurrentNodeIdx];
+    // TODO: why not just compute the pin position here?
     pin.AttributeRect = GetItemRect();
     node.PinIndices.push_back(GImNodes->CurrentPinIdx);
 }

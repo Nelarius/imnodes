@@ -161,13 +161,27 @@ struct ImNodeData
 
 struct ImPinData
 {
-    int                  Id;
-    int                  ParentNodeIdx;
-    ImRect               AttributeRect;
+    int Id;
+    // TODO: It seems this is used to fetch the node id in a few different places.
+    //
+    // The parent node id is needed in IsLinkCreated(), and in order to check that the pin the link
+    // is being attached to is in a different node.
+    int ParentNodeIdx;
+    // TODO: this can be removed by computing the pin position directly in EndPinAttribute()
+    ImRect AttributeRect;
+    // TODO: This is used in ShouldLinkSnapToPin to enforce that the end pin is of a different type.
+    // It is also used to compute the position of the pin. We could avoid storing this if we
+    // computed the position as soon as possible.
     ImNodesAttributeType Type;
     ImNodesPinShape      Shape;
     ImVec2               Pos; // screen-space coordinates
     int                  Flags;
+
+    // NOTE: core data needed to render the pin:
+    // - Shape
+    // - Pos
+    // - Flags
+    // - ColorStyle
 
     struct
     {
@@ -365,6 +379,16 @@ inline void ObjectPoolUpdate(ImObjectPool<ImNodeData>& nodes)
         }
         else
         {
+            // This is utterly broken. We're in the unused object path here, and the error is
+            // indexing a recycled object's id in to the id map (which maps _active_ objects to
+            // slots). So we're placing the same preconditions on recycled state as we're placing on
+            // the active state.
+            //
+            // The recycled state can have the same id as an active object, since a user might reuse
+            // ids on deleted nodes.
+            //
+            // Thus we _will_ cause assert(previous_idx == i) to trigger when the user reuses their
+            // object ids.
             const int previous_id = nodes.Pool[i].Id;
             const int previous_idx = nodes.IdMap.GetInt(previous_id, -1);
 
