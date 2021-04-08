@@ -209,7 +209,7 @@ void PopColorStyle();
 void PushStyleVar(ImNodesStyleVar style_item, float value);
 void PopStyleVar();
 
-// id can be any positive or negative integer, but INT_MIN is currently reserved for internal use.
+// id can be any positive or negative integer.
 void BeginNode(int id);
 void EndNode();
 
