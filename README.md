@@ -11,7 +11,7 @@
 Features:
 
 * Create nodes, links, and pins in an immediate-mode style
-* Single header and source file, just copy-paste `imnodes.h` and `imnodes.cpp` into your project. The only dependency is `dear imgui` itself!
+* Single header and source file, just copy-paste `imnodes.h`, `imnodes_internal.h`, and `imnodes.cpp` into your project. The only dependency is `dear imgui` itself!
 * Written in the same style of C++ as `dear imgui` itself -- no modern C++ used
 * Use regular `dear imgui` widgets inside the nodes
 * Multiple node and link selection with a box selector
