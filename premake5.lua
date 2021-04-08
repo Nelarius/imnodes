@@ -140,7 +140,7 @@ workspace "imnodes"
         cppdialect "C++98"
         enablewarnings { "all" }
         targetdir "lib/%{cfg.buildcfg}"
-        files { "imnodes.h", "imnodes.cpp" }
+        files { "imnodes.h", "imnodes_internal.h", "imnodes.cpp" }
         includedirs { path.join(imguilocation) }
 
     group "examples"
