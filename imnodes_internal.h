@@ -15,7 +15,8 @@
 // [SECTION] object pool implementation
 
 struct ImNodesContext;
-struct ImNodesEditorContext;
+
+extern ImNodesContext* GImNodes;
 
 // [SECTION] internal enums
 
@@ -234,8 +235,28 @@ struct ImNodesStyleVarElement
 
 // [SECTION] global and editor context structs
 
-// TODO: this could probably be renamed
-extern ImNodesContext* g;
+struct ImNodesEditorContext
+{
+    ImObjectPool<ImNodeData> Nodes;
+    ImObjectPool<ImPinData>  Pins;
+    ImObjectPool<ImLinkData> Links;
+
+    ImVector<int> NodeDepthOrder;
+
+    // ui related fields
+    ImVec2 Panning;
+
+    ImVector<int> SelectedNodeIndices;
+    ImVector<int> SelectedLinkIndices;
+
+    ImClickInteractionState ClickInteraction;
+
+    ImNodesEditorContext()
+        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
+          ClickInteraction()
+    {
+    }
+};
 
 struct ImNodesContext
 {
@@ -281,6 +302,8 @@ struct ImNodesContext
     ImOptionalIndex SnapLinkIdx;
 
     // Event helper state
+    // TODO: this should be a part of a state machine, and not a member of the global struct.
+    // Unclear what parts of the code this relates to.
     int ImNodesUIState;
 
     int  ActiveAttributeId;
@@ -297,36 +320,13 @@ struct ImNodesContext
     bool AltMouseDragging;
 };
 
-struct ImNodesEditorContext
-{
-    ImObjectPool<ImNodeData> Nodes;
-    ImObjectPool<ImPinData>  Pins;
-    ImObjectPool<ImLinkData> Links;
-
-    ImVector<int> NodeDepthOrder;
-
-    // ui related fields
-    ImVec2 Panning;
-
-    ImVector<int> SelectedNodeIndices;
-    ImVector<int> SelectedLinkIndices;
-
-    ImClickInteractionState ClickInteraction;
-
-    ImNodesEditorContext()
-        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          ClickInteraction()
-    {
-    }
-};
-
 namespace ImNodes
 {
 static inline ImNodesEditorContext& EditorContextGet()
 {
     // No editor context was set! Did you forget to call ImNodes::CreateContext()?
-    assert(g->EditorCtx != NULL);
-    return *g->EditorCtx;
+    assert(GImNodes->EditorCtx != NULL);
+    return *GImNodes->EditorCtx;
 }
 
 // [SECTION] ObjectPool implementation
