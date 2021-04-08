@@ -334,12 +334,7 @@ void ImDrawListSplitterSwapChannels(
     }
 }
 
-void DrawListSet(ImDrawList* window_draw_list)
-{
-    GImNodes->CanvasDrawList = window_draw_list;
-    GImNodes->NodeIdxToSubmissionIdx.Clear();
-    GImNodes->NodeIdxSubmissionOrder.clear();
-}
+void DrawListSet(ImDrawList* window_draw_list) { GImNodes->CanvasDrawList = window_draw_list; }
 
 // The draw list channels are structured as follows. First we have our base channel, the canvas grid
 // on which we render the grid lines in BeginNodeEditor(). The base channel is the reason
@@ -360,13 +355,7 @@ void DrawListSet(ImDrawList* window_draw_list)
 //            |                     |
 //            -----------------------
 
-void DrawListAddNode(const int node_idx)
-{
-    GImNodes->NodeIdxToSubmissionIdx.SetInt(
-        static_cast<ImGuiID>(node_idx), GImNodes->NodeIdxSubmissionOrder.Size);
-    GImNodes->NodeIdxSubmissionOrder.push_back(node_idx);
-    ImDrawListGrowChannels(GImNodes->CanvasDrawList, 2);
-}
+void DrawListAddNode() { ImDrawListGrowChannels(GImNodes->CanvasDrawList, 2); }
 
 void DrawListAppendClickInteractionChannel()
 {
@@ -394,25 +383,17 @@ void DrawListActivateClickInteractionChannel()
 
 void DrawListActivateCurrentNodeForeground()
 {
+    const int node_submission_idx = GImNodes->Nodes.size() - 1;
     const int foreground_channel_idx =
-        DrawListSubmissionIdxToForegroundChannelIdx(GImNodes->NodeIdxSubmissionOrder.Size - 1);
+        DrawListSubmissionIdxToForegroundChannelIdx(node_submission_idx);
     GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
         GImNodes->CanvasDrawList, foreground_channel_idx);
 }
 
-void DrawListActivateNodeBackground(const int node_idx)
+void DrawListActivateNodeBackground(const int node_submission_idx)
 {
-    const int submission_idx =
-        GImNodes->NodeIdxToSubmissionIdx.GetInt(static_cast<ImGuiID>(node_idx), -1);
-    // There is a discrepancy in the submitted node count and the rendered node count! Did you call
-    // one of the following functions
-    // * EditorContextMoveToNode
-    // * SetNodeScreenSpacePos
-    // * SetNodeGridSpacePos
-    // * SetNodeDraggable
-    // after the BeginNode/EndNode function calls?
-    assert(submission_idx != -1);
-    const int background_channel_idx = DrawListSubmissionIdxToBackgroundChannelIdx(submission_idx);
+    const int background_channel_idx =
+        DrawListSubmissionIdxToBackgroundChannelIdx(node_submission_idx);
     GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
         GImNodes->CanvasDrawList, background_channel_idx);
 }
@@ -438,6 +419,7 @@ void DrawListSwapSubmissionIndices(const int lhs_idx, const int rhs_idx)
 
 void DrawListSortChannelsByDepth(const ImVector<int>& node_idx_depth_order)
 {
+#if DEPTH_SORTING_ENABLED
     if (GImNodes->NodeIdxToSubmissionIdx.Data.Size < 2)
     {
         return;
@@ -486,6 +468,9 @@ void DrawListSortChannelsByDepth(const ImVector<int>& node_idx_depth_order)
             ImSwap(GImNodes->NodeIdxSubmissionOrder[j], GImNodes->NodeIdxSubmissionOrder[j + 1]);
         }
     }
+#else
+#pragma message("DrawListSortChannelsByDepth is disabled")
+#endif
 }
 
 // [SECTION] ui state logic
@@ -1907,8 +1892,7 @@ void BeginNode(const int node_id)
     }
 
     {
-        const int node_submission_idx = GImNodes->Nodes.size();
-        DrawListAddNode(node_submission_idx);
+        DrawListAddNode();
         DrawListActivateCurrentNodeForeground();
         GImNodes->Nodes.push_back(node);
     }

@@ -286,8 +286,6 @@ struct ImNodesContext
 
     // Canvas draw list and helper state
     ImDrawList*   CanvasDrawList;
-    ImGuiStorage  NodeIdxToSubmissionIdx;
-    ImVector<int> NodeIdxSubmissionOrder;
     ImVector<int> NodeIndicesOverlappingWithMouse;
     ImVector<int> OccludedPinIndices;
 
