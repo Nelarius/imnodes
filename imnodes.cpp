@@ -1759,7 +1759,6 @@ void StyleColorsLight()
     GImNodes->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
     GImNodes->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(225, 225, 225, 255);
     GImNodes->Style.Colors[ImNodesCol_GridLine] = IM_COL32(180, 180, 180, 100);
-    GImNodes->Style.Flags = ImNodesStyleFlags_None;
 }
 
 void BeginNodeEditor()
