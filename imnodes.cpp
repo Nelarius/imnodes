@@ -527,12 +527,16 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
     // If the node is not already contained in the selection, then we want only
     // the interaction node to be selected, effective immediately.
     //
+    // If the multiple selection modifier is active, we want to add this node
+    // to the current list of selected nodes.
+    //
     // Otherwise, we want to allow for the possibility of multiple nodes to be
     // moved at once.
     if (!editor.SelectedNodeIndices.contains(node_idx))
     {
-        editor.SelectedNodeIndices.clear();
         editor.SelectedLinkIndices.clear();
+        if (!GImNodes->MultipleSelectModifier)
+            editor.SelectedNodeIndices.clear();
         editor.SelectedNodeIndices.push_back(node_idx);
 
         // Ensure that individually selected nodes get rendered on top
@@ -541,6 +545,28 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
         assert(elem != depth_stack.end());
         depth_stack.erase(elem);
         depth_stack.push_back(node_idx);
+    }
+    // Deselect a previously-selected node
+    else if (GImNodes->MultipleSelectModifier)
+    {
+        const int* const node_ptr = editor.SelectedNodeIndices.find(node_idx);
+        editor.SelectedNodeIndices.erase(node_ptr);
+
+        // Don't allow dragging after deselecting
+        editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
+    }
+
+    // To support snapping of multiple nodes, we need to store the offset of
+    // each node in the selection to the origin of the dragged node.
+    const ImVec2 ref_origin = editor.Nodes.Pool[node_idx].Origin;
+    editor.PrimaryNodeOffset = ref_origin + GImNodes->CanvasOriginScreenSpace + editor.Panning - GImNodes->MousePos;
+
+    editor.SelectedNodeOrigins.clear();
+    for (int idx = 0; idx < editor.SelectedNodeIndices.Size; idx++)
+    {
+        const int    node = editor.SelectedNodeIndices[idx];
+        const ImVec2 node_origin = editor.Nodes.Pool[node].Origin - ref_origin;
+        editor.SelectedNodeOrigins.push_back(node_origin);
     }
 }
 
@@ -705,18 +731,34 @@ void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
     }
 }
 
+ImVec2 SnapOriginToGrid(ImVec2 origin)
+{
+    if (GImNodes->Style.Flags & ImNodesStyleFlags_GridSnapping)
+    {
+        const float spacing = GImNodes->Style.GridSpacing;
+        const float spacing2 = spacing / 2.0f;
+        float modx = fmodf(fabsf(origin.x) + spacing2, spacing) - spacing2;
+        float mody = fmodf(fabsf(origin.y) + spacing2, spacing) - spacing2;
+        origin.x += (origin.x < 0.f) ? modx : -modx;
+        origin.y += (origin.y < 0.f) ? mody : -mody;
+    }
+
+    return origin;
+}
+
 void TranslateSelectedNodes(ImNodesEditorContext& editor)
 {
     if (GImNodes->LeftMouseDragging)
     {
-        const ImGuiIO& io = ImGui::GetIO();
+        const ImVec2 origin = SnapOriginToGrid(GImNodes->MousePos - GImNodes->CanvasOriginScreenSpace - editor.Panning + editor.PrimaryNodeOffset);
         for (int i = 0; i < editor.SelectedNodeIndices.size(); ++i)
         {
-            const int   node_idx = editor.SelectedNodeIndices[i];
-            ImNodeData& node = editor.Nodes.Pool[node_idx];
+            const ImVec2 node_rel = editor.SelectedNodeOrigins[i];
+            const int    node_idx = editor.SelectedNodeIndices[i];
+            ImNodeData&  node = editor.Nodes.Pool[node_idx];
             if (node.Draggable)
             {
-                node.Origin += io.MouseDelta;
+                node.Origin = origin + node_rel;
             }
         }
     }
@@ -1211,6 +1253,9 @@ inline ImRect GetNodeTitleRect(const ImNodeData& node)
 void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
 {
     const ImVec2 offset = editor.Panning;
+    ImU32 line_color = GImNodes->Style.Colors[ImNodesCol_GridLine];
+    ImU32 line_color_prim = GImNodes->Style.Colors[ImNodesCol_GridLinePrimary];
+    bool draw_primary = GImNodes->Style.Flags & ImNodesStyleFlags_GridLinesPrimary;
 
     for (float x = fmodf(offset.x, GImNodes->Style.GridSpacing); x < canvas_size.x;
          x += GImNodes->Style.GridSpacing)
@@ -1218,7 +1263,7 @@ void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
         GImNodes->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(x, 0.0f)),
             EditorSpaceToScreenSpace(ImVec2(x, canvas_size.y)),
-            GImNodes->Style.Colors[ImNodesCol_GridLine]);
+            offset.x - x == 0.f && draw_primary ? line_color_prim : line_color);
     }
 
     for (float y = fmodf(offset.y, GImNodes->Style.GridSpacing); y < canvas_size.y;
@@ -1227,7 +1272,7 @@ void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
         GImNodes->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(0.0f, y)),
             EditorSpaceToScreenSpace(ImVec2(canvas_size.x, y)),
-            GImNodes->Style.Colors[ImNodesCol_GridLine]);
+            offset.y - y == 0.f && draw_primary ? line_color_prim : line_color);
     }
 }
 
@@ -1610,6 +1655,8 @@ ImNodesIO::EmulateThreeButtonMouse::EmulateThreeButtonMouse() : Modifier(NULL) {
 
 ImNodesIO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : Modifier(NULL) {}
 
+ImNodesIO::MultipleSelectModifier::MultipleSelectModifier() : Modifier(NULL) {}
+
 ImNodesIO::ImNodesIO()
     : EmulateThreeButtonMouse(), LinkDetachWithModifierClick(),
       AltMouseButton(ImGuiMouseButton_Middle)
@@ -1617,7 +1664,7 @@ ImNodesIO::ImNodesIO()
 }
 
 ImNodesStyle::ImNodesStyle()
-    : GridSpacing(32.f), NodeCornerRounding(4.f), NodePaddingHorizontal(8.f),
+    : GridSpacing(24.f), NodeCornerRounding(4.f), NodePaddingHorizontal(8.f),
       NodePaddingVertical(8.f), NodeBorderThickness(1.f), LinkThickness(3.f),
       LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f), PinCircleRadius(4.f),
       PinQuadSideLength(7.f), PinTriangleSideLength(9.5), PinLineThickness(1.f),
@@ -1716,6 +1763,7 @@ void StyleColorsDark()
 
     GImNodes->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(40, 40, 50, 200);
     GImNodes->Style.Colors[ImNodesCol_GridLine] = IM_COL32(200, 200, 200, 40);
+    GImNodes->Style.Colors[ImNodesCol_GridLinePrimary] = IM_COL32(240, 240, 240, 60);
 }
 
 void StyleColorsClassic()
@@ -1736,6 +1784,7 @@ void StyleColorsClassic()
     GImNodes->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
     GImNodes->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(40, 40, 50, 200);
     GImNodes->Style.Colors[ImNodesCol_GridLine] = IM_COL32(200, 200, 200, 40);
+    GImNodes->Style.Colors[ImNodesCol_GridLinePrimary] = IM_COL32(240, 240, 240, 60);
 }
 
 void StyleColorsLight()
@@ -1759,6 +1808,7 @@ void StyleColorsLight()
     GImNodes->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
     GImNodes->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(225, 225, 225, 255);
     GImNodes->Style.Colors[ImNodesCol_GridLine] = IM_COL32(180, 180, 180, 100);
+    GImNodes->Style.Colors[ImNodesCol_GridLinePrimary] = IM_COL32(120, 120, 120, 100);
 }
 
 void BeginNodeEditor()
@@ -1788,15 +1838,18 @@ void BeginNodeEditor()
     GImNodes->MousePos = ImGui::GetIO().MousePos;
     GImNodes->LeftMouseClicked = ImGui::IsMouseClicked(0);
     GImNodes->LeftMouseReleased = ImGui::IsMouseReleased(0);
+    GImNodes->LeftMouseDragging = ImGui::IsMouseDragging(0, 0.0f);
     GImNodes->AltMouseClicked =
         (GImNodes->Io.EmulateThreeButtonMouse.Modifier != NULL &&
          *GImNodes->Io.EmulateThreeButtonMouse.Modifier && GImNodes->LeftMouseClicked) ||
         ImGui::IsMouseClicked(GImNodes->Io.AltMouseButton);
-    GImNodes->LeftMouseDragging = ImGui::IsMouseDragging(0, 0.0f);
     GImNodes->AltMouseDragging =
         (GImNodes->Io.EmulateThreeButtonMouse.Modifier != NULL && GImNodes->LeftMouseDragging &&
          (*GImNodes->Io.EmulateThreeButtonMouse.Modifier)) ||
         ImGui::IsMouseDragging(GImNodes->Io.AltMouseButton, 0.0f);
+    GImNodes->MultipleSelectModifier =
+        (GImNodes->Io.MultipleSelectModifier.Modifier != NULL ?
+         *GImNodes->Io.MultipleSelectModifier.Modifier : ImGui::GetIO().KeyCtrl);
 
     GImNodes->ActiveAttribute = false;
 
@@ -2513,7 +2566,7 @@ void NodeLineHandler(ImNodesEditorContext& editor, const char* const line)
     else if (sscanf(line, "origin=%i,%i", &x, &y) == 2)
     {
         ImNodeData& node = editor.Nodes.Pool[GImNodes->CurrentNodeIdx];
-        node.Origin = ImVec2((float)x, (float)y);
+        node.Origin = SnapOriginToGrid(ImVec2((float)x, (float)y));
     }
 }
 

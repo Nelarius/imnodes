@@ -26,6 +26,7 @@ enum ImNodesCol_
     ImNodesCol_BoxSelectorOutline,
     ImNodesCol_GridBackground,
     ImNodesCol_GridLine,
+    ImNodesCol_GridLinePrimary,
     ImNodesCol_COUNT
 };
 
@@ -51,7 +52,9 @@ enum ImNodesStyleFlags_
 {
     ImNodesStyleFlags_None = 0,
     ImNodesStyleFlags_NodeOutline = 1 << 0,
-    ImNodesStyleFlags_GridLines = 1 << 2
+    ImNodesStyleFlags_GridLines = 1 << 2,
+    ImNodesStyleFlags_GridLinesPrimary = 1 << 3,
+    ImNodesStyleFlags_GridSnapping = 1 << 4
 };
 
 enum ImNodesPinShape_
@@ -109,6 +112,21 @@ struct ImNodesIO
         // IsLinkDestroyed() after EndNodeEditor().
         const bool* Modifier;
     } LinkDetachWithModifierClick;
+
+    struct MultipleSelectModifier
+    {
+        MultipleSelectModifier();
+
+        // Pointer to a boolean value indicating when the desired modifier is pressed. Set to NULL
+        // by default. To enable the feature, set the modifier to point to a boolean indicating the
+        // state of a modifier. For example,
+        //
+        // ImNodes::GetIO().MultipleSelectModifier.Modifier = &ImGui::GetIO().KeyCtrl;
+        //
+        // Left-clicking a node with this modifier pressed will add the node to the list of currently
+        // selected nodes. If this value is NULL, the Ctrl key will be used.
+        const bool* Modifier;
+    } MultipleSelectModifier;
 
     // Holding alt mouse button pans the node area, by default middle mouse button will be used
     // Set based on ImGuiMouseButton values
