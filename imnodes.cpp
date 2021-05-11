@@ -632,8 +632,7 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
     const bool started_panning = GImNodes->AltMouseClicked;
 
     // Handle mini-map interactions
-    if (ImGui::IsWindowFocused() and
-        ImGui::IsMouseHoveringRect(GImNodes->MiniMapRectScreenSpace.Min, GImNodes->MiniMapRectScreenSpace.Max))
+    if (ImGui::IsMouseHoveringRect(GImNodes->MiniMapRectScreenSpace.Min, GImNodes->MiniMapRectScreenSpace.Max))
     {
         if (started_panning)
         {
@@ -1722,7 +1721,6 @@ static void MiniMapDrawNode(ImNodesEditorContext& editor,
     ImU32 mini_map_node_background;
 
     if (editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
-        ImGui::IsWindowFocused() &&
         ImGui::IsMouseHoveringRect(mini_map_node_min, mini_map_node_max))
     {
         mini_map_node_background = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
@@ -1818,7 +1816,6 @@ static void MiniMapUpdate()
 
     // NOTE: use normal background when panning (typically opaque)
     if (editor.ClickInteraction.Type != ImNodesClickInteractionType_MiniMapPanning &&
-        ImGui::IsWindowFocused() &&
         ImGui::IsMouseHoveringRect(mini_map_rect.Min, mini_map_rect.Max))
     {
         mini_map_background = GImNodes->Style.Colors[ImNodesCol_MiniMapBackgroundHovered];
