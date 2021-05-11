@@ -615,6 +615,8 @@ void BeginLinkCreation(ImNodesEditorContext& editor, const int hovered_pin_idx)
     GImNodes->ImNodesUIState |= ImNodesUIState_LinkStarted;
 }
 
+static inline bool IsMiniMapHovered();
+
 void BeginCanvasInteraction(ImNodesEditorContext& editor)
 {
     const bool any_ui_element_hovered =
@@ -632,7 +634,7 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
     const bool started_panning = GImNodes->AltMouseClicked;
 
     // Handle mini-map interactions
-    if (ImGui::IsMouseHoveringRect(GImNodes->MiniMapRectScreenSpace.Min, GImNodes->MiniMapRectScreenSpace.Max))
+    if (IsMiniMapHovered())
     {
         if (started_panning)
         {
@@ -1658,6 +1660,17 @@ void Shutdown(ImNodesContext* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
 
 // [SECTION] minimap
 
+static inline bool IsMiniMapActive()
+{
+    return GImNodes->MiniMapRectScreenSpace.GetWidth() > 0.f;
+}
+
+static inline bool IsMiniMapHovered()
+{
+    return IsMiniMapActive() &&
+           ImGui::IsMouseHoveringRect(GImNodes->MiniMapRectScreenSpace.Min, GImNodes->MiniMapRectScreenSpace.Max);
+}
+
 static inline ImRect ToMiniMapRect(const float minimap_size_fraction, const ImRect& editor_rect, const ImNodesMiniMapLocation location)
 {
     const ImVec2 editor_size(editor_rect.Max - editor_rect.Min);
@@ -1810,13 +1823,10 @@ static void MiniMapUpdate()
 {
     ImNodesEditorContext& editor = EditorContextGet();
 
-    const ImRect& mini_map_rect = GImNodes->MiniMapRectScreenSpace;
-
     ImU32 mini_map_background;
 
     // NOTE: use normal background when panning (typically opaque)
-    if (editor.ClickInteraction.Type != ImNodesClickInteractionType_MiniMapPanning &&
-        ImGui::IsMouseHoveringRect(mini_map_rect.Min, mini_map_rect.Max))
+    if (editor.ClickInteraction.Type != ImNodesClickInteractionType_MiniMapPanning && IsMiniMapHovered())
     {
         mini_map_background = GImNodes->Style.Colors[ImNodesCol_MiniMapBackgroundHovered];
     }
@@ -1830,6 +1840,8 @@ static void MiniMapUpdate()
     const ImVec2 editor_center(
         0.5f * (editor_rect.Min.x + editor_rect.Max.x),
         0.5f * (editor_rect.Min.y + editor_rect.Max.y));
+
+    const ImRect& mini_map_rect = GImNodes->MiniMapRectScreenSpace;
 
     const ImVec2 mini_map_center(
         0.5f * (mini_map_rect.Min.x + mini_map_rect.Max.x),
@@ -2157,7 +2169,10 @@ void EndNodeEditor()
     // Detect which UI element is being hovered over. Detection is done in a hierarchical fashion,
     // because a UI element being hovered excludes any other as being hovered over.
 
-    if (MouseInCanvas())
+    // Don't do hovering detection for nodes/links/pins when interacting with the mini-map, since
+    // its an *overlay* with its own interaction behavior and must have precedence during mouse interaction
+
+    if (MouseInCanvas() && !IsMiniMapHovered())
     {
         // Pins needs some special care. We need to check the depth stack to see which pins are
         // being occluded by other nodes.
@@ -2212,7 +2227,7 @@ void EndNodeEditor()
     }
 
     // Mini-map rect will be set with non-zero width if MiniMap(...) was called
-    if (GImNodes->MiniMapRectScreenSpace.GetWidth() > 0.f)
+    if (IsMiniMapActive())
     {
         MiniMapUpdate();
     }
