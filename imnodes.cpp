@@ -638,7 +638,7 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
         {
             editor.ClickInteraction.Type = ImNodesClickInteractionType_MiniMapPanning;
         }
-        else if (GImNodes->LeftMouseClicked)
+        else if (GImNodes->LeftMouseReleased)
         {
             editor.ClickInteraction.Type = ImNodesClickInteractionType_MiniMapSnapping;
         }
@@ -2206,7 +2206,7 @@ void EndNodeEditor()
     DrawListAppendClickInteractionChannel();
     DrawListActivateClickInteractionChannel();
 
-    if (GImNodes->LeftMouseClicked || GImNodes->AltMouseClicked || GImNodes->AltMouseScrollDelta != 0.f)
+    if (GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased || GImNodes->AltMouseClicked || GImNodes->AltMouseScrollDelta != 0.f)
     {
         BeginCanvasInteraction(editor);
     }
