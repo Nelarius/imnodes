@@ -187,6 +187,44 @@ style.colors[ImNodesCol_TitleBar] = IM_COL32(232, 27, 86, 255);
 style.colors[ImNodesCol_TitleBarSelected] = IM_COL32(241, 108, 146, 255);
 ```
 
+To handle quicker navigation of large graphs you can use an interactive mini-map overlay. The mini-map can be zoomed and scrolled. Editor nodes will track the panning of the mini-map accordingly.
+
+```cpp
+ImGui::Begin("node editor");
+
+ImNodes::BeginNodeEditor();
+
+// add nodes...
+
+// must be called right before EndNodeEditor
+ImNodes::MiniMap();
+ImNodes::EndNodeEditor();
+
+ImGui::End();
+```
+
+The relative sizing and corner location of the mini-map in the editor space can be specified like so:
+
+```cpp
+// MiniMap is a square region with a side length that is 20% the largest editor canvas dimension
+// See ImNodesMiniMapLocation_ for other corner locations
+ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
+```
+
+The mini-map also supports limited node hovering customization through a user-defined callback.
+```cpp
+// User callback
+void mini_map_node_hovering_callback(int node_id, void* user_data)
+{
+  ImGui::SetTooltip("This is node %d", node_id);
+}
+
+// Later on...
+ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight, mini_map_node_hovering_callback, custom_user_data);
+
+// 'custom_user_data' can be used to supply extra information needed for drawing within the callback
+```
+
 ## Known issues
 
 * `ImGui::Separator()` spans the current window span. As a result, using a separator inside a node will result in the separator spilling out of the node into the node editor grid.
