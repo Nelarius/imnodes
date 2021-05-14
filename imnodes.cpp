@@ -1194,7 +1194,7 @@ ImOptionalIndex ResolveHoveredLink(
                 // since we're not calling this function in the same scope as ImNodes::Link(). The
                 // rendered/detected link might have a different hover distance than what the user
                 // had specified when calling Link()
-                if (distance < GImNodes->Style.LinkHoverDistance)
+                if (distance < GImNodes->Style.LinkHoverDistance && distance < smallest_distance)
                 {
                     smallest_distance = distance;
                     link_idx_with_smallest_distance = idx;
