@@ -1014,7 +1014,12 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     break;
     case ImNodesClickInteractionType_MiniMapZooming:
     {
-        GImNodes->MiniMapZoom = fmax(0.05f, fmin(GImNodes->MiniMapZoom + 0.1f * GImNodes->MiniMapZoom * GImNodes->AltMouseScrollDelta, 1.f));
+        GImNodes->MiniMapZoom = fmax(
+            0.05f,
+            fmin(
+                GImNodes->MiniMapZoom +
+                    0.1f * GImNodes->MiniMapZoom * GImNodes->AltMouseScrollDelta,
+                1.f));
         editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
     }
     break;
@@ -1660,24 +1665,25 @@ void Shutdown(ImNodesContext* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
 
 // [SECTION] minimap
 
-static inline bool IsMiniMapActive()
-{
-    return GImNodes->MiniMapRectScreenSpace.GetWidth() > 0.f;
-}
+static inline bool IsMiniMapActive() { return GImNodes->MiniMapRectScreenSpace.GetWidth() > 0.f; }
 
 static inline bool IsMiniMapHovered()
 {
     return IsMiniMapActive() &&
-           ImGui::IsMouseHoveringRect(GImNodes->MiniMapRectScreenSpace.Min, GImNodes->MiniMapRectScreenSpace.Max);
+           ImGui::IsMouseHoveringRect(
+               GImNodes->MiniMapRectScreenSpace.Min, GImNodes->MiniMapRectScreenSpace.Max);
 }
 
-static inline ImRect ToMiniMapRect(const float minimap_size_fraction, const ImRect& editor_rect, const ImNodesMiniMapLocation location)
+static inline ImRect ToMiniMapRect(
+    const float                  minimap_size_fraction,
+    const ImRect&                editor_rect,
+    const ImNodesMiniMapLocation location)
 {
     const ImVec2 editor_size(editor_rect.Max - editor_rect.Min);
-    const float max_editor_coord = fmax(editor_size.x, editor_size.y);
-    const float mini_map_coord = minimap_size_fraction * max_editor_coord;
-    const float corner_offset_alpha = fmin(1.f - minimap_size_fraction, 0.1f);
-    const float corner_offset_coord = corner_offset_alpha * mini_map_coord;
+    const float  max_editor_coord = fmax(editor_size.x, editor_size.y);
+    const float  mini_map_coord = minimap_size_fraction * max_editor_coord;
+    const float  corner_offset_alpha = fmin(1.f - minimap_size_fraction, 0.1f);
+    const float  corner_offset_coord = corner_offset_alpha * mini_map_coord;
 
     // Compute the size of the mini-map area; lower bound with some reasonable size values
     const ImVec2 mini_map_size(mini_map_coord, mini_map_coord);
@@ -1687,36 +1693,40 @@ static inline ImRect ToMiniMapRect(const float minimap_size_fraction, const ImRe
 
     switch (location)
     {
-        case ImNodesMiniMapLocation_BottomRight:
-            return ImRect(editor_rect.Max - corner_offset - mini_map_size, editor_rect.Max - corner_offset);
-        case ImNodesMiniMapLocation_BottomLeft:
-            return ImRect(
-                ImVec2(editor_rect.Min.x + corner_offset.x,
-                       editor_rect.Max.y - corner_offset.y - mini_map_size.y),
-                ImVec2(editor_rect.Min.x + corner_offset.x + mini_map_size.x,
-                       editor_rect.Max.y - corner_offset.y)
-            );
-        case ImNodesMiniMapLocation_TopRight:
-            return ImRect(
-                ImVec2(editor_rect.Max.x - corner_offset.x - mini_map_size.x,
-                       editor_rect.Min.y + corner_offset.y),
-                ImVec2(editor_rect.Max.x - corner_offset.x,
-                       editor_rect.Min.y + corner_offset.y + mini_map_size.y)
-            );
-        case ImNodesMiniMapLocation_TopLeft:
-            // [[fallthrough]]
-        default:
-            // [[fallthrough]]
-            break;
+    case ImNodesMiniMapLocation_BottomRight:
+        return ImRect(
+            editor_rect.Max - corner_offset - mini_map_size, editor_rect.Max - corner_offset);
+    case ImNodesMiniMapLocation_BottomLeft:
+        return ImRect(
+            ImVec2(
+                editor_rect.Min.x + corner_offset.x,
+                editor_rect.Max.y - corner_offset.y - mini_map_size.y),
+            ImVec2(
+                editor_rect.Min.x + corner_offset.x + mini_map_size.x,
+                editor_rect.Max.y - corner_offset.y));
+    case ImNodesMiniMapLocation_TopRight:
+        return ImRect(
+            ImVec2(
+                editor_rect.Max.x - corner_offset.x - mini_map_size.x,
+                editor_rect.Min.y + corner_offset.y),
+            ImVec2(
+                editor_rect.Max.x - corner_offset.x,
+                editor_rect.Min.y + corner_offset.y + mini_map_size.y));
+    case ImNodesMiniMapLocation_TopLeft:
+        // [[fallthrough]]
+    default:
+        // [[fallthrough]]
+        break;
     }
     return ImRect(editor_rect.Min + corner_offset, editor_rect.Min + corner_offset + mini_map_size);
 }
 
-static void MiniMapDrawNode(ImNodesEditorContext& editor,
-                            const int node_idx,
-                            const ImVec2& editor_center,
-                            const ImVec2& mini_map_center,
-                            const float scaling)
+static void MiniMapDrawNode(
+    ImNodesEditorContext& editor,
+    const int             node_idx,
+    const ImVec2&         editor_center,
+    const ImVec2&         mini_map_center,
+    const float           scaling)
 {
     const ImNodeData& node = editor.Nodes.Pool[node_idx];
 
@@ -1741,11 +1751,13 @@ static void MiniMapDrawNode(ImNodesEditorContext& editor,
         // Run user callback when hovering a mini-map node
         if (GImNodes->MiniMapNodeHoveringCallback)
         {
-            GImNodes->MiniMapNodeHoveringCallback(node.Id, GImNodes->MiniMapNodeHoveringCallbackUserData);
+            GImNodes->MiniMapNodeHoveringCallback(
+                node.Id, GImNodes->MiniMapNodeHoveringCallbackUserData);
         }
 
         // Compute the amount to pan editor to center node selected in the minimap
-        GImNodes->MiniMapRectSnappingOffset = editor_center - (node.Rect.Min + node.Rect.Max) * 0.5f;
+        GImNodes->MiniMapRectSnappingOffset =
+            editor_center - (node.Rect.Min + node.Rect.Max) * 0.5f;
     }
     else if (editor.SelectedNodeIndices.contains(node_idx))
     {
@@ -1759,25 +1771,18 @@ static void MiniMapDrawNode(ImNodesEditorContext& editor,
     const ImU32 mini_map_node_outline = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline];
 
     GImNodes->CanvasDrawList->AddRectFilled(
-        mini_map_node_min,
-        mini_map_node_max,
-        mini_map_node_background,
-        mini_map_node_rounding
-    );
+        mini_map_node_min, mini_map_node_max, mini_map_node_background, mini_map_node_rounding);
 
     GImNodes->CanvasDrawList->AddRect(
-        mini_map_node_min,
-        mini_map_node_max,
-        mini_map_node_outline,
-        mini_map_node_rounding
-    );
+        mini_map_node_min, mini_map_node_max, mini_map_node_outline, mini_map_node_rounding);
 }
 
-static void MiniMapDrawLink(ImNodesEditorContext& editor,
-                            const int link_idx,
-                            const ImVec2& editor_center,
-                            const ImVec2& mini_map_center,
-                            const float scaling)
+static void MiniMapDrawLink(
+    ImNodesEditorContext& editor,
+    const int             link_idx,
+    const ImVec2&         editor_center,
+    const ImVec2&         mini_map_center,
+    const float           scaling)
 {
     const ImLinkData& link = editor.Links.Pool[link_idx];
     const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
@@ -1799,11 +1804,10 @@ static void MiniMapDrawLink(ImNodesEditorContext& editor,
         return;
     }
 
-    const ImU32 link_color = GImNodes->Style.Colors[
-        editor.SelectedLinkIndices.contains(link_idx) ?
-        ImNodesCol_MiniMapLinkSelected :
-        ImNodesCol_MiniMapLink
-    ];
+    const ImU32 link_color =
+        GImNodes->Style.Colors
+            [editor.SelectedLinkIndices.contains(link_idx) ? ImNodesCol_MiniMapLinkSelected
+                                                           : ImNodesCol_MiniMapLink];
 
 #if IMGUI_VERSION_NUM < 18000
     GImNodes->CanvasDrawList->AddBezierCurve(
@@ -1826,7 +1830,8 @@ static void MiniMapUpdate()
     ImU32 mini_map_background;
 
     // NOTE: use normal background when panning (typically opaque)
-    if (editor.ClickInteraction.Type != ImNodesClickInteractionType_MiniMapPanning && IsMiniMapHovered())
+    if (editor.ClickInteraction.Type != ImNodesClickInteractionType_MiniMapPanning &&
+        IsMiniMapHovered())
     {
         mini_map_background = GImNodes->Style.Colors[ImNodesCol_MiniMapBackgroundHovered];
     }
@@ -1849,17 +1854,14 @@ static void MiniMapUpdate()
 
     // Draw minimap background and border
     GImNodes->CanvasDrawList->AddRectFilled(
-        mini_map_rect.Min,
-        mini_map_rect.Max,
-        mini_map_background);
+        mini_map_rect.Min, mini_map_rect.Max, mini_map_background);
 
     GImNodes->CanvasDrawList->AddRect(
-        mini_map_rect.Min,
-        mini_map_rect.Max,
-        GImNodes->Style.Colors[ImNodesCol_MiniMapOutline]);
+        mini_map_rect.Min, mini_map_rect.Max, GImNodes->Style.Colors[ImNodesCol_MiniMapOutline]);
 
     // Clip draw list items to mini-map rect (after drawing background/outline)
-    GImNodes->CanvasDrawList->PushClipRect(mini_map_rect.Min, mini_map_rect.Max, true /* intersect with editor clip-rect */);
+    GImNodes->CanvasDrawList->PushClipRect(
+        mini_map_rect.Min, mini_map_rect.Max, true /* intersect with editor clip-rect */);
 
     // Get zoom scaling (0, 1]
     const float scaling = GImNodes->MiniMapZoom;
@@ -2015,10 +2017,12 @@ void StyleColorsDark()
     GImNodes->Style.Colors[ImNodesCol_MiniMapOutlineHovered] = IM_COL32(150, 150, 150, 200);
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackground] = IM_COL32(200, 200, 200, 100);
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered] = IM_COL32(200, 200, 200, 255);
-    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] =
+        GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline] = IM_COL32(200, 200, 200, 100);
     GImNodes->Style.Colors[ImNodesCol_MiniMapLink] = GImNodes->Style.Colors[ImNodesCol_Link];
-    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] = GImNodes->Style.Colors[ImNodesCol_LinkSelected];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] =
+        GImNodes->Style.Colors[ImNodesCol_LinkSelected];
 }
 
 void StyleColorsClassic()
@@ -2046,11 +2050,13 @@ void StyleColorsClassic()
     GImNodes->Style.Colors[ImNodesCol_MiniMapOutline] = IM_COL32(150, 150, 150, 100);
     GImNodes->Style.Colors[ImNodesCol_MiniMapOutlineHovered] = IM_COL32(150, 150, 150, 200);
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackground] = IM_COL32(200, 200, 200, 100);
-    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] =
+        GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] = IM_COL32(200, 200, 240, 255);
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline] = IM_COL32(200, 200, 200, 100);
     GImNodes->Style.Colors[ImNodesCol_MiniMapLink] = GImNodes->Style.Colors[ImNodesCol_Link];
-    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] = GImNodes->Style.Colors[ImNodesCol_LinkSelected];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] =
+        GImNodes->Style.Colors[ImNodesCol_LinkSelected];
 }
 
 void StyleColorsLight()
@@ -2081,11 +2087,13 @@ void StyleColorsLight()
     GImNodes->Style.Colors[ImNodesCol_MiniMapOutline] = IM_COL32(150, 150, 150, 100);
     GImNodes->Style.Colors[ImNodesCol_MiniMapOutlineHovered] = IM_COL32(150, 150, 150, 200);
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackground] = IM_COL32(200, 200, 200, 100);
-    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] =
+        GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] = IM_COL32(200, 200, 240, 255);
     GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline] = IM_COL32(200, 200, 200, 100);
     GImNodes->Style.Colors[ImNodesCol_MiniMapLink] = GImNodes->Style.Colors[ImNodesCol_Link];
-    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] = GImNodes->Style.Colors[ImNodesCol_LinkSelected];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] =
+        GImNodes->Style.Colors[ImNodesCol_LinkSelected];
 }
 
 void BeginNodeEditor()
@@ -2170,7 +2178,8 @@ void EndNodeEditor()
     // because a UI element being hovered excludes any other as being hovered over.
 
     // Don't do hovering detection for nodes/links/pins when interacting with the mini-map, since
-    // its an *overlay* with its own interaction behavior and must have precedence during mouse interaction
+    // its an *overlay* with its own interaction behavior and must have precedence during mouse
+    // interaction
 
     if (MouseInCanvas() && !IsMiniMapHovered())
     {
@@ -2221,7 +2230,8 @@ void EndNodeEditor()
     DrawListAppendClickInteractionChannel();
     DrawListActivateClickInteractionChannel();
 
-    if (GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased || GImNodes->AltMouseClicked || GImNodes->AltMouseScrollDelta != 0.f)
+    if (GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased || GImNodes->AltMouseClicked ||
+        GImNodes->AltMouseScrollDelta != 0.f)
     {
         BeginCanvasInteraction(editor);
     }
@@ -2256,10 +2266,11 @@ void EndNodeEditor()
     ImGui::EndGroup();
 }
 
-void MiniMap(const float minimap_size_fraction,
-             const ImNodesMiniMapLocation location,
-             const ImNodesMiniMapNodeHoveringCallback node_hovering_callback,
-             void* node_hovering_callback_data)
+void MiniMap(
+    const float                              minimap_size_fraction,
+    const ImNodesMiniMapLocation             location,
+    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback,
+    void*                                    node_hovering_callback_data)
 {
     // Check that editor size fraction is sane; must be in the range (0, 1]
     assert(minimap_size_fraction > 0.f && minimap_size_fraction <= 1.f);
@@ -2268,7 +2279,8 @@ void MiniMap(const float minimap_size_fraction,
     assert(GImNodes->CurrentScope == ImNodesScope_Editor);
 
     // Set the size of the mini map to the global state
-    GImNodes->MiniMapRectScreenSpace = ToMiniMapRect(minimap_size_fraction, GImNodes->CanvasRectScreenSpace, location);
+    GImNodes->MiniMapRectScreenSpace =
+        ToMiniMapRect(minimap_size_fraction, GImNodes->CanvasRectScreenSpace, location);
 
     // We'll know that the mini map is active if GImNodes->MiniMapRectScreenSpace specifies
     // a non-zero area (actually, just the width is checked for non-zero size)
