@@ -356,12 +356,12 @@ void DrawListSet(ImDrawList* window_draw_list) { GImNodes->CanvasDrawList = wind
 // |grid      |background|foreground|          |          |interaction
 // |          |          |          |          |          |          |
 // +----------+----------+----------+----------+----------+----------+
-//            |                     |
-//            |   submission idx    |
-//            |                     |
-//            -----------------------
+//            |                     |                     |
+//            |   submission idx    |...                  |
+//            |                     |                     |
+//            ---------------------------------------------
 
-void DrawListAddNode() { ImDrawListGrowChannels(GImNodes->CanvasDrawList, 2); }
+void DrawListAppendNodeChannels() { ImDrawListGrowChannels(GImNodes->CanvasDrawList, 2); }
 
 void DrawListAppendClickInteractionChannel()
 {
@@ -372,7 +372,7 @@ void DrawListAppendClickInteractionChannel()
 
 int DrawListSubmissionIdxToBackgroundChannelIdx(const int submission_idx)
 {
-    // NOTE: the first channel is the canvas background, i.e. the grid
+    // NOTE: the first channel is the canvas background
     return 1 + 2 * submission_idx;
 }
 
@@ -387,21 +387,22 @@ void DrawListActivateClickInteractionChannel()
         GImNodes->CanvasDrawList, GImNodes->CanvasDrawList->_Splitter._Count - 1);
 }
 
-void DrawListActivateCurrentNodeForeground()
-{
-    const int node_submission_idx = GImNodes->Nodes.size() - 1;
-    const int foreground_channel_idx =
-        DrawListSubmissionIdxToForegroundChannelIdx(node_submission_idx);
-    GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
-        GImNodes->CanvasDrawList, foreground_channel_idx);
-}
-
 void DrawListActivateNodeBackground(const int node_submission_idx)
 {
     const int background_channel_idx =
         DrawListSubmissionIdxToBackgroundChannelIdx(node_submission_idx);
+    assert(background_channel_idx < GImNodes->CanvasDrawList->_Splitter._Channels.size());
     GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
         GImNodes->CanvasDrawList, background_channel_idx);
+}
+
+void DrawListActivateNodeForeground(const int node_submission_idx)
+{
+    const int foreground_channel_idx =
+        DrawListSubmissionIdxToForegroundChannelIdx(node_submission_idx);
+    assert(foreground_channel_idx < GImNodes->CanvasDrawList->_Splitter._Channels.size());
+    GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
+        GImNodes->CanvasDrawList, foreground_channel_idx);
 }
 
 void DrawListSwapSubmissionIndices(const int lhs_idx, const int rhs_idx)
@@ -1702,11 +1703,11 @@ static void MiniMapDrawNodes(
     {
         const ImNodeDrawData& node = GImNodes->Nodes[idx];
 
-        const ImRect& node_rectangle(node.NodeRectangle);
-        const ImVec2 editor_node_offset(node_rectangle.Min - editor_center);
-        const ImVec2 mini_map_node_size((node_rectangle.Max - node_rectangle.Min) * scaling);
-        const ImVec2 mini_map_node_min(editor_node_offset * scaling + mini_map_center);
-        const ImVec2 mini_map_node_max(mini_map_node_min + mini_map_node_size);
+        const ImRect& node_rectangle = node.NodeRectangle;
+        const ImVec2  editor_node_offset(node_rectangle.Min - editor_center);
+        const ImVec2  mini_map_node_size((node_rectangle.Max - node_rectangle.Min) * scaling);
+        const ImVec2  mini_map_node_min(editor_node_offset * scaling + mini_map_center);
+        const ImVec2  mini_map_node_max(mini_map_node_min + mini_map_node_size);
 
         // Round to near whole pixel value for corner-rounding to prevent visual glitches
         const float mini_map_node_rounding = floor(node.LayoutStyle.CornerRounding * scaling);
@@ -1732,7 +1733,8 @@ static void MiniMapDrawNodes(
         }
         else if (editor.SelectedNodeIndices.contains(idx))
         {
-            // TODO: fixme (map selection rendering in minimap is probably broken here, idx <-> id confusion)
+            // TODO: fixme (map selection rendering in minimap is probably broken here, idx <-> id
+            // confusion)
             mini_map_node_background =
                 GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected];
         }
@@ -2270,8 +2272,8 @@ void BeginNode(const int node_id)
     }
 
     {
-        DrawListAddNode();
-        DrawListActivateCurrentNodeForeground();
+        DrawListAppendNodeChannels();
+        DrawListActivateNodeForeground(GImNodes->Nodes.size());
         GImNodes->Nodes.push_back(node);
     }
 
@@ -2281,8 +2283,7 @@ void BeginNode(const int node_id)
     // IMPLEMENTATION DETAIL: ImGui::SetCursorPos sets the cursor position, relative to the current
     // widget -- in this case the child object which was created in BeginNodeEditor(). We could also
     // use ImGui::SetCursorScreenSpacePos to set the cursor position in screen space directly.
-    ImGui::SetCursorPos(
-        GridSpaceToEditorSpace(editor, node.EditorSpacePosition + node.LayoutStyle.Padding));
+    ImGui::SetCursorPos(node.EditorSpacePosition + node.LayoutStyle.Padding);
 
     ImGui::PushID(node.Id);
     ImGui::BeginGroup();
