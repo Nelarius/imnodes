@@ -36,19 +36,18 @@ namespace
 {
 // [SECTION] bezier curve helpers
 
-struct BezierCurve
+struct CubicBezier
 {
-    // the curve control points
     ImVec2 P0, P1, P2, P3;
+    int    NumSegments;
 };
 
-struct LinkBezierData
-{
-    BezierCurve Bezier;
-    int         NumSegments;
-};
-
-inline ImVec2 EvalBezier(const float t, const BezierCurve& bc)
+inline ImVec2 EvalCubicBezier(
+    const float   t,
+    const ImVec2& P0,
+    const ImVec2& P1,
+    const ImVec2& P2,
+    const ImVec2& P3)
 {
     // B(t) = (1-t)**3 p0 + 3(1 - t)**2 t P1 + 3(1-t)t**2 P2 + t**3 P3
 
@@ -58,24 +57,21 @@ inline ImVec2 EvalBezier(const float t, const BezierCurve& bc)
     const float b2 = 3 * u * t * t;
     const float b3 = t * t * t;
     return ImVec2(
-        b0 * bc.P0.x + b1 * bc.P1.x + b2 * bc.P2.x + b3 * bc.P3.x,
-        b0 * bc.P0.y + b1 * bc.P1.y + b2 * bc.P2.y + b3 * bc.P3.y);
+        b0 * P0.x + b1 * P1.x + b2 * P2.x + b3 * P3.x,
+        b0 * P0.y + b1 * P1.y + b2 * P2.y + b3 * P3.y);
 }
 
 // Calculates the closest point along each bezier curve segment.
-ImVec2 GetClosestPointOnCubicBezier(
-    const int          num_segments,
-    const ImVec2&      p,
-    const BezierCurve& bezier)
+ImVec2 GetClosestPointOnCubicBezier(const int num_segments, const ImVec2& p, const CubicBezier& cb)
 {
     IM_ASSERT(num_segments > 0);
-    ImVec2 p_last = bezier.P0;
+    ImVec2 p_last = cb.P0;
     ImVec2 p_closest;
     float  p_closest_dist = FLT_MAX;
     float  t_step = 1.0f / (float)num_segments;
     for (int i = 1; i <= num_segments; ++i)
     {
-        ImVec2 p_current = EvalBezier(t_step * i, bezier);
+        ImVec2 p_current = EvalCubicBezier(t_step * i, cb.P0, cb.P1, cb.P2, cb.P3);
         ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
         float  dist = ImLengthSqr(p - p_line);
         if (dist < p_closest_dist)
@@ -90,31 +86,31 @@ ImVec2 GetClosestPointOnCubicBezier(
 
 inline float GetDistanceToCubicBezier(
     const ImVec2&      pos,
-    const BezierCurve& bezier,
+    const CubicBezier& cubic_bezier,
     const int          num_segments)
 {
-    const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(num_segments, pos, bezier);
+    const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(num_segments, pos, cubic_bezier);
 
     const ImVec2 to_curve = point_on_curve - pos;
     return ImSqrt(ImLengthSqr(to_curve));
 }
 
-inline ImRect GetContainingRectForBezierCurve(const BezierCurve& bezier)
+inline ImRect GetContainingRectForCubicBezier(const CubicBezier& cb)
 {
-    const ImVec2 min = ImVec2(ImMin(bezier.P0.x, bezier.P3.x), ImMin(bezier.P0.y, bezier.P3.y));
-    const ImVec2 max = ImVec2(ImMax(bezier.P0.x, bezier.P3.x), ImMax(bezier.P0.y, bezier.P3.y));
+    const ImVec2 min = ImVec2(ImMin(cb.P0.x, cb.P3.x), ImMin(cb.P0.y, cb.P3.y));
+    const ImVec2 max = ImVec2(ImMax(cb.P0.x, cb.P3.x), ImMax(cb.P0.y, cb.P3.y));
 
     const float hover_distance = GImNodes->Style.LinkHoverDistance;
 
     ImRect rect(min, max);
-    rect.Add(bezier.P1);
-    rect.Add(bezier.P2);
+    rect.Add(cb.P1);
+    rect.Add(cb.P2);
     rect.Expand(ImVec2(hover_distance, hover_distance));
 
     return rect;
 }
 
-inline LinkBezierData GetLinkRenderable(
+inline CubicBezier GetCubicBezier(
     ImVec2                     start,
     ImVec2                     end,
     const ImNodesAttributeType start_type,
@@ -127,15 +123,15 @@ inline LinkBezierData GetLinkRenderable(
         ImSwap(start, end);
     }
 
-    const float    link_length = ImSqrt(ImLengthSqr(end - start));
-    const ImVec2   offset = ImVec2(0.25f * link_length, 0.f);
-    LinkBezierData link_data;
-    link_data.Bezier.P0 = start;
-    link_data.Bezier.P1 = start + offset;
-    link_data.Bezier.P2 = end - offset;
-    link_data.Bezier.P3 = end;
-    link_data.NumSegments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
-    return link_data;
+    const float  link_length = ImSqrt(ImLengthSqr(end - start));
+    const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
+    CubicBezier  cubic_bezier;
+    cubic_bezier.P0 = start;
+    cubic_bezier.P1 = start + offset;
+    cubic_bezier.P2 = end - offset;
+    cubic_bezier.P3 = end;
+    cubic_bezier.NumSegments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
+    return cubic_bezier;
 }
 
 inline float EvalImplicitLineEq(const ImVec2& p1, const ImVec2& p2, const ImVec2& p)
@@ -194,13 +190,19 @@ inline bool RectangleOverlapsLineSegment(const ImRect& rect, const ImVec2& p1, c
     return abs(sum) != sum_abs;
 }
 
-inline bool RectangleOverlapsBezier(const ImRect& rectangle, const LinkBezierData& link_data)
+inline bool RectangleOverlapsBezier(const ImRect& rectangle, const CubicBezier& cubic_bezier)
 {
-    ImVec2      current = EvalBezier(0.f, link_data.Bezier);
-    const float dt = 1.0f / link_data.NumSegments;
-    for (int s = 0; s < link_data.NumSegments; ++s)
+    ImVec2 current =
+        EvalCubicBezier(0.f, cubic_bezier.P0, cubic_bezier.P1, cubic_bezier.P2, cubic_bezier.P3);
+    const float dt = 1.0f / cubic_bezier.NumSegments;
+    for (int s = 0; s < cubic_bezier.NumSegments; ++s)
     {
-        ImVec2 next = EvalBezier(static_cast<float>((s + 1) * dt), link_data.Bezier);
+        ImVec2 next = EvalCubicBezier(
+            static_cast<float>((s + 1) * dt),
+            cubic_bezier.P0,
+            cubic_bezier.P1,
+            cubic_bezier.P2,
+            cubic_bezier.P3);
         if (RectangleOverlapsLineSegment(rectangle, current, next))
         {
             return true;
@@ -242,9 +244,9 @@ inline bool RectangleOverlapsLink(
         // Second level of refinement: do a more expensive test against the
         // link
 
-        const LinkBezierData link_data =
-            GetLinkRenderable(start, end, start_type, GImNodes->Style.LinkLineSegmentsPerLength);
-        return RectangleOverlapsBezier(rectangle, link_data);
+        const CubicBezier cubic_bezier =
+            GetCubicBezier(start, end, start_type, GImNodes->Style.LinkLineSegmentsPerLength);
+        return RectangleOverlapsBezier(rectangle, cubic_bezier);
     }
 
     return false;
@@ -936,20 +938,20 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
                                          editor, editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()])
                                    : GImNodes->MousePos;
 
-        const LinkBezierData link_data = GetLinkRenderable(
+        const CubicBezier cubic_bezier = GetCubicBezier(
             start_pos, end_pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
 #if IMGUI_VERSION_NUM < 18000
         GImNodes->CanvasDrawList->AddBezierCurve(
 #else
         GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-            link_data.Bezier.P0,
-            link_data.Bezier.P1,
-            link_data.Bezier.P2,
-            link_data.Bezier.P3,
+            cubic_bezier.P0,
+            cubic_bezier.P1,
+            cubic_bezier.P2,
+            cubic_bezier.P3,
             GImNodes->Style.Colors[ImNodesCol_Link],
             GImNodes->Style.LinkThickness,
-            link_data.NumSegments);
+            cubic_bezier.NumSegments);
 
         const bool link_creation_on_snap =
             GImNodes->HoveredPinIdx.HasValue() &&
@@ -1182,22 +1184,22 @@ ImOptionalIndex ResolveHoveredLink(
             return idx;
         }
 
-        // TODO: the calculated LinkBezierDatas could be cached since we generate them again when
+        // TODO: the calculated CubicBeziers could be cached since we generate them again when
         // rendering the links
 
-        const LinkBezierData link_data = GetLinkRenderable(
+        const CubicBezier cubic_bezier = GetCubicBezier(
             start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
 
         // The distance test
         {
-            const ImRect link_rect = GetContainingRectForBezierCurve(link_data.Bezier);
+            const ImRect link_rect = GetContainingRectForCubicBezier(cubic_bezier);
 
             // First, do a simple bounding box test against the box containing the link
             // to see whether calculating the distance to the link is worth doing.
             if (link_rect.Contains(GImNodes->MousePos))
             {
                 const float distance = GetDistanceToCubicBezier(
-                    GImNodes->MousePos, link_data.Bezier, link_data.NumSegments);
+                    GImNodes->MousePos, cubic_bezier, cubic_bezier.NumSegments);
 
                 // TODO: GImNodes->Style.LinkHoverDistance could be also copied into ImLinkData,
                 // since we're not calling this function in the same scope as ImNodes::Link(). The
@@ -1539,7 +1541,7 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
     const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
     const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
 
-    const LinkBezierData link_data = GetLinkRenderable(
+    const CubicBezier cubic_bezier = GetCubicBezier(
         start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
 
     const bool link_hovered =
@@ -1580,13 +1582,13 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
 #else
     GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-        link_data.Bezier.P0,
-        link_data.Bezier.P1,
-        link_data.Bezier.P2,
-        link_data.Bezier.P3,
+        cubic_bezier.P0,
+        cubic_bezier.P1,
+        cubic_bezier.P2,
+        cubic_bezier.P3,
         link_color,
         GImNodes->Style.LinkThickness,
-        link_data.NumSegments);
+        cubic_bezier.NumSegments);
 }
 
 void BeginPinAttribute(
@@ -1792,7 +1794,7 @@ static void MiniMapDrawLink(
     const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
     const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
 
-    const LinkBezierData link_data = GetLinkRenderable(
+    const CubicBezier cubic_bezier = GetCubicBezier(
         (start_pin.Pos - editor_center) * scaling + mini_map_center,
         (end_pin.Pos - editor_center) * scaling + mini_map_center,
         start_pin.Type,
@@ -1818,13 +1820,13 @@ static void MiniMapDrawLink(
 #else
     GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-        link_data.Bezier.P0,
-        link_data.Bezier.P1,
-        link_data.Bezier.P2,
-        link_data.Bezier.P3,
+        cubic_bezier.P0,
+        cubic_bezier.P1,
+        cubic_bezier.P2,
+        cubic_bezier.P3,
         link_color,
         GImNodes->Style.LinkThickness * scaling,
-        link_data.NumSegments);
+        cubic_bezier.NumSegments);
 }
 
 static void MiniMapUpdate()
