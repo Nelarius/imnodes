@@ -7,6 +7,7 @@ typedef int ImNodesStyleVar;       // -> enum ImNodesStyleVar_
 typedef int ImNodesStyleFlags;     // -> enum ImNodesStyleFlags_
 typedef int ImNodesPinShape;       // -> enum ImNodesPinShape_
 typedef int ImNodesAttributeFlags; // -> enum ImNodesAttributeFlags_
+typedef int ImNodesMiniMapLocation;// -> enum ImNodesMiniMapLocation_
 
 enum ImNodesCol_
 {
@@ -26,6 +27,16 @@ enum ImNodesCol_
     ImNodesCol_BoxSelectorOutline,
     ImNodesCol_GridBackground,
     ImNodesCol_GridLine,
+    ImNodesCol_MiniMapBackground,
+    ImNodesCol_MiniMapBackgroundHovered,
+    ImNodesCol_MiniMapOutline,
+    ImNodesCol_MiniMapOutlineHovered,
+    ImNodesCol_MiniMapNodeBackground,
+    ImNodesCol_MiniMapNodeBackgroundHovered,
+    ImNodesCol_MiniMapNodeBackgroundSelected,
+    ImNodesCol_MiniMapNodeOutline,
+    ImNodesCol_MiniMapLink,
+    ImNodesCol_MiniMapLinkSelected,
     ImNodesCol_COUNT
 };
 
@@ -159,6 +170,14 @@ struct ImNodesStyle
     ImNodesStyle();
 };
 
+enum ImNodesMiniMapLocation_
+{
+    ImNodesMiniMapLocation_BottomLeft,
+    ImNodesMiniMapLocation_BottomRight,
+    ImNodesMiniMapLocation_TopLeft,
+    ImNodesMiniMapLocation_TopRight,
+};
+
 struct ImGuiContext;
 struct ImVec2;
 
@@ -170,6 +189,9 @@ struct ImNodesContext;
 // By default, the library creates an editor context behind the scenes, so using any of the imnodes
 // functions doesn't require you to explicitly create a context.
 struct ImNodesEditorContext;
+
+// Callback type used to specify special behavior when hovering a node in the minimap
+typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
 
 namespace ImNodes
 {
@@ -202,6 +224,13 @@ void StyleColorsLight();
 // will result the node editor grid workspace being rendered.
 void BeginNodeEditor();
 void EndNodeEditor();
+
+// Add a navigable minimap to the editor; call before EndNodeEditor after all
+// nodes and links have been specified
+void MiniMap(const float minimap_size_fraction = 0.2f,
+             const ImNodesMiniMapLocation location = ImNodesMiniMapLocation_TopLeft,
+             const ImNodesMiniMapNodeHoveringCallback node_hovering_callback = NULL,
+             void* node_hovering_callback_data = NULL);
 
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
 void PushColorStyle(ImNodesCol item, unsigned int color);

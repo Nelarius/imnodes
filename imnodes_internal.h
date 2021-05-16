@@ -58,6 +58,9 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_LinkCreation,
     ImNodesClickInteractionType_Panning,
     ImNodesClickInteractionType_BoxSelection,
+    ImNodesClickInteractionType_MiniMapPanning,
+    ImNodesClickInteractionType_MiniMapZooming,
+    ImNodesClickInteractionType_MiniMapSnapping,
     ImNodesClickInteractionType_None
 };
 
@@ -66,6 +69,9 @@ enum ImNodesLinkCreationType_
     ImNodesLinkCreationType_Standard,
     ImNodesLinkCreationType_FromDetach
 };
+
+// Callback type used to specify special behavior when hovering a node in the minimap
+typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
 
 // [SECTION] internal data structures
 
@@ -293,6 +299,13 @@ struct ImNodesContext
     ImVec2 CanvasOriginScreenSpace;
     ImRect CanvasRectScreenSpace;
 
+    // MiniMap state
+    ImRect MiniMapRectScreenSpace;
+    ImVec2 MiniMapRectSnappingOffset;
+    float MiniMapZoom;
+    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
+    void* MiniMapNodeHoveringCallbackUserData;
+
     // Debug helpers
     ImNodesScope CurrentScope;
 
@@ -345,6 +358,7 @@ struct ImNodesContext
     bool AltMouseClicked;
     bool LeftMouseDragging;
     bool AltMouseDragging;
+    float AltMouseScrollDelta;
 };
 
 namespace ImNodes

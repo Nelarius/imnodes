@@ -40,42 +40,42 @@ namespace
 {
 // [SECTION] bezier curve helpers
 
-struct BezierCurve
+struct CubicBezier
 {
-    // the curve control points
     ImVec2 P0, P1, P2, P3;
+    int    NumSegments;
 };
 
-struct LinkBezierData
-{
-    BezierCurve Bezier;
-    int         NumSegments;
-};
-
-inline ImVec2 EvalBezier(float t, const BezierCurve& bezier)
+inline ImVec2 EvalCubicBezier(
+    const float   t,
+    const ImVec2& P0,
+    const ImVec2& P1,
+    const ImVec2& P2,
+    const ImVec2& P3)
 {
     // B(t) = (1-t)**3 p0 + 3(1 - t)**2 t P1 + 3(1-t)t**2 P2 + t**3 P3
+
+    const float u = 1.0f - t;
+    const float b0 = u * u * u;
+    const float b1 = 3 * u * u * t;
+    const float b2 = 3 * u * t * t;
+    const float b3 = t * t * t;
     return ImVec2(
-        (1 - t) * (1 - t) * (1 - t) * bezier.P0.x + 3 * (1 - t) * (1 - t) * t * bezier.P1.x +
-            3 * (1 - t) * t * t * bezier.P2.x + t * t * t * bezier.P3.x,
-        (1 - t) * (1 - t) * (1 - t) * bezier.P0.y + 3 * (1 - t) * (1 - t) * t * bezier.P1.y +
-            3 * (1 - t) * t * t * bezier.P2.y + t * t * t * bezier.P3.y);
+        b0 * P0.x + b1 * P1.x + b2 * P2.x + b3 * P3.x,
+        b0 * P0.y + b1 * P1.y + b2 * P2.y + b3 * P3.y);
 }
 
 // Calculates the closest point along each bezier curve segment.
-ImVec2 GetClosestPointOnCubicBezier(
-    const int          num_segments,
-    const ImVec2&      p,
-    const BezierCurve& bezier)
+ImVec2 GetClosestPointOnCubicBezier(const int num_segments, const ImVec2& p, const CubicBezier& cb)
 {
     IM_ASSERT(num_segments > 0);
-    ImVec2 p_last = bezier.P0;
+    ImVec2 p_last = cb.P0;
     ImVec2 p_closest;
     float  p_closest_dist = FLT_MAX;
     float  t_step = 1.0f / (float)num_segments;
     for (int i = 1; i <= num_segments; ++i)
     {
-        ImVec2 p_current = EvalBezier(t_step * i, bezier);
+        ImVec2 p_current = EvalCubicBezier(t_step * i, cb.P0, cb.P1, cb.P2, cb.P3);
         ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
         float  dist = ImLengthSqr(p - p_line);
         if (dist < p_closest_dist)
@@ -90,31 +90,31 @@ ImVec2 GetClosestPointOnCubicBezier(
 
 inline float GetDistanceToCubicBezier(
     const ImVec2&      pos,
-    const BezierCurve& bezier,
+    const CubicBezier& cubic_bezier,
     const int          num_segments)
 {
-    const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(num_segments, pos, bezier);
+    const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(num_segments, pos, cubic_bezier);
 
     const ImVec2 to_curve = point_on_curve - pos;
     return ImSqrt(ImLengthSqr(to_curve));
 }
 
-inline ImRect GetContainingRectForBezierCurve(const BezierCurve& bezier)
+inline ImRect GetContainingRectForCubicBezier(const CubicBezier& cb)
 {
-    const ImVec2 min = ImVec2(ImMin(bezier.P0.x, bezier.P3.x), ImMin(bezier.P0.y, bezier.P3.y));
-    const ImVec2 max = ImVec2(ImMax(bezier.P0.x, bezier.P3.x), ImMax(bezier.P0.y, bezier.P3.y));
+    const ImVec2 min = ImVec2(ImMin(cb.P0.x, cb.P3.x), ImMin(cb.P0.y, cb.P3.y));
+    const ImVec2 max = ImVec2(ImMax(cb.P0.x, cb.P3.x), ImMax(cb.P0.y, cb.P3.y));
 
     const float hover_distance = GImNodes->Style.LinkHoverDistance;
 
     ImRect rect(min, max);
-    rect.Add(bezier.P1);
-    rect.Add(bezier.P2);
+    rect.Add(cb.P1);
+    rect.Add(cb.P2);
     rect.Expand(ImVec2(hover_distance, hover_distance));
 
     return rect;
 }
 
-inline LinkBezierData GetLinkRenderable(
+inline CubicBezier GetCubicBezier(
     ImVec2                     start,
     ImVec2                     end,
     const ImNodesAttributeType start_type,
@@ -127,15 +127,15 @@ inline LinkBezierData GetLinkRenderable(
         ImSwap(start, end);
     }
 
-    const float    link_length = ImSqrt(ImLengthSqr(end - start));
-    const ImVec2   offset = ImVec2(0.25f * link_length, 0.f);
-    LinkBezierData link_data;
-    link_data.Bezier.P0 = start;
-    link_data.Bezier.P1 = start + offset;
-    link_data.Bezier.P2 = end - offset;
-    link_data.Bezier.P3 = end;
-    link_data.NumSegments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
-    return link_data;
+    const float  link_length = ImSqrt(ImLengthSqr(end - start));
+    const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
+    CubicBezier  cubic_bezier;
+    cubic_bezier.P0 = start;
+    cubic_bezier.P1 = start + offset;
+    cubic_bezier.P2 = end - offset;
+    cubic_bezier.P3 = end;
+    cubic_bezier.NumSegments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
+    return cubic_bezier;
 }
 
 inline float EvalImplicitLineEq(const ImVec2& p1, const ImVec2& p2, const ImVec2& p)
@@ -194,13 +194,19 @@ inline bool RectangleOverlapsLineSegment(const ImRect& rect, const ImVec2& p1, c
     return abs(sum) != sum_abs;
 }
 
-inline bool RectangleOverlapsBezier(const ImRect& rectangle, const LinkBezierData& link_data)
+inline bool RectangleOverlapsBezier(const ImRect& rectangle, const CubicBezier& cubic_bezier)
 {
-    ImVec2      current = EvalBezier(0.f, link_data.Bezier);
-    const float dt = 1.0f / link_data.NumSegments;
-    for (int s = 0; s < link_data.NumSegments; ++s)
+    ImVec2 current =
+        EvalCubicBezier(0.f, cubic_bezier.P0, cubic_bezier.P1, cubic_bezier.P2, cubic_bezier.P3);
+    const float dt = 1.0f / cubic_bezier.NumSegments;
+    for (int s = 0; s < cubic_bezier.NumSegments; ++s)
     {
-        ImVec2 next = EvalBezier(static_cast<float>((s + 1) * dt), link_data.Bezier);
+        ImVec2 next = EvalCubicBezier(
+            static_cast<float>((s + 1) * dt),
+            cubic_bezier.P0,
+            cubic_bezier.P1,
+            cubic_bezier.P2,
+            cubic_bezier.P3);
         if (RectangleOverlapsLineSegment(rectangle, current, next))
         {
             return true;
@@ -242,9 +248,9 @@ inline bool RectangleOverlapsLink(
         // Second level of refinement: do a more expensive test against the
         // link
 
-        const LinkBezierData link_data =
-            GetLinkRenderable(start, end, start_type, GImNodes->Style.LinkLineSegmentsPerLength);
-        return RectangleOverlapsBezier(rectangle, link_data);
+        const CubicBezier cubic_bezier =
+            GetCubicBezier(start, end, start_type, GImNodes->Style.LinkLineSegmentsPerLength);
+        return RectangleOverlapsBezier(rectangle, cubic_bezier);
     }
 
     return false;
@@ -609,6 +615,8 @@ void BeginLinkCreation(ImNodesEditorContext& editor, const int hovered_pin_idx)
     GImNodes->ImNodesUIState |= ImNodesUIState_LinkStarted;
 }
 
+static inline bool IsMiniMapHovered();
+
 void BeginCanvasInteraction(ImNodesEditorContext& editor)
 {
     const bool any_ui_element_hovered =
@@ -625,14 +633,34 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
 
     const bool started_panning = GImNodes->AltMouseClicked;
 
-    if (started_panning)
+    // Handle mini-map interactions
+    if (IsMiniMapHovered())
     {
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_Panning;
+        if (started_panning)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_MiniMapPanning;
+        }
+        else if (GImNodes->LeftMouseReleased)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_MiniMapSnapping;
+        }
+        else if (GImNodes->AltMouseScrollDelta != 0.f)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_MiniMapZooming;
+        }
     }
-    else if (GImNodes->LeftMouseClicked)
+    // Handle normal editor interactions
+    else
     {
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_BoxSelection;
-        editor.ClickInteraction.BoxSelector.Rect.Min = GImNodes->MousePos;
+        if (started_panning)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_Panning;
+        }
+        else if (GImNodes->LeftMouseClicked)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_BoxSelection;
+            editor.ClickInteraction.BoxSelector.Rect.Min = GImNodes->MousePos;
+        }
     }
 }
 
@@ -904,20 +932,20 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
                                          editor, editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()])
                                    : GImNodes->MousePos;
 
-        const LinkBezierData link_data = GetLinkRenderable(
+        const CubicBezier cubic_bezier = GetCubicBezier(
             start_pos, end_pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
 #if IMGUI_VERSION_NUM < 18000
         GImNodes->CanvasDrawList->AddBezierCurve(
 #else
         GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-            link_data.Bezier.P0,
-            link_data.Bezier.P1,
-            link_data.Bezier.P2,
-            link_data.Bezier.P3,
+            cubic_bezier.P0,
+            cubic_bezier.P1,
+            cubic_bezier.P2,
+            cubic_bezier.P3,
             GImNodes->Style.Colors[ImNodesCol_Link],
             GImNodes->Style.LinkThickness,
-            link_data.NumSegments);
+            cubic_bezier.NumSegments);
 
         const bool link_creation_on_snap =
             GImNodes->HoveredPinIdx.HasValue() &&
@@ -968,6 +996,39 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
         {
             editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
         }
+    }
+    break;
+    case ImNodesClickInteractionType_MiniMapPanning:
+    {
+        const bool dragging = GImNodes->AltMouseDragging;
+
+        if (dragging)
+        {
+            editor.Panning += ImGui::GetIO().MouseDelta / GImNodes->MiniMapZoom;
+        }
+        else
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
+        }
+    }
+    break;
+    case ImNodesClickInteractionType_MiniMapZooming:
+    {
+        GImNodes->MiniMapZoom = fmax(
+            0.05f,
+            fmin(
+                GImNodes->MiniMapZoom +
+                    0.1f * GImNodes->MiniMapZoom * GImNodes->AltMouseScrollDelta,
+                1.f));
+        editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
+    }
+    break;
+    case ImNodesClickInteractionType_MiniMapSnapping:
+    {
+        editor.Panning += GImNodes->MiniMapRectSnappingOffset;
+        GImNodes->MiniMapRectSnappingOffset = ImVec2(0.f, 0.f);
+
+        editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
     }
     break;
     case ImNodesClickInteractionType_None:
@@ -1126,28 +1187,28 @@ ImOptionalIndex ResolveHoveredLink(
             return idx;
         }
 
-        // TODO: the calculated LinkBezierDatas could be cached since we generate them again when
+        // TODO: the calculated CubicBeziers could be cached since we generate them again when
         // rendering the links
 
-        const LinkBezierData link_data = GetLinkRenderable(
+        const CubicBezier cubic_bezier = GetCubicBezier(
             start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
 
         // The distance test
         {
-            const ImRect link_rect = GetContainingRectForBezierCurve(link_data.Bezier);
+            const ImRect link_rect = GetContainingRectForCubicBezier(cubic_bezier);
 
             // First, do a simple bounding box test against the box containing the link
             // to see whether calculating the distance to the link is worth doing.
             if (link_rect.Contains(GImNodes->MousePos))
             {
                 const float distance = GetDistanceToCubicBezier(
-                    GImNodes->MousePos, link_data.Bezier, link_data.NumSegments);
+                    GImNodes->MousePos, cubic_bezier, cubic_bezier.NumSegments);
 
                 // TODO: GImNodes->Style.LinkHoverDistance could be also copied into ImLinkData,
                 // since we're not calling this function in the same scope as ImNodes::Link(). The
                 // rendered/detected link might have a different hover distance than what the user
                 // had specified when calling Link()
-                if (distance < GImNodes->Style.LinkHoverDistance)
+                if (distance < GImNodes->Style.LinkHoverDistance && distance < smallest_distance)
                 {
                     smallest_distance = distance;
                     link_idx_with_smallest_distance = idx;
@@ -1436,7 +1497,7 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
     const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
     const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
 
-    const LinkBezierData link_data = GetLinkRenderable(
+    const CubicBezier cubic_bezier = GetCubicBezier(
         start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
 
     const bool link_hovered =
@@ -1477,13 +1538,13 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
 #else
     GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-        link_data.Bezier.P0,
-        link_data.Bezier.P1,
-        link_data.Bezier.P2,
-        link_data.Bezier.P3,
+        cubic_bezier.P0,
+        cubic_bezier.P1,
+        cubic_bezier.P2,
+        cubic_bezier.P3,
         link_color,
         GImNodes->Style.LinkThickness,
-        link_data.NumSegments);
+        cubic_bezier.NumSegments);
 }
 
 void BeginPinAttribute(
@@ -1553,6 +1614,12 @@ void Initialize(ImNodesContext* context)
     context->CanvasRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
     context->CurrentScope = ImNodesScope_None;
 
+    context->MiniMapRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
+    context->MiniMapRectSnappingOffset = ImVec2(0.f, 0.f);
+    context->MiniMapZoom = 0.1f;
+    context->MiniMapNodeHoveringCallback = NULL;
+    context->MiniMapNodeHoveringCallbackUserData = NULL;
+
     context->CurrentPinIdx = INT_MAX;
     context->CurrentNodeIdx = INT_MAX;
 
@@ -1566,6 +1633,238 @@ void Initialize(ImNodesContext* context)
 }
 
 void Shutdown(ImNodesContext* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
+
+// [SECTION] minimap
+
+static inline bool IsMiniMapActive() { return GImNodes->MiniMapRectScreenSpace.GetWidth() > 0.f; }
+
+static inline bool IsMiniMapHovered()
+{
+    return IsMiniMapActive() &&
+           ImGui::IsMouseHoveringRect(
+               GImNodes->MiniMapRectScreenSpace.Min, GImNodes->MiniMapRectScreenSpace.Max);
+}
+
+static inline ImRect ToMiniMapRect(
+    const float                  minimap_size_fraction,
+    const ImRect&                editor_rect,
+    const ImNodesMiniMapLocation location)
+{
+    const ImVec2 editor_size(editor_rect.Max - editor_rect.Min);
+    const float  max_editor_coord = fmax(editor_size.x, editor_size.y);
+    const float  mini_map_coord = minimap_size_fraction * max_editor_coord;
+    const float  corner_offset_alpha = fmin(1.f - minimap_size_fraction, 0.1f);
+    const float  corner_offset_coord = corner_offset_alpha * mini_map_coord;
+
+    // Compute the size of the mini-map area; lower bound with some reasonable size values
+    const ImVec2 mini_map_size(mini_map_coord, mini_map_coord);
+
+    // Corner offset from editor context
+    const ImVec2 corner_offset(corner_offset_coord, corner_offset_coord);
+
+    switch (location)
+    {
+    case ImNodesMiniMapLocation_BottomRight:
+        return ImRect(
+            editor_rect.Max - corner_offset - mini_map_size, editor_rect.Max - corner_offset);
+    case ImNodesMiniMapLocation_BottomLeft:
+        return ImRect(
+            ImVec2(
+                editor_rect.Min.x + corner_offset.x,
+                editor_rect.Max.y - corner_offset.y - mini_map_size.y),
+            ImVec2(
+                editor_rect.Min.x + corner_offset.x + mini_map_size.x,
+                editor_rect.Max.y - corner_offset.y));
+    case ImNodesMiniMapLocation_TopRight:
+        return ImRect(
+            ImVec2(
+                editor_rect.Max.x - corner_offset.x - mini_map_size.x,
+                editor_rect.Min.y + corner_offset.y),
+            ImVec2(
+                editor_rect.Max.x - corner_offset.x,
+                editor_rect.Min.y + corner_offset.y + mini_map_size.y));
+    case ImNodesMiniMapLocation_TopLeft:
+        // [[fallthrough]]
+    default:
+        // [[fallthrough]]
+        break;
+    }
+    return ImRect(editor_rect.Min + corner_offset, editor_rect.Min + corner_offset + mini_map_size);
+}
+
+static void MiniMapDrawNode(
+    ImNodesEditorContext& editor,
+    const int             node_idx,
+    const ImVec2&         editor_center,
+    const ImVec2&         mini_map_center,
+    const float           scaling)
+{
+    const ImNodeData& node = editor.Nodes.Pool[node_idx];
+
+    const ImVec2 editor_node_offset(node.Rect.Min - editor_center);
+
+    const ImVec2 mini_map_node_size((node.Rect.Max - node.Rect.Min) * scaling);
+
+    const ImVec2 mini_map_node_min(editor_node_offset * scaling + mini_map_center);
+
+    const ImVec2 mini_map_node_max(mini_map_node_min + mini_map_node_size);
+
+    // Round to near whole pixel value for corner-rounding to prevent visual glitches
+    const float mini_map_node_rounding = floor(node.LayoutStyle.CornerRounding * scaling);
+
+    ImU32 mini_map_node_background;
+
+    if (editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
+        ImGui::IsMouseHoveringRect(mini_map_node_min, mini_map_node_max))
+    {
+        mini_map_node_background = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
+
+        // Run user callback when hovering a mini-map node
+        if (GImNodes->MiniMapNodeHoveringCallback)
+        {
+            GImNodes->MiniMapNodeHoveringCallback(
+                node.Id, GImNodes->MiniMapNodeHoveringCallbackUserData);
+        }
+
+        // Compute the amount to pan editor to center node selected in the minimap
+        GImNodes->MiniMapRectSnappingOffset =
+            editor_center - (node.Rect.Min + node.Rect.Max) * 0.5f;
+    }
+    else if (editor.SelectedNodeIndices.contains(node_idx))
+    {
+        mini_map_node_background = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected];
+    }
+    else
+    {
+        mini_map_node_background = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackground];
+    }
+
+    const ImU32 mini_map_node_outline = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline];
+
+    GImNodes->CanvasDrawList->AddRectFilled(
+        mini_map_node_min, mini_map_node_max, mini_map_node_background, mini_map_node_rounding);
+
+    GImNodes->CanvasDrawList->AddRect(
+        mini_map_node_min, mini_map_node_max, mini_map_node_outline, mini_map_node_rounding);
+}
+
+static void MiniMapDrawLink(
+    ImNodesEditorContext& editor,
+    const int             link_idx,
+    const ImVec2&         editor_center,
+    const ImVec2&         mini_map_center,
+    const float           scaling)
+{
+    const ImLinkData& link = editor.Links.Pool[link_idx];
+    const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
+    const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
+
+    const CubicBezier cubic_bezier = GetCubicBezier(
+        (start_pin.Pos - editor_center) * scaling + mini_map_center,
+        (end_pin.Pos - editor_center) * scaling + mini_map_center,
+        start_pin.Type,
+        GImNodes->Style.LinkLineSegmentsPerLength / scaling);
+
+    // It's possible for a link to be deleted in begin_link_interaction. A user
+    // may detach a link, resulting in the link wire snapping to the mouse
+    // position.
+    //
+    // In other words, skip rendering the link if it was deleted.
+    if (GImNodes->DeletedLinkIdx == link_idx)
+    {
+        return;
+    }
+
+    const ImU32 link_color =
+        GImNodes->Style.Colors
+            [editor.SelectedLinkIndices.contains(link_idx) ? ImNodesCol_MiniMapLinkSelected
+                                                           : ImNodesCol_MiniMapLink];
+
+#if IMGUI_VERSION_NUM < 18000
+    GImNodes->CanvasDrawList->AddBezierCurve(
+#else
+    GImNodes->CanvasDrawList->AddBezierCubic(
+#endif
+        cubic_bezier.P0,
+        cubic_bezier.P1,
+        cubic_bezier.P2,
+        cubic_bezier.P3,
+        link_color,
+        GImNodes->Style.LinkThickness * scaling,
+        cubic_bezier.NumSegments);
+}
+
+static void MiniMapUpdate()
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+
+    ImU32 mini_map_background;
+
+    // NOTE: use normal background when panning (typically opaque)
+    if (editor.ClickInteraction.Type != ImNodesClickInteractionType_MiniMapPanning &&
+        IsMiniMapHovered())
+    {
+        mini_map_background = GImNodes->Style.Colors[ImNodesCol_MiniMapBackgroundHovered];
+    }
+    else
+    {
+        mini_map_background = GImNodes->Style.Colors[ImNodesCol_MiniMapBackground];
+    }
+
+    const ImRect& editor_rect = GImNodes->CanvasRectScreenSpace;
+
+    const ImVec2 editor_center(
+        0.5f * (editor_rect.Min.x + editor_rect.Max.x),
+        0.5f * (editor_rect.Min.y + editor_rect.Max.y));
+
+    const ImRect& mini_map_rect = GImNodes->MiniMapRectScreenSpace;
+
+    const ImVec2 mini_map_center(
+        0.5f * (mini_map_rect.Min.x + mini_map_rect.Max.x),
+        0.5f * (mini_map_rect.Min.y + mini_map_rect.Max.y));
+
+    // Draw minimap background and border
+    GImNodes->CanvasDrawList->AddRectFilled(
+        mini_map_rect.Min, mini_map_rect.Max, mini_map_background);
+
+    GImNodes->CanvasDrawList->AddRect(
+        mini_map_rect.Min, mini_map_rect.Max, GImNodes->Style.Colors[ImNodesCol_MiniMapOutline]);
+
+    // Clip draw list items to mini-map rect (after drawing background/outline)
+    GImNodes->CanvasDrawList->PushClipRect(
+        mini_map_rect.Min, mini_map_rect.Max, true /* intersect with editor clip-rect */);
+
+    // Get zoom scaling (0, 1]
+    const float scaling = GImNodes->MiniMapZoom;
+
+    // Draw links first so they appear under nodes, and we can use the same draw channel
+    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
+    {
+        if (editor.Links.InUse[link_idx])
+        {
+            MiniMapDrawLink(editor, link_idx, editor_center, mini_map_center, scaling);
+        }
+    }
+
+    for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
+    {
+        if (editor.Nodes.InUse[node_idx])
+        {
+            MiniMapDrawNode(editor, node_idx, editor_center, mini_map_center, scaling);
+        }
+    }
+
+    // Have to pop mini-map clip rect
+    GImNodes->CanvasDrawList->PopClipRect();
+
+    // Reset callback info after use
+    GImNodes->MiniMapNodeHoveringCallback = NULL;
+    GImNodes->MiniMapNodeHoveringCallbackUserData = NULL;
+
+    // Reset mini-map area so that it will disappear if MiniMap(...) is not called on the next frame
+    GImNodes->MiniMapRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
+}
+
 } // namespace
 } // namespace ImNodes
 
@@ -1685,6 +1984,20 @@ void StyleColorsDark()
 
     GImNodes->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(40, 40, 50, 200);
     GImNodes->Style.Colors[ImNodesCol_GridLine] = IM_COL32(200, 200, 200, 40);
+
+    // minimap colors
+    GImNodes->Style.Colors[ImNodesCol_MiniMapBackground] = IM_COL32(25, 25, 25, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapBackgroundHovered] = IM_COL32(25, 25, 25, 200);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapOutline] = IM_COL32(150, 150, 150, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapOutlineHovered] = IM_COL32(150, 150, 150, 200);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackground] = IM_COL32(200, 200, 200, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered] = IM_COL32(200, 200, 200, 255);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] =
+        GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline] = IM_COL32(200, 200, 200, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLink] = GImNodes->Style.Colors[ImNodesCol_Link];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] =
+        GImNodes->Style.Colors[ImNodesCol_LinkSelected];
 }
 
 void StyleColorsClassic()
@@ -1705,6 +2018,20 @@ void StyleColorsClassic()
     GImNodes->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(82, 82, 161, 255);
     GImNodes->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(40, 40, 50, 200);
     GImNodes->Style.Colors[ImNodesCol_GridLine] = IM_COL32(200, 200, 200, 40);
+
+    // minimap colors
+    GImNodes->Style.Colors[ImNodesCol_MiniMapBackground] = IM_COL32(25, 25, 25, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapBackgroundHovered] = IM_COL32(25, 25, 25, 200);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapOutline] = IM_COL32(150, 150, 150, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapOutlineHovered] = IM_COL32(150, 150, 150, 200);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackground] = IM_COL32(200, 200, 200, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] =
+        GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] = IM_COL32(200, 200, 240, 255);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline] = IM_COL32(200, 200, 200, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLink] = GImNodes->Style.Colors[ImNodesCol_Link];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] =
+        GImNodes->Style.Colors[ImNodesCol_LinkSelected];
 }
 
 void StyleColorsLight()
@@ -1728,7 +2055,20 @@ void StyleColorsLight()
     GImNodes->Style.Colors[ImNodesCol_BoxSelectorOutline] = IM_COL32(90, 170, 250, 150);
     GImNodes->Style.Colors[ImNodesCol_GridBackground] = IM_COL32(225, 225, 225, 255);
     GImNodes->Style.Colors[ImNodesCol_GridLine] = IM_COL32(180, 180, 180, 100);
-    GImNodes->Style.Flags = ImNodesStyleFlags_None;
+
+    // minimap colors
+    GImNodes->Style.Colors[ImNodesCol_MiniMapBackground] = IM_COL32(25, 25, 25, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapBackgroundHovered] = IM_COL32(25, 25, 25, 200);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapOutline] = IM_COL32(150, 150, 150, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapOutlineHovered] = IM_COL32(150, 150, 150, 200);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackground] = IM_COL32(200, 200, 200, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] =
+        GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected] = IM_COL32(200, 200, 240, 255);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapNodeOutline] = IM_COL32(200, 200, 200, 100);
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLink] = GImNodes->Style.Colors[ImNodesCol_Link];
+    GImNodes->Style.Colors[ImNodesCol_MiniMapLinkSelected] =
+        GImNodes->Style.Colors[ImNodesCol_LinkSelected];
 }
 
 void BeginNodeEditor()
@@ -1768,6 +2108,7 @@ void BeginNodeEditor()
         (GImNodes->Io.EmulateThreeButtonMouse.Modifier != NULL && GImNodes->LeftMouseDragging &&
          (*GImNodes->Io.EmulateThreeButtonMouse.Modifier)) ||
         ImGui::IsMouseDragging(GImNodes->Io.AltMouseButton, 0.0f);
+    GImNodes->AltMouseScrollDelta = ImGui::GetIO().MouseWheel;
 
     GImNodes->ActiveAttribute = false;
 
@@ -1814,7 +2155,11 @@ void EndNodeEditor()
     // Detect which UI element is being hovered over. Detection is done in a hierarchical fashion,
     // because a UI element being hovered excludes any other as being hovered over.
 
-    if (MouseInCanvas())
+    // Don't do hovering detection for nodes/links/pins when interacting with the mini-map, since
+    // its an *overlay* with its own interaction behavior and must have precedence during mouse
+    // interaction
+
+    if (MouseInCanvas() && !IsMiniMapHovered())
     {
         if (!GImNodes->HoveredPinIdx.HasValue())
         {
@@ -1834,9 +2179,16 @@ void EndNodeEditor()
     DrawListAppendClickInteractionChannel();
     DrawListActivateClickInteractionChannel();
 
-    if (GImNodes->LeftMouseClicked || GImNodes->AltMouseClicked)
+    if (GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased || GImNodes->AltMouseClicked ||
+        GImNodes->AltMouseScrollDelta != 0.f)
     {
         BeginCanvasInteraction(editor);
+    }
+
+    // Mini-map rect will be set with non-zero width if MiniMap(...) was called
+    if (IsMiniMapActive())
+    {
+        MiniMapUpdate();
     }
 
     ClickInteractionUpdate(editor);
@@ -1850,6 +2202,35 @@ void EndNodeEditor()
     ImGui::PopStyleVar();   // pop window padding
     ImGui::PopStyleVar();   // pop frame padding
     ImGui::EndGroup();
+}
+
+void MiniMap(
+    const float                              minimap_size_fraction,
+    const ImNodesMiniMapLocation             location,
+    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback,
+    void*                                    node_hovering_callback_data)
+{
+    // Check that editor size fraction is sane; must be in the range (0, 1]
+    assert(minimap_size_fraction > 0.f && minimap_size_fraction <= 1.f);
+
+    // Remember to call before EndNodeEditor
+    assert(GImNodes->CurrentScope == ImNodesScope_Editor);
+
+    // Set the size of the mini map to the global state
+    GImNodes->MiniMapRectScreenSpace =
+        ToMiniMapRect(minimap_size_fraction, GImNodes->CanvasRectScreenSpace, location);
+
+    // We'll know that the mini map is active if GImNodes->MiniMapRectScreenSpace specifies
+    // a non-zero area (actually, just the width is checked for non-zero size)
+
+    // Set node hovering callback information
+    GImNodes->MiniMapNodeHoveringCallback = node_hovering_callback;
+    GImNodes->MiniMapNodeHoveringCallbackUserData = node_hovering_callback_data;
+
+    // Actual drawing/updating of the MiniMap is done in EndNodeEditor so that
+    // mini map is draw over everything and all pin/link positions are updated
+    // correctly relative to their respective nodes. Hence, we must store some of
+    // of the state for the mini map in GImNodes for the actual drawing/updating
 }
 
 void BeginNode(const int node_id)
