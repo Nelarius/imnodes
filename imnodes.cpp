@@ -1229,7 +1229,7 @@ inline ImVec2 ScreenSpaceToGridSpace(const ImNodesEditorContext& editor, const I
     return v - GImNodes->CanvasOriginScreenSpace - editor.Panning;
 }
 
-static inline ImVec2 ScreenSpaceToGridSpace(const ImVec2& panning_offset, const ImVec2 p)
+static inline ImVec2 ScreenSpaceToGridSpace(const ImVec2& panning_offset, const ImVec2& p)
 {
     return p - GImNodes->CanvasOriginScreenSpace - panning_offset;
 }
@@ -1239,29 +1239,29 @@ inline ImVec2 GridSpaceToScreenSpace(const ImNodesEditorContext& editor, const I
     return v + GImNodes->CanvasOriginScreenSpace + editor.Panning;
 }
 
-inline ImVec2 GridSpaceToEditorSpace(const ImNodesEditorContext& editor, const ImVec2& v)
+inline ImVec2 GridSpaceToCanvasSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
-#pragma message("Stop using this variant of GridSpaceToEditorSpace")
+#pragma message("Stop using this variant of GridSpaceToCanvasSpace")
     return v + editor.Panning;
 }
 
-static inline ImVec2 GridSpaceToEditorSpace(const ImVec2& panning_offset, const ImVec2& p)
+static inline ImVec2 GridSpaceToCanvasSpace(const ImVec2& panning_offset, const ImVec2& p)
 {
     return p + panning_offset;
 }
 
-inline ImVec2 EditorSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
+inline ImVec2 CanvasSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
-#pragma message("Stop using this variant of EditorSpaceToGridSpace")
+#pragma message("Stop using this variant of CanvasSpaceToGridSpace")
     return v - editor.Panning;
 }
 
-static inline ImVec2 EditorSpaceToGridSpace(const ImVec2& panning_offset, const ImVec2& p)
+static inline ImVec2 CanvasSpaceToGridSpace(const ImVec2& panning_offset, const ImVec2& p)
 {
     return p - panning_offset;
 }
 
-inline ImVec2 EditorSpaceToScreenSpace(const ImVec2& v)
+inline ImVec2 CanvasSpaceToScreenSpace(const ImVec2& v)
 {
     return GImNodes->CanvasOriginScreenSpace + v;
 }
@@ -1274,8 +1274,8 @@ void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
          x += GImNodes->Style.GridSpacing)
     {
         GImNodes->CanvasDrawList->AddLine(
-            EditorSpaceToScreenSpace(ImVec2(x, 0.0f)),
-            EditorSpaceToScreenSpace(ImVec2(x, canvas_size.y)),
+            CanvasSpaceToScreenSpace(ImVec2(x, 0.0f)),
+            CanvasSpaceToScreenSpace(ImVec2(x, canvas_size.y)),
             GImNodes->Style.Colors[ImNodesCol_GridLine]);
     }
 
@@ -1283,8 +1283,8 @@ void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
          y += GImNodes->Style.GridSpacing)
     {
         GImNodes->CanvasDrawList->AddLine(
-            EditorSpaceToScreenSpace(ImVec2(0.0f, y)),
-            EditorSpaceToScreenSpace(ImVec2(canvas_size.x, y)),
+            CanvasSpaceToScreenSpace(ImVec2(0.0f, y)),
+            CanvasSpaceToScreenSpace(ImVec2(canvas_size.x, y)),
             GImNodes->Style.Colors[ImNodesCol_GridLine]);
     }
 }
@@ -2132,7 +2132,7 @@ void BeginNodeEditor()
         {
             const ImVec2 canvas_size = ImGui::GetWindowSize();
             GImNodes->CanvasRectScreenSpace = ImRect(
-                EditorSpaceToScreenSpace(ImVec2(0.f, 0.f)), EditorSpaceToScreenSpace(canvas_size));
+                CanvasSpaceToScreenSpace(ImVec2(0.f, 0.f)), CanvasSpaceToScreenSpace(canvas_size));
 
             if (GImNodes->Style.Flags & ImNodesStyleFlags_GridLines)
             {
@@ -2258,16 +2258,16 @@ void BeginNode(const int node_id)
             editor.GridSpaceNodeOrigins.find(node_id);
         if (id_node_pair != editor.GridSpaceNodeOrigins.cend())
         {
-            node.EditorSpacePosition = GridSpaceToEditorSpace(editor.Panning, id_node_pair->second);
+            node.CanvasSpacePosition = GridSpaceToCanvasSpace(editor.Panning, id_node_pair->second);
         }
         else
         {
             const ImVec2 default_position = ImVec2(0.0f, 0.0f);
             const ImVec2 grid_space_position =
-                EditorSpaceToGridSpace(editor.Panning, default_position);
+                CanvasSpaceToGridSpace(editor.Panning, default_position);
             editor.GridSpaceNodeOrigins.insert(
                 std::make_pair<int, ImVec2>(node_id, grid_space_position));
-            node.EditorSpacePosition = default_position;
+            node.CanvasSpacePosition = default_position;
         }
     }
 
@@ -2283,7 +2283,7 @@ void BeginNode(const int node_id)
     // IMPLEMENTATION DETAIL: ImGui::SetCursorPos sets the cursor position, relative to the current
     // widget -- in this case the child object which was created in BeginNodeEditor(). We could also
     // use ImGui::SetCursorScreenSpacePos to set the cursor position in screen space directly.
-    ImGui::SetCursorPos(node.EditorSpacePosition + node.LayoutStyle.Padding);
+    ImGui::SetCursorPos(node.CanvasSpacePosition + node.LayoutStyle.Padding);
 
     ImGui::PushID(node.Id);
     ImGui::BeginGroup();
@@ -2352,7 +2352,7 @@ void EndNodeTitleBar()
         const ImVec2 title_bar_vertical_offset =
             ImVec2(0.0f, node.TitleRectangle.GetHeight() + 2.0f * node.LayoutStyle.Padding.y);
         const ImVec2 node_content_pos =
-            node.EditorSpacePosition + node.LayoutStyle.Padding + title_bar_vertical_offset;
+            node.CanvasSpacePosition + node.LayoutStyle.Padding + title_bar_vertical_offset;
 
         ImGui::SetCursorPos(node_content_pos);
     }
@@ -2537,10 +2537,10 @@ void SetNodeScreenSpacePos(const int node_id, const ImVec2& screen_space_pos)
     editor.GridSpaceNodeOrigins[node_id] = ScreenSpaceToGridSpace(editor.Panning, screen_space_pos);
 }
 
-void SetNodeEditorSpacePos(const int node_id, const ImVec2& editor_space_pos)
+void SetNodeCanvasSpacePos(const int node_id, const ImVec2& editor_space_pos)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.GridSpaceNodeOrigins[node_id] = EditorSpaceToGridSpace(editor.Panning, editor_space_pos);
+    editor.GridSpaceNodeOrigins[node_id] = CanvasSpaceToGridSpace(editor.Panning, editor_space_pos);
 }
 
 void SetNodeGridSpacePos(const int node_id, const ImVec2& grid_space_pos)
@@ -2570,17 +2570,19 @@ ImVec2 GetNodeScreenSpacePos(const int node_id)
     return ImVec2(0.0f, 0.0f);
 }
 
-ImVec2 GetNodeEditorSpacePos(const int node_id)
+ImVec2 GetNodeCanvasSpacePos(const int node_id)
 {
     // TODO: the problem with these functions is the fact that the user is interested in the actual,
     // rendered node position. We can't use the retained state for this, since that might have been
     // updated.
 
-// const ImNodesEditorContext& editor = EditorContextGet();
-// TODO: How on earth should errors be handled here?
-// std::map<int, ImVec2>::const_iterator id_node_pair = editor.GridSpaceNodeOrigins.find(node_id);
-// assert(id_node_pair != editor.GridSpaceNodeOrigins.end());
-// return GridSpaceToEditorSpace(editor.Panning, id_node_pair->second);
+    // const ImNodesEditorContext& editor = EditorContextGet();
+    // TODO: How on earth should errors be handled here?
+    // std::map<int, ImVec2>::const_iterator id_node_pair =
+    // editor.GridSpaceNodeOrigins.find(node_id); assert(id_node_pair !=
+    // editor.GridSpaceNodeOrigins.end()); return GridSpaceToCanvasSpace(editor.Panning,
+    // id_node_pair->second);
+
 #pragma message("GetNodeEditorSpacePos is disabled")
     return ImVec2(0.0f, 0.0f);
 }

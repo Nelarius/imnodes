@@ -143,7 +143,7 @@ struct ImNodeDrawData
     int Id;
     // The coordinates of the node's upper left corner, relative to the editor canvas' upper left
     // corner. See notes/coordinate_spaces.md for further detail.
-    ImVec2 EditorSpacePosition;
+    ImVec2 CanvasSpacePosition;
     ImRect NodeRectangle;
     ImRect TitleRectangle;
 
@@ -300,11 +300,11 @@ struct ImNodesContext
     ImRect CanvasRectScreenSpace;
 
     // MiniMap state
-    ImRect MiniMapRectScreenSpace;
-    ImVec2 MiniMapRectSnappingOffset;
-    float MiniMapZoom;
+    ImRect                             MiniMapRectScreenSpace;
+    ImVec2                             MiniMapRectSnappingOffset;
+    float                              MiniMapZoom;
     ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    void* MiniMapNodeHoveringCallbackUserData;
+    void*                              MiniMapNodeHoveringCallbackUserData;
 
     // Debug helpers
     ImNodesScope CurrentScope;
@@ -353,11 +353,11 @@ struct ImNodesContext
 
     ImVec2 MousePos;
 
-    bool LeftMouseClicked;
-    bool LeftMouseReleased;
-    bool AltMouseClicked;
-    bool LeftMouseDragging;
-    bool AltMouseDragging;
+    bool  LeftMouseClicked;
+    bool  LeftMouseReleased;
+    bool  AltMouseClicked;
+    bool  LeftMouseDragging;
+    bool  AltMouseDragging;
     float AltMouseScrollDelta;
 };
 
