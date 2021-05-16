@@ -48,14 +48,18 @@ struct LinkBezierData
     int         NumSegments;
 };
 
-inline ImVec2 EvalBezier(float t, const BezierCurve& bezier)
+inline ImVec2 EvalBezier(const float t, const BezierCurve& bc)
 {
     // B(t) = (1-t)**3 p0 + 3(1 - t)**2 t P1 + 3(1-t)t**2 P2 + t**3 P3
+
+    const float u = 1.0f - t;
+    const float b0 = u * u * u;
+    const float b1 = 3 * u * u * t;
+    const float b2 = 3 * u * t * t;
+    const float b3 = t * t * t;
     return ImVec2(
-        (1 - t) * (1 - t) * (1 - t) * bezier.P0.x + 3 * (1 - t) * (1 - t) * t * bezier.P1.x +
-            3 * (1 - t) * t * t * bezier.P2.x + t * t * t * bezier.P3.x,
-        (1 - t) * (1 - t) * (1 - t) * bezier.P0.y + 3 * (1 - t) * (1 - t) * t * bezier.P1.y +
-            3 * (1 - t) * t * t * bezier.P2.y + t * t * t * bezier.P3.y);
+        b0 * bc.P0.x + b1 * bc.P1.x + b2 * bc.P2.x + b3 * bc.P3.x,
+        b0 * bc.P0.y + b1 * bc.P1.y + b2 * bc.P2.y + b3 * bc.P3.y);
 }
 
 // Calculates the closest point along each bezier curve segment.
