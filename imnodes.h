@@ -2,12 +2,12 @@
 
 #include <stddef.h>
 
-typedef int ImNodesCol;            // -> enum ImNodesCol_
-typedef int ImNodesStyleVar;       // -> enum ImNodesStyleVar_
-typedef int ImNodesStyleFlags;     // -> enum ImNodesStyleFlags_
-typedef int ImNodesPinShape;       // -> enum ImNodesPinShape_
-typedef int ImNodesAttributeFlags; // -> enum ImNodesAttributeFlags_
-typedef int ImNodesMiniMapLocation;// -> enum ImNodesMiniMapLocation_
+typedef int ImNodesCol;             // -> enum ImNodesCol_
+typedef int ImNodesStyleVar;        // -> enum ImNodesStyleVar_
+typedef int ImNodesStyleFlags;      // -> enum ImNodesStyleFlags_
+typedef int ImNodesPinShape;        // -> enum ImNodesPinShape_
+typedef int ImNodesAttributeFlags;  // -> enum ImNodesAttributeFlags_
+typedef int ImNodesMiniMapLocation; // -> enum ImNodesMiniMapLocation_
 
 enum ImNodesCol_
 {
@@ -227,10 +227,11 @@ void EndNodeEditor();
 
 // Add a navigable minimap to the editor; call before EndNodeEditor after all
 // nodes and links have been specified
-void MiniMap(const float minimap_size_fraction = 0.2f,
-             const ImNodesMiniMapLocation location = ImNodesMiniMapLocation_TopLeft,
-             const ImNodesMiniMapNodeHoveringCallback node_hovering_callback = NULL,
-             void* node_hovering_callback_data = NULL);
+void MiniMap(
+    const float                              minimap_size_fraction = 0.2f,
+    const ImNodesMiniMapLocation             location = ImNodesMiniMapLocation_TopLeft,
+    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback = NULL,
+    void*                                    node_hovering_callback_data = NULL);
 
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
 void PushColorStyle(ImNodesCol item, unsigned int color);

@@ -281,11 +281,11 @@ struct ImNodesContext
     ImRect CanvasRectScreenSpace;
 
     // MiniMap state
-    ImRect MiniMapRectScreenSpace;
-    ImVec2 MiniMapRectSnappingOffset;
-    float MiniMapZoom;
+    ImRect                             MiniMapRectScreenSpace;
+    ImVec2                             MiniMapRectSnappingOffset;
+    float                              MiniMapZoom;
     ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    void* MiniMapNodeHoveringCallbackUserData;
+    void*                              MiniMapNodeHoveringCallbackUserData;
 
     // Debug helpers
     ImNodesScope CurrentScope;
@@ -326,11 +326,11 @@ struct ImNodesContext
 
     ImVec2 MousePos;
 
-    bool LeftMouseClicked;
-    bool LeftMouseReleased;
-    bool AltMouseClicked;
-    bool LeftMouseDragging;
-    bool AltMouseDragging;
+    bool  LeftMouseClicked;
+    bool  LeftMouseReleased;
+    bool  AltMouseClicked;
+    bool  LeftMouseDragging;
+    bool  AltMouseDragging;
     float AltMouseScrollDelta;
 };
 
