@@ -391,7 +391,6 @@ void DrawListActivateNodeBackground(const int node_submission_idx)
 {
     const int background_channel_idx =
         DrawListSubmissionIdxToBackgroundChannelIdx(node_submission_idx);
-    assert(background_channel_idx < GImNodes->CanvasDrawList->_Splitter._Channels.size());
     GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
         GImNodes->CanvasDrawList, background_channel_idx);
 }
@@ -400,7 +399,6 @@ void DrawListActivateNodeForeground(const int node_submission_idx)
 {
     const int foreground_channel_idx =
         DrawListSubmissionIdxToForegroundChannelIdx(node_submission_idx);
-    assert(foreground_channel_idx < GImNodes->CanvasDrawList->_Splitter._Channels.size());
     GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
         GImNodes->CanvasDrawList, foreground_channel_idx);
 }
