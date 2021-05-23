@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <string.h> // strlen, strncmp
 
+#include <utility>
+
 ImNodesContext* GImNodes = NULL;
 
 #define ENABLE_PINS 0
@@ -512,7 +514,7 @@ bool MouseInCanvas()
            GImNodes->CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
 }
 
-void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
+void BeginNodeSelection(ImNodesEditorContext& editor, const int node_id)
 {
     // Don't start selecting a node if we are e.g. already creating and dragging
     // a new link! New link creation can happen when the mouse is clicked over
@@ -528,18 +530,20 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
     //
     // Otherwise, we want to allow for the possibility of multiple nodes to be
     // moved at once.
-    if (!editor.SelectedNodeIndices.contains(node_idx))
+    if (!editor.SelectedNodeIds.contains(node_id))
     {
-        editor.SelectedNodeIndices.clear();
+        editor.SelectedNodeIds.clear();
         editor.SelectedLinkIndices.clear();
-        editor.SelectedNodeIndices.push_back(node_idx);
+        editor.SelectedNodeIds.push_back(node_id);
 
+#if DEPTH_SORTING_ENABLED
         // Ensure that individually selected nodes get rendered on top
         ImVector<int>&   depth_stack = editor.NodeDepthOrder;
         const int* const elem = depth_stack.find(node_idx);
         assert(elem != depth_stack.end());
         depth_stack.erase(elem);
         depth_stack.push_back(node_idx);
+#endif
     }
 }
 
@@ -548,7 +552,7 @@ void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
     editor.ClickInteraction.Type = ImNodesClickInteractionType_Link;
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
-    editor.SelectedNodeIndices.clear();
+    editor.SelectedNodeIds.clear();
     editor.SelectedLinkIndices.clear();
     editor.SelectedLinkIndices.push_back(link_idx);
 }
@@ -679,7 +683,7 @@ void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
 
     // Update node selection
 
-    editor.SelectedNodeIndices.resize(0);
+    editor.SelectedNodeIds.resize(0);
 
     // Test for overlap against node rectangles
 
@@ -688,7 +692,7 @@ void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
         const ImNodeDrawData& node = GImNodes->Nodes[i];
         if (box_rect.Overlaps(node.NodeRectangle))
         {
-            GImNodes->SelectedNodeIds.push_back(node.Id);
+            editor.SelectedNodeIds.push_back(node.Id);
         }
     }
 
@@ -733,9 +737,9 @@ void TranslateSelectedNodes(ImNodesEditorContext& editor)
     {
         const ImGuiIO&         io = ImGui::GetIO();
         std::map<int, ImVec2>& node_origins = editor.GridSpaceNodeOrigins;
-        for (int i = 0; i < GImNodes->SelectedNodeIds.size(); ++i)
+        for (int i = 0; i < editor.SelectedNodeIds.size(); ++i)
         {
-            const int                       node_id = GImNodes->SelectedNodeIds[i];
+            const int                       node_id = editor.SelectedNodeIds[i];
             std::map<int, ImVec2>::iterator id_pos_pair = node_origins.find(node_id);
             assert(id_pos_pair != node_origins.end());
             id_pos_pair->second += io.MouseDelta;
@@ -841,8 +845,10 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
 
         if (GImNodes->LeftMouseReleased)
         {
-            ImVector<int>&       depth_stack = editor.NodeDepthOrder;
-            const ImVector<int>& selected_idxs = editor.SelectedNodeIndices;
+#if DEPTH_SORTING_ENABLED
+            ImVector<int>& depth_stack = editor.NodeDepthOrder;
+            // TODO: revisit this when implementing depth sorting with node ids.
+            // const ImVector<int>& selected_idxs = editor.SelectedNodeIndices;
 
             // Bump the selected node indices, in order, to the top of the depth stack.
             // NOTE: this algorithm has worst case time complexity of O(N^2), if the node selection
@@ -867,6 +873,7 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
                     }
                 }
             }
+#endif
 
             editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
         }
@@ -1445,8 +1452,10 @@ void DrawPin(ImNodesEditorContext& editor, const int pin_idx, const bool left_mo
 #endif
 }
 
-void DrawNodes()
+void DrawNodes(const ImOptionalIndex maybe_hovered_node_idx)
 {
+    const ImNodesEditorContext& editor = EditorContextGet();
+
     // TODO: the hovered node id needs to be passed in here somehow
     for (int i = 0; i < GImNodes->Nodes.size(); ++i)
     {
@@ -1454,10 +1463,19 @@ void DrawNodes()
 
         const ImNodeDrawData& node = GImNodes->Nodes[i];
 
-        // TODO: need to adjust color based on hovering and selection
+        ImU32 node_background_color = node.ColorStyle.Background;
+        ImU32 titlebar_background_color = node.ColorStyle.Titlebar;
 
-        const ImU32 node_background_color = node.ColorStyle.Background;
-        const ImU32 titlebar_background_color = node.ColorStyle.Titlebar;
+        if (editor.SelectedNodeIds.contains(node.Id))
+        {
+            node_background_color = node.ColorStyle.BackgroundSelected;
+            titlebar_background_color = node.ColorStyle.TitlebarSelected;
+        }
+        else if (maybe_hovered_node_idx == i)
+        {
+            node_background_color = node.ColorStyle.BackgroundHovered;
+            titlebar_background_color = node.ColorStyle.TitlebarHovered;
+        }
 
         GImNodes->CanvasDrawList->AddRectFilled(
             node.NodeRectangle.Min,
@@ -1729,7 +1747,7 @@ static void MiniMapDrawNodes(
             GImNodes->MiniMapRectSnappingOffset =
                 editor_center - (node_rectangle.Min + node_rectangle.Max) * 0.5f;
         }
-        else if (editor.SelectedNodeIndices.contains(idx))
+        else if (editor.SelectedNodeIds.contains(node.Id))
         {
             // TODO: fixme (map selection rendering in minimap is probably broken here, idx <-> id
             // confusion)
@@ -2156,19 +2174,37 @@ void EndNodeEditor()
     // its an *overlay* with its own interaction behavior and must have precedence during mouse
     // interaction
 
+    ImOptionalIndex maybe_hovered_node_idx;
+
     if (MouseInCanvas() && !IsMiniMapHovered())
     {
         if (!GImNodes->HoveredPinIdx.HasValue())
         {
+#if DEPTH_SORTING_ENABLED
+            // TODO: this should figure out whether a click interaction is blocking the node hover
+            // (mouse click dragging or box select)
             // Resolve which node is actually on top and being hovered using the depth stack.
-            GImNodes->HoveredNodeIdx = ResolveHoveredNode(editor.NodeDepthOrder);
+            maybe_hovered_node_idx = ResolveHoveredNode(editor.NodeDepthOrder);
+#else
+            if (!GImNodes->NodeIndicesOverlappingWithMouse.empty() &&
+                editor.ClickInteraction.Type == ImNodesClickInteractionType_None)
+            {
+                maybe_hovered_node_idx = GImNodes->NodeIndicesOverlappingWithMouse.back();
+            }
+#endif
         }
     }
 
-    // TODO: handle BeginClickInteraction before rendering nodes. If a user clicks on a node, it
-    // appends the node idx into the selected node index array.
+    // BeginClickInteraction
+    {
+        if (GImNodes->LeftMouseClicked && maybe_hovered_node_idx.HasValue())
+        {
+            const int id = GImNodes->Nodes[maybe_hovered_node_idx.Value()].Id;
+            BeginNodeSelection(editor, id);
+        }
+    }
 
-    DrawNodes();
+    DrawNodes(maybe_hovered_node_idx);
 
     // Render the click interaction UI elements (partial links, box selector) on top of everything
     // else.
@@ -2239,6 +2275,7 @@ void BeginNode(const int node_id)
     ImNodesEditorContext& editor = EditorContextGet();
 
     ImNodeDrawData node;
+    node.Id = node_id;
     node.ColorStyle.Background = GImNodes->Style.Colors[ImNodesCol_NodeBackground];
     node.ColorStyle.BackgroundHovered = GImNodes->Style.Colors[ImNodesCol_NodeBackgroundHovered];
     node.ColorStyle.BackgroundSelected = GImNodes->Style.Colors[ImNodesCol_NodeBackgroundSelected];
@@ -2263,8 +2300,7 @@ void BeginNode(const int node_id)
             const ImVec2 default_position = ImVec2(0.0f, 0.0f);
             const ImVec2 grid_space_position =
                 CanvasSpaceToGridSpace(editor.Panning, default_position);
-            editor.GridSpaceNodeOrigins.insert(
-                std::make_pair<int, ImVec2>(node_id, grid_space_position));
+            editor.GridSpaceNodeOrigins.insert(std::make_pair(node_id, grid_space_position));
             node.CanvasSpacePosition = default_position;
         }
     }
@@ -2302,14 +2338,10 @@ void EndNode()
     node.NodeRectangle = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
     node.NodeRectangle.Expand(node.LayoutStyle.Padding);
 
-#if DEPTH_SORTING_ENABLED
     if (node.NodeRectangle.Contains(GImNodes->MousePos))
     {
-        GImNodes->NodeIndicesOverlappingWithMouse.push_back(GImNodes->CurrentNodeIdx);
+        GImNodes->NodeIndicesOverlappingWithMouse.push_back(GImNodes->Nodes.size() - 1);
     }
-#else
-#pragma message("Clicking a node is disabled")
-#endif
 }
 
 ImVec2 GetNodeDimensions(int node_id)
@@ -2645,7 +2677,8 @@ bool IsPinHovered(int* const attr)
 int NumSelectedNodes()
 {
     assert(GImNodes->CurrentScope == ImNodesScope_None);
-    return GImNodes->SelectedNodeIds.size();
+    const ImNodesEditorContext& editor = EditorContextGet();
+    return editor.SelectedNodeIds.size();
 }
 
 int NumSelectedLinks()
@@ -2657,14 +2690,12 @@ int NumSelectedLinks()
 
 void GetSelectedNodes(int* node_ids)
 {
-    assert(node_ids != NULL);
-    assert(GImNodes->SelectedNodeIds.size() > 0);
+    const ImNodesEditorContext& editor = EditorContextGet();
 
-    const ImVector<int>& selected_node_ids = GImNodes->SelectedNodeIds;
-    for (int i = 0; i < selected_node_ids.size(); ++i)
-    {
-        node_ids[i] = selected_node_ids[i];
-    }
+    assert(node_ids != NULL);
+    assert(!editor.SelectedNodeIds.empty());
+
+    memcpy(node_ids, editor.SelectedNodeIds.Data, editor.SelectedNodeIds.size_in_bytes());
 }
 
 void GetSelectedLinks(int* link_ids)
@@ -2682,7 +2713,7 @@ void GetSelectedLinks(int* link_ids)
 void ClearNodeSelection()
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.SelectedNodeIndices.clear();
+    editor.SelectedNodeIds.clear();
 }
 
 void ClearLinkSelection()

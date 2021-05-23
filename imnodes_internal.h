@@ -271,15 +271,16 @@ struct ImNodesEditorContext
     // TODO: this could be named & documented more specifically
     ImVec2 Panning;
 
-    // TODO: These probably don't need to be retained between frames. These get reset to zero every
-    // time we update them.
-    ImVector<int> SelectedNodeIndices;
+    // The ids of nodes selected by the user. Selection can happen through clicking on a node, or by
+    // dragging a selection box.
+    ImVector<int> SelectedNodeIds;
+
     ImVector<int> SelectedLinkIndices;
 
     ImClickInteractionState ClickInteraction;
 
     ImNodesEditorContext()
-        : GridSpaceNodeOrigins(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(),
+        : GridSpaceNodeOrigins(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIds(),
           SelectedLinkIndices(), ClickInteraction()
     {
     }
@@ -323,10 +324,6 @@ struct ImNodesContext
     // elements are being hovered or selected, and which events occurred.
 
     ImVector<ImNodeDrawData> Nodes;
-
-    // The ids of nodes selected by the user. Selection can happen through clicking on a node, or by
-    // dragging a selection box.
-    ImVector<int> SelectedNodeIds;
 
     int CurrentNodeIdx;
     int CurrentPinIdx;
