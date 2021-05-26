@@ -4,6 +4,7 @@
 // [SECTION] draw list helper
 // [SECTION] ui state logic
 // [SECTION] render helpers
+// [SECTION] minimap
 // [SECTION] API implementation
 
 #include "imnodes.h"
