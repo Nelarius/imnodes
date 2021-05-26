@@ -61,6 +61,7 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_MiniMapPanning,
     ImNodesClickInteractionType_MiniMapZooming,
     ImNodesClickInteractionType_MiniMapSnapping,
+    ImNodesClickInteractionType_ImGuiItem,
     ImNodesClickInteractionType_None
 };
 

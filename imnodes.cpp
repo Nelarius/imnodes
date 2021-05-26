@@ -1038,6 +1038,13 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
         editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
     }
     break;
+    case ImNodesClickInteractionType_ImGuiItem:
+    {
+        if (GImNodes->LeftMouseReleased)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
+        }
+    }
     case ImNodesClickInteractionType_None:
         break;
     default:
@@ -2177,7 +2184,16 @@ void EndNodeEditor()
 
     ImOptionalIndex maybe_hovered_node_idx;
 
-    if (MouseInCanvas() && !IsMiniMapHovered())
+    // The UI (nodes, links, pins) are not interactable if there is an ongoing interaction already:
+    // * interacting or hovering over the minimap
+    // * hovering over an ImGui widget
+    // * an existing interaction, such as a box select, or an ImGui widget manipulation
+    // We don't want to detect a node UI element as being hovered, if interaction is not allowed.
+    const bool node_ui_interactable =
+        editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
+        !ImGui::IsAnyItemHovered() && !IsMiniMapHovered();
+
+    if (MouseInCanvas() && node_ui_interactable)
     {
         if (!GImNodes->HoveredPinIdx.HasValue())
         {
@@ -2187,8 +2203,7 @@ void EndNodeEditor()
             // Resolve which node is actually on top and being hovered using the depth stack.
             maybe_hovered_node_idx = ResolveHoveredNode(editor.NodeDepthOrder);
 #else
-            if (!GImNodes->NodeIndicesOverlappingWithMouse.empty() &&
-                editor.ClickInteraction.Type == ImNodesClickInteractionType_None)
+            if (!GImNodes->NodeIndicesOverlappingWithMouse.empty())
             {
                 maybe_hovered_node_idx = GImNodes->NodeIndicesOverlappingWithMouse.back();
             }
@@ -2198,10 +2213,19 @@ void EndNodeEditor()
 
     // BeginClickInteraction
     {
-        if (GImNodes->LeftMouseClicked && maybe_hovered_node_idx.HasValue())
+        if (GImNodes->LeftMouseClicked)
         {
-            const int id = GImNodes->Nodes[maybe_hovered_node_idx.Value()].Id;
-            BeginNodeSelection(editor, id);
+            if (ImGui::IsAnyItemActive() &&
+                editor.ClickInteraction.Type == ImNodesClickInteractionType_None)
+            {
+                editor.ClickInteraction.Type = ImNodesClickInteractionType_ImGuiItem;
+            }
+
+            if (maybe_hovered_node_idx.HasValue())
+            {
+                const int id = GImNodes->Nodes[maybe_hovered_node_idx.Value()].Id;
+                BeginNodeSelection(editor, id);
+            }
         }
     }
 
@@ -2213,6 +2237,7 @@ void EndNodeEditor()
     DrawListAppendClickInteractionChannel();
     DrawListActivateClickInteractionChannel();
 
+    // TODO: could this be combined with BeginClickInteraction?
     if (GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased || GImNodes->AltMouseClicked ||
         GImNodes->AltMouseScrollDelta != 0.f)
     {
