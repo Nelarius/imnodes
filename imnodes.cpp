@@ -33,7 +33,6 @@
 
 ImNodesContext* GImNodes = NULL;
 
-#define ENABLE_PINS 0
 #define ENABLE_LINKS 0
 #define ENABLE_DEPTH_SORTING 0
 
@@ -495,17 +494,6 @@ ImVec2 GetScreenSpacePinCoordinates(
     return ImVec2(x, 0.5f * (attribute_rect.Min.y + attribute_rect.Max.y));
 }
 
-ImVec2 GetScreenSpacePinCoordinates(const ImNodesEditorContext& editor, const ImPinData& pin)
-{
-#if PINS_ENABLED
-    const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
-    return GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
-#else
-#pragma message("GetScreenSpacePinCoordinates is disabled")
-    return ImVec2(0.0f, 0.0f);
-#endif
-}
-
 bool MouseInCanvas()
 {
     // This flag should be true either when hovering or clicking something in the canvas.
@@ -900,7 +888,7 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     break;
     case ImNodesClickInteractionType_LinkCreation:
     {
-        const ImPinData& start_pin =
+        const ImPinDrawData& start_pin =
             editor.Pins.Pool[editor.ClickInteraction.LinkCreation.StartPinIdx];
 
         const ImOptionalIndex maybe_duplicate_link_idx =
@@ -1053,75 +1041,21 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     }
 }
 
-void ResolveOccludedPins(const ImNodesEditorContext& editor, ImVector<int>& occluded_pin_indices)
-{
-#if DEPTH_SORTING_ENABLED
-    const ImVector<int>& depth_stack = editor.NodeDepthOrder;
-
-    occluded_pin_indices.resize(0);
-
-    if (depth_stack.Size < 2)
-    {
-        return;
-    }
-
-    // For each node in the depth stack
-    for (int depth_idx = 0; depth_idx < (depth_stack.Size - 1); ++depth_idx)
-    {
-        const ImNodeData& node_below = editor.Nodes.Pool[depth_stack[depth_idx]];
-
-        // Iterate over the rest of the depth stack to find nodes overlapping the pins
-        for (int next_depth_idx = depth_idx + 1; next_depth_idx < depth_stack.Size;
-             ++next_depth_idx)
-        {
-            const ImRect& rect_above = editor.Nodes.Pool[depth_stack[next_depth_idx]].Rect;
-
-            // Iterate over each pin
-            for (int idx = 0; idx < node_below.PinIndices.Size; ++idx)
-            {
-                const int     pin_idx = node_below.PinIndices[idx];
-                const ImVec2& pin_pos = editor.Pins.Pool[pin_idx].Pos;
-
-                if (rect_above.Contains(pin_pos))
-                {
-                    occluded_pin_indices.push_back(pin_idx);
-                }
-            }
-        }
-    }
-#else
-#pragma message("ResolveOccludedPins disabled")
-#endif
-}
-
-ImOptionalIndex ResolveHoveredPin(
-    const ImObjectPool<ImPinData>& pins,
-    const ImVector<int>&           occluded_pin_indices)
+ImOptionalIndex ResolveHoveredPin()
 {
     float           smallest_distance = FLT_MAX;
     ImOptionalIndex pin_idx_with_smallest_distance;
 
-    const float hover_radius_sqr = GImNodes->Style.PinHoverRadius * GImNodes->Style.PinHoverRadius;
-
-    for (int idx = 0; idx < pins.Pool.Size; ++idx)
+    for (int idx = 0; idx < GImNodes->Pins.size(); ++idx)
     {
-        if (!pins.InUse[idx])
-        {
-            continue;
-        }
+        const ImPinDrawData& pin = GImNodes->Pins[idx];
 
-        if (occluded_pin_indices.contains(idx))
-        {
-            continue;
-        }
+        const ImVec2& pin_pos = pin.ScreenSpacePosition;
+        const float   hover_radius = pin.HoverRadius;
 
-        const ImVec2& pin_pos = pins.Pool[idx].Pos;
-        const float   distance_sqr = ImLengthSqr(pin_pos - GImNodes->MousePos);
+        const float hover_radius_sqr = hover_radius * hover_radius;
+        const float distance_sqr = ImLengthSqr(pin_pos - GImNodes->MousePos);
 
-        // TODO: GImNodes->Style.PinHoverRadius needs to be copied into pin data and the pin-local
-        // value used here. This is no longer called in BeginAttribute/EndAttribute scope and the
-        // detected pin might have a different hover radius than what the user had when calling
-        // BeginAttribute/EndAttribute.
         if (distance_sqr < hover_radius_sqr && distance_sqr < smallest_distance)
         {
             smallest_distance = distance_sqr;
@@ -1170,8 +1104,8 @@ ImOptionalIndex ResolveHoveredNode(const ImVector<int>& depth_stack)
 }
 
 ImOptionalIndex ResolveHoveredLink(
-    const ImObjectPool<ImLinkData>& links,
-    const ImObjectPool<ImPinData>&  pins)
+    const ImObjectPool<ImLinkData>&    links,
+    const ImObjectPool<ImPinDrawData>& pins)
 {
     float           smallest_distance = FLT_MAX;
     ImOptionalIndex link_idx_with_smallest_distance;
@@ -1350,11 +1284,11 @@ TriangleOffsets CalculateTriangleOffsets(const float side_length)
     return offset;
 }
 
-void DrawPinShape(const ImVec2& pin_pos, const ImPinData& pin, const ImU32 pin_color)
+void DrawPinShape(const ImVec2& pin_pos, const ImNodesPinShape shape, const ImU32 pin_color)
 {
     static const int CIRCLE_NUM_SEGMENTS = 8;
 
-    switch (pin.Shape)
+    switch (shape)
     {
     case ImNodesPinShape_Circle:
     {
@@ -1428,48 +1362,22 @@ void DrawPinShape(const ImVec2& pin_pos, const ImPinData& pin, const ImU32 pin_c
     }
 }
 
-void DrawPin(ImNodesEditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
+void DrawNodesAndPins(
+    const ImOptionalIndex maybe_hovered_node_idx,
+    const ImOptionalIndex maybe_hovered_pin_idx)
 {
-#if 0
-    ImPinData&    pin = editor.Pins.Pool[pin_idx];
-    const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
+    assert(GImNodes->Nodes.size() == GImNodes->NodeToPinIndices.size());
+    assert(GImNodes->Pins.size() == GImNodes->PinAttributeRectangles.size());
 
-    // TODO: This could be computed in EndNode() and stored directly in the pin data. There is only
-    // one pin being constructed at a time, no need to store this and pass it around.
-    pin.Pos = GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
-
-    ImU32 pin_color = pin.ColorStyle.Background;
-
-    const bool pin_hovered =
-        GImNodes->HoveredPinIdx == pin_idx &&
-        editor.ClickInteraction.Type != ImNodesClickInteractionType_BoxSelection;
-
-    if (pin_hovered)
-    {
-        GImNodes->HoveredPinIdx = pin_idx;
-        GImNodes->HoveredPinFlags = pin.Flags;
-        pin_color = pin.ColorStyle.Hovered;
-
-        if (left_mouse_clicked)
-        {
-            BeginLinkCreation(editor, pin_idx);
-        }
-    }
-
-    DrawPinShape(pin.Pos, pin, pin_color);
-#endif
-}
-
-void DrawNodes(const ImOptionalIndex maybe_hovered_node_idx)
-{
     const ImNodesEditorContext& editor = EditorContextGet();
 
-    // TODO: the hovered node id needs to be passed in here somehow
-    for (int i = 0; i < GImNodes->Nodes.size(); ++i)
+    for (int node_idx = 0; node_idx < GImNodes->Nodes.size(); ++node_idx)
     {
-        DrawListActivateNodeBackground(i);
+        DrawListActivateNodeBackground(node_idx);
 
-        const ImNodeDrawData& node = GImNodes->Nodes[i];
+        // Submit the node rectangle draw commands
+
+        const ImNodeDrawData& node = GImNodes->Nodes[node_idx];
 
         ImU32 node_background_color = node.ColorStyle.Background;
         ImU32 titlebar_background_color = node.ColorStyle.Titlebar;
@@ -1479,7 +1387,7 @@ void DrawNodes(const ImOptionalIndex maybe_hovered_node_idx)
             node_background_color = node.ColorStyle.BackgroundSelected;
             titlebar_background_color = node.ColorStyle.TitlebarSelected;
         }
-        else if (maybe_hovered_node_idx == i)
+        else if (maybe_hovered_node_idx == node_idx)
         {
             node_background_color = node.ColorStyle.BackgroundHovered;
             titlebar_background_color = node.ColorStyle.TitlebarHovered;
@@ -1512,6 +1420,24 @@ void DrawNodes(const ImOptionalIndex maybe_hovered_node_idx)
                 node.LayoutStyle.CornerRounding,
                 ImDrawFlags_RoundCornersTop);
 #endif
+        }
+
+        // Submit the pin draw commands
+
+        const ImIdxSpan pin_idx_span = GImNodes->NodeToPinIndices[node_idx];
+
+        for (int pin_idx = pin_idx_span.IdxStart; pin_idx < pin_idx_span.IdxEnd; ++pin_idx)
+        {
+            const ImPinDrawData& pin = GImNodes->Pins[pin_idx];
+
+            ImU32 pin_color = pin.ColorStyle.Background;
+
+            if (maybe_hovered_pin_idx == pin_idx)
+            {
+                pin_color = pin.ColorStyle.Hovered;
+            }
+
+            DrawPinShape(pin.ScreenSpacePosition, pin.Shape, pin_color);
         }
     }
 }
@@ -1574,41 +1500,32 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
 
 void BeginPinAttribute(
     const int                  id,
+    const float                hover_radius,
     const ImNodesAttributeType type,
-    const ImNodesPinShape      shape,
-    const int                  node_idx)
+    const ImNodesPinShape      shape)
 {
-#if ENABLE_PINS
     // Make sure to call BeginNode() before calling
     // BeginAttribute()
     assert(GImNodes->CurrentScope == ImNodesScope_Node);
     GImNodes->CurrentScope = ImNodesScope_Attribute;
-
-    ImGui::BeginGroup();
-    ImGui::PushID(id);
-
-    ImNodesEditorContext& editor = EditorContextGet();
-
     GImNodes->CurrentAttributeId = id;
 
-    const int pin_idx = ObjectPoolFindOrCreateIndex(editor.Pins, id);
-    GImNodes->CurrentPinIdx = pin_idx;
-    ImPinData& pin = editor.Pins.Pool[pin_idx];
+    ImGui::BeginGroup();
+    ImGui::PushId(id);
+
+    ImPinDrawData pin;
     pin.Id = id;
-    pin.ParentNodeIdx = node_idx;
     pin.Type = type;
     pin.Shape = shape;
     pin.Flags = GImNodes->CurrentAttributeFlags;
+    pin.HoverRadius = hover_radius;
     pin.ColorStyle.Background = GImNodes->Style.Colors[ImNodesCol_Pin];
     pin.ColorStyle.Hovered = GImNodes->Style.Colors[ImNodesCol_PinHovered];
-#else
-#pragma message("BeginPinAttribute has been disabled")
-#endif
+    GImNodes->Pins.push_back(pin);
 }
 
 void EndPinAttribute()
 {
-#if ENABLE_PINS
     assert(GImNodes->CurrentScope == ImNodesScope_Attribute);
     GImNodes->CurrentScope = ImNodesScope_Node;
 
@@ -1619,18 +1536,9 @@ void EndPinAttribute()
     {
         GImNodes->ActiveAttribute = true;
         GImNodes->ActiveAttributeId = GImNodes->CurrentAttributeId;
-        GImNodes->InteractiveNodeIdx = GImNodes->CurrentNodeIdx;
     }
 
-    ImNodesEditorContext& editor = EditorContextGet();
-    ImPinData&            pin = editor.Pins.Pool[GImNodes->CurrentPinIdx];
-    ImNodeData&           node = editor.Nodes.Pool[GImNodes->CurrentNodeIdx];
-    // TODO: why not just compute the pin position here?
-    pin.AttributeRect = GetItemRect();
-    node.PinIndices.push_back(GImNodes->CurrentPinIdx);
-#else
-#pragma message("EndPinAttribute has been disabled")
-#endif
+    GImNodes->PinAttributeRectangles(GetItemRect());
 }
 
 void Initialize(ImNodesContext* context)
@@ -1645,7 +1553,6 @@ void Initialize(ImNodesContext* context)
     context->MiniMapNodeHoveringCallback = NULL;
     context->MiniMapNodeHoveringCallbackUserData = NULL;
 
-    context->CurrentPinIdx = INT_MAX;
     context->CurrentNodeIdx = INT_MAX;
 
     context->DefaultEditorCtx = EditorContextCreate();
@@ -2102,13 +2009,15 @@ void BeginNodeEditor()
     // Reset state from previous pass
 
     GImNodes->Nodes.resize(0);
+    GImNodes->NodeToPinIndices.resize(0);
+
+    GImNodes->Pins.resize(0);
+    GImNodes->AttributeRectangles.resize(0);
 
     ImNodesEditorContext& editor = EditorContextGet();
-    ObjectPoolReset(editor.Pins);
     ObjectPoolReset(editor.Links);
 
     GImNodes->HoveredNodeIdx.Reset();
-    GImNodes->InteractiveNodeIdx.Reset();
     GImNodes->HoveredLinkIdx.Reset();
     GImNodes->HoveredPinIdx.Reset();
     GImNodes->HoveredPinFlags = ImNodesAttributeFlags_None;
@@ -2183,6 +2092,7 @@ void EndNodeEditor()
     // interaction
 
     ImOptionalIndex maybe_hovered_node_idx;
+    ImOptionalIndex maybe_hovered_pin_idx;
 
     // The UI (nodes, links, pins) are not interactable if there is an ongoing interaction already:
     // * interacting or hovering over the minimap
@@ -2195,7 +2105,9 @@ void EndNodeEditor()
 
     if (MouseInCanvas() && node_ui_interactable)
     {
-        if (!GImNodes->HoveredPinIdx.HasValue())
+        maybe_hovered_pin_idx = ResolveHoveredPin();
+
+        if (!maybe_hovered_pin_idx.HasValue())
         {
 #if DEPTH_SORTING_ENABLED
             // TODO: this should figure out whether a click interaction is blocking the node hover
@@ -2229,7 +2141,7 @@ void EndNodeEditor()
         }
     }
 
-    DrawNodes(maybe_hovered_node_idx);
+    DrawNodesAndPins(maybe_hovered_node_idx, maybe_hovered_pin_idx);
 
     // Render the click interaction UI elements (partial links, box selector) on top of everything
     // else.
@@ -2331,10 +2243,14 @@ void BeginNode(const int node_id)
         }
     }
 
+    // Append the draw state
     {
         DrawListAppendNodeChannels();
         DrawListActivateNodeForeground(GImNodes->Nodes.size());
         GImNodes->Nodes.push_back(node);
+
+        GImNodes->NodeToPinIndices.push_back(ImIdxSpan());
+        GImNodes->NodeToPinIndices.back().IdxStart = GImNodes->Pins.size();
     }
 
     // The cursor is offset so that the user's ImGui widgets satisfy the Padding setting that the
@@ -2363,6 +2279,19 @@ void EndNode()
     // Calculate the rectangle which fits tightly around the node's UI content group.
     node.NodeRectangle = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
     node.NodeRectangle.Expand(node.LayoutStyle.Padding);
+
+    GImNodes->NodeToPinIndices.back().IdxEnd = GImNodes->Pins.size();
+
+    {
+        const ImIdxSpan pin_idx_span = GImNodes->NodeToPinIndices.back();
+
+        for (int pin_idx = pin_idx_span.IdxStart; pin_idx < pin_idx_span.IdxEnd; ++pin_idx)
+        {
+            ImPinDrawData& pin = GImNodes->Pins[pin_idx];
+            pin.ScreenSpacePosition = GetScreenSpacePinCoordinates(
+                node.NodeRectangle, GImNodes->PinAttributeRectangles[pin_idx], pin.Type);
+        }
+    }
 
     if (node.NodeRectangle.Contains(GImNodes->MousePos))
     {
@@ -2453,7 +2382,6 @@ void EndStaticAttribute()
     {
         GImNodes->ActiveAttribute = true;
         GImNodes->ActiveAttributeId = GImNodes->CurrentAttributeId;
-        GImNodes->InteractiveNodeIdx = GImNodes->CurrentNodeIdx;
     }
 }
 

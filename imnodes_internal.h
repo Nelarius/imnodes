@@ -135,6 +135,13 @@ private:
     int _Index;
 };
 
+// An index span into an array.
+struct ImIdxSpan
+{
+    int IdxStart;
+    int IdxEnd;
+};
+
 // This struct contains all data needed to draw the node in EndNodeEditor(). We store duplicated
 // style and color state, because we can't know whether the node is hovered or selected until all
 // other nodes have been submitted. The full style state has to be captured in the draw data,
@@ -162,39 +169,23 @@ struct ImNodeDrawData
     } LayoutStyle;
 };
 
-struct ImPinData
+struct ImPinDrawData
 {
-    int Id;
-    // TODO: It seems this is used to fetch the node id in a few different places.
-    //
-    // The parent node id is needed in IsLinkCreated(), and in order to check that the pin the link
-    // is being attached to is in a different node.
-    int ParentNodeIdx;
-    // TODO: this can be removed by computing the pin position directly in EndPinAttribute()
-    ImRect AttributeRect;
-    // TODO: This is used in ShouldLinkSnapToPin to enforce that the end pin is of a different type.
-    // It is also used to compute the position of the pin. We could avoid storing this if we
-    // computed the position as soon as possible.
+    int                  Id;
     ImNodesAttributeType Type;
     ImNodesPinShape      Shape;
-    ImVec2               Pos; // screen-space coordinates
+    ImVec2               ScreenSpacePosition;
     int                  Flags;
-
-    // NOTE: core data needed to render the pin:
-    // - Shape
-    // - Pos
-    // - Flags
-    // - ColorStyle
+    float                HoverRadius;
 
     struct
     {
         ImU32 Background, Hovered;
     } ColorStyle;
 
-    ImPinData(const int pin_id)
-        : Id(pin_id), ParentNodeIdx(), AttributeRect(), Type(ImNodesAttributeType_None),
-          Shape(ImNodesPinShape_CircleFilled), Pos(), Flags(ImNodesAttributeFlags_None),
-          ColorStyle()
+    ImPinDrawData(const int pin_id)
+        : Id(pin_id), Type(ImNodesAttributeType_None), Shape(ImNodesPinShape_CircleFilled),
+          ScreenSpacePosition(), Flags(ImNodesAttributeFlags_None), HoverRadius(), ColorStyle()
     {
     }
 };
@@ -262,7 +253,6 @@ struct ImNodesEditorContext
     // TODO: get rid of std::map.
     std::map<int, ImVec2> GridSpaceNodeOrigins;
 
-    ImObjectPool<ImPinData>  Pins;
     ImObjectPool<ImLinkData> Links;
 
     ImVector<int> NodeDepthOrder;
@@ -326,12 +316,23 @@ struct ImNodesContext
 
     ImVector<ImNodeDrawData> Nodes;
 
+    // Maps a node idx to a span of pin indices, indicating which pins belong to a node.
+    ImVector<ImIdxSpan> NodeToPinIndices;
+
+    ImVector<ImPinDrawData> Pins;
+    ImVector<ImRect>        PinAttributeRectangles;
+
+    // Attribute state
+
+    // TODO: are these actually used somewhere?
+    int  ActiveAttributeId;
+    bool ActiveAttribute;
+
+    // TODO: try to delete this
     int CurrentNodeIdx;
-    int CurrentPinIdx;
     int CurrentAttributeId;
 
     ImOptionalIndex HoveredNodeIdx;
-    ImOptionalIndex InteractiveNodeIdx;
     ImOptionalIndex HoveredLinkIdx;
     ImOptionalIndex HoveredPinIdx;
     int             HoveredPinFlags;
@@ -343,9 +344,6 @@ struct ImNodesContext
     // TODO: this should be a part of a state machine, and not a member of the global struct.
     // Unclear what parts of the code this relates to.
     int ImNodesUIState;
-
-    int  ActiveAttributeId;
-    bool ActiveAttribute;
 
     // ImGui::IO cache
 
