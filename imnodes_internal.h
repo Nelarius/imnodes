@@ -480,4 +480,31 @@ static inline T& ObjectPoolFindOrCreateObject(ImObjectPool<T>& objects, const in
     const int index = ObjectPoolFindOrCreateIndex(objects, id);
     return objects.Pool[index];
 }
+
+// Selection helpers
+template<typename T>
+void select_object(const ObjectPool<T>& objects, ImVector<int>& selected_indices, const int id)
+{
+    const int idx = object_pool_find(objects, id);
+    assert(idx >= 0); // id not found, did you pass a valid id?
+    assert(selected_indices.find(idx) == selected_indices.end()); // not previously unselected
+    selected_indices.push_back(idx);
+}
+
+template<typename T>
+void unselect_object(const ObjectPool<T>& objects, ImVector<int>& selected_indices, const int id)
+{
+    const int idx = object_pool_find(objects, id);
+    assert(idx >= 0); // id not found, did you pass a valid id?
+    assert(selected_indices.find(idx) != selected_indices.end()); // not previously selected
+    selected_indices.find_erase_unsorted(idx);
+}
+
+template<typename T>
+bool is_selected(const ObjectPool<T>& objects, ImVector<int>& selected_indices, const int id) 
+{   // note: selected_indices should be const but ImVector is not being const-correct
+    const int idx = object_pool_find(objects, id);
+    return selected_indices.find(idx) != selected_indices.end();
+}
+
 } // namespace ImNodes
