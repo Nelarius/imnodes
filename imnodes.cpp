@@ -1020,9 +1020,9 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     break;
     case ImNodesClickInteractionType_MiniMapZooming:
     {
-        GImNodes->MiniMapZoom = fmax(
+        GImNodes->MiniMapZoom = fmaxf(
             0.05f,
-            fmin(
+            fminf(
                 GImNodes->MiniMapZoom +
                     0.1f * GImNodes->MiniMapZoom * GImNodes->AltMouseScrollDelta,
                 1.f));
@@ -1686,9 +1686,9 @@ static inline ImRect ToMiniMapRect(
     const ImNodesMiniMapLocation location)
 {
     const ImVec2 editor_size(editor_rect.Max - editor_rect.Min);
-    const float  max_editor_coord = fmax(editor_size.x, editor_size.y);
+    const float  max_editor_coord = fmaxf(editor_size.x, editor_size.y);
     const float  mini_map_coord = minimap_size_fraction * max_editor_coord;
-    const float  corner_offset_alpha = fmin(1.f - minimap_size_fraction, 0.1f);
+    const float  corner_offset_alpha = fminf(1.f - minimap_size_fraction, 0.1f);
     const float  corner_offset_coord = corner_offset_alpha * mini_map_coord;
 
     // Compute the size of the mini-map area; lower bound with some reasonable size values
@@ -1745,7 +1745,7 @@ static void MiniMapDrawNode(
     const ImVec2 mini_map_node_max(mini_map_node_min + mini_map_node_size);
 
     // Round to near whole pixel value for corner-rounding to prevent visual glitches
-    const float mini_map_node_rounding = floor(node.LayoutStyle.CornerRounding * scaling);
+    const float mini_map_node_rounding = floorf(node.LayoutStyle.CornerRounding * scaling);
 
     ImU32 mini_map_node_background;
 
@@ -1898,6 +1898,42 @@ static void MiniMapUpdate()
 
     // Reset mini-map area so that it will disappear if MiniMap(...) is not called on the next frame
     GImNodes->MiniMapRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
+}
+
+// [SECTION] selection helpers
+
+template<typename T>
+void SelectObject(
+    const ImObjectPool<T>& objects,
+    ImVector<int>&       selected_indices,
+    const int            id)
+{
+    const int idx = ObjectPoolFind(objects, id);
+    assert(idx >= 0);
+    assert(selected_indices.find(idx) == selected_indices.end());
+    selected_indices.push_back(idx);
+}
+
+template<typename T>
+void ClearObjectSelection(
+    const ImObjectPool<T>& objects,
+    ImVector<int>&       selected_indices,
+    const int            id) 
+{
+    const int idx = ObjectPoolFind(objects, id);
+    assert(idx >= 0);
+    assert(selected_indices.find(idx) != selected_indices.end());
+    selected_indices.find_erase_unsorted(idx);
+}
+
+template<typename T>
+bool IsObjectSelected(
+    const ImObjectPool<T>& objects, 
+    ImVector<int>& selected_indices, 
+    const int id) 
+{
+    const int idx = ObjectPoolFind(objects, id);
+    return selected_indices.find(idx) != selected_indices.end();
 }
 
 } // namespace
@@ -2701,10 +2737,46 @@ void ClearNodeSelection()
     editor.SelectedNodeIndices.clear();
 }
 
+void ClearNodeSelection(int node_id)
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+    ClearObjectSelection(editor.Nodes, editor.SelectedNodeIndices, node_id);
+}
+
 void ClearLinkSelection()
 {
     ImNodesEditorContext& editor = EditorContextGet();
     editor.SelectedLinkIndices.clear();
+}
+
+void ClearLinkSelection(int link_id)
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+    ClearObjectSelection(editor.Links, editor.SelectedLinkIndices, link_id);
+}
+
+void SelectNode(int node_id)
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+    SelectObject(editor.Nodes, editor.SelectedNodeIndices, node_id);
+}
+
+void SelectLink(int link_id)
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+    SelectObject(editor.Links, editor.SelectedLinkIndices, link_id);
+}
+
+bool IsNodeSelected(int node_id)
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+    return IsObjectSelected(editor.Nodes, editor.SelectedNodeIndices, node_id);
+}
+
+bool IsLinkSelected(int link_id)
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+    return IsObjectSelected(editor.Links, editor.SelectedLinkIndices, link_id);
 }
 
 bool IsAttributeActive()
@@ -2901,7 +2973,7 @@ void NodeLineHandler(ImNodesEditorContext& editor, const char* const line)
 
 void EditorLineHandler(ImNodesEditorContext& editor, const char* const line)
 {
-    sscanf(line, "panning=%f,%f", &editor.Panning.x, &editor.Panning.y);
+    (void)sscanf(line, "panning=%f,%f", &editor.Panning.x, &editor.Panning.y);
 }
 } // namespace
 
