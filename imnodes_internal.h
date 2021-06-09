@@ -142,6 +142,12 @@ struct ImIdxSpan
     int IdxEnd;
 };
 
+struct ImCubicBezier
+{
+    ImVec2 P0, P1, P2, P3;
+    int    NumSegments;
+};
+
 // This struct contains all data needed to draw the node in EndNodeEditor(). We store duplicated
 // style and color state, because we can't know whether the node is hovered or selected until all
 // other nodes have been submitted. The full style state has to be captured in the draw data,
@@ -182,25 +188,19 @@ struct ImPinDrawData
     {
         ImU32 Background, Hovered;
     } ColorStyle;
-
-    ImPinDrawData(const int pin_id)
-        : Id(pin_id), Type(ImNodesAttributeType_None), Shape(ImNodesPinShape_CircleFilled),
-          ScreenSpacePosition(), Flags(ImNodesAttributeFlags_None), HoverRadius(), ColorStyle()
-    {
-    }
 };
 
-struct ImLinkData
+struct ImLinkDrawData
 {
     int Id;
-    int StartPinIdx, EndPinIdx;
+    int StartPinId, EndPinId;
+
+    ImCubicBezier CubicBezier;
 
     struct
     {
         ImU32 Base, Hovered, Selected;
     } ColorStyle;
-
-    ImLinkData(const int link_id) : Id(link_id), StartPinIdx(), EndPinIdx(), ColorStyle() {}
 };
 
 struct ImClickInteractionState
@@ -321,6 +321,8 @@ struct ImNodesContext
 
     ImVector<ImPinDrawData> Pins;
     ImVector<ImRect>        PinAttributeRectangles;
+
+    ImVector<ImLinkDrawData> Links;
 
     // Attribute state
 
