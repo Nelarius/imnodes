@@ -284,21 +284,22 @@ void Link(int id, int start_attribute_id, int end_attribute_id);
 // Enable or disable the ability to click and drag a specific node.
 void SetNodeDraggable(int node_id, const bool draggable);
 
-// The node's position can be expressed in three coordinate systems:
-// * screen space coordinates, -- the origin is the upper left corner of the window.
-// * editor space coordinates -- the origin is the upper left corner of the node editor window
-// * grid space coordinates, -- the origin is the upper left corner of the node editor window,
-// translated by the current editor panning vector (see EditorContextGetPanning() and
-// EditorContextResetPanning())
+// A note on coordinate spaces.
+// * screen space coordinates -- the origin is the upper left corner of the window
+// * canvas space coordinates -- the origin is the upper left corner of the node editor canvas
+// * grid space coordinates -- the origin moves with the grid in the node editor canvas. More
+// precisely, it is the canvas space translated by the current panning vector (see
+// EditorContextGetPanning() and EditorContextResetPanning())
 
-// Use the following functions to get and set the node's coordinates in these coordinate systems.
+// Use the following functions to get and set the node's coordinates in these coordinate
+// systems.
 
 void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
-void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
+void SetNodeCanvasSpacePos(int node_id, const ImVec2& canvas_space_pos);
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 
 ImVec2 GetNodeScreenSpacePos(const int node_id);
-ImVec2 GetNodeEditorSpacePos(const int node_id);
+ImVec2 GetNodeCanvasSpacePos(const int node_id);
 ImVec2 GetNodeGridSpacePos(const int node_id);
 
 // Returns true if the current node editor canvas is being hovered over by the mouse, and is not
