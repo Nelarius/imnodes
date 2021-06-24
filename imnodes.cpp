@@ -306,42 +306,7 @@ void ImDrawListGrowChannels(ImDrawList* draw_list, const int num_channels)
     }
 }
 
-void ImDrawListSplitterSwapChannels(
-    ImDrawListSplitter& splitter,
-    const int           lhs_idx,
-    const int           rhs_idx)
-{
-    if (lhs_idx == rhs_idx)
-    {
-        return;
-    }
-
-    assert(lhs_idx >= 0 && lhs_idx < splitter._Count);
-    assert(rhs_idx >= 0 && rhs_idx < splitter._Count);
-
-    ImDrawChannel& lhs_channel = splitter._Channels[lhs_idx];
-    ImDrawChannel& rhs_channel = splitter._Channels[rhs_idx];
-    lhs_channel._CmdBuffer.swap(rhs_channel._CmdBuffer);
-    lhs_channel._IdxBuffer.swap(rhs_channel._IdxBuffer);
-
-    const int current_channel = splitter._Current;
-
-    if (current_channel == lhs_idx)
-    {
-        splitter._Current = rhs_idx;
-    }
-    else if (current_channel == rhs_idx)
-    {
-        splitter._Current = lhs_idx;
-    }
-}
-
-void DrawListSet(ImDrawList* window_draw_list)
-{
-    GImNodes->CanvasDrawList = window_draw_list;
-    GImNodes->NodeIdxToSubmissionIdx.Clear();
-    GImNodes->NodeIdxSubmissionOrder.clear();
-}
+void DrawListSet(ImDrawList* window_draw_list) { GImNodes->CanvasDrawList = window_draw_list; }
 
 // The draw list channels are structured as follows. First we have our base channel, the canvas grid
 // on which we render the grid lines in BeginNodeEditor(). The base channel is the reason
@@ -357,18 +322,12 @@ void DrawListSet(ImDrawList* window_draw_list)
 // |grid      |background|foreground|          |          |interaction
 // |          |          |          |          |          |          |
 // +----------+----------+----------+----------+----------+----------+
-//            |                     |
-//            |   submission idx    |
-//            |                     |
-//            -----------------------
+//            |                     |                     |
+//            |   submission idx    |...                  |
+//            |                     |                     |
+//            ---------------------------------------------
 
-void DrawListAddNode(const int node_idx)
-{
-    GImNodes->NodeIdxToSubmissionIdx.SetInt(
-        static_cast<ImGuiID>(node_idx), GImNodes->NodeIdxSubmissionOrder.Size);
-    GImNodes->NodeIdxSubmissionOrder.push_back(node_idx);
-    ImDrawListGrowChannels(GImNodes->CanvasDrawList, 2);
-}
+void DrawListAppendNodeChannels() { ImDrawListGrowChannels(GImNodes->CanvasDrawList, 2); }
 
 void DrawListAppendClickInteractionChannel()
 {
@@ -379,7 +338,7 @@ void DrawListAppendClickInteractionChannel()
 
 int DrawListSubmissionIdxToBackgroundChannelIdx(const int submission_idx)
 {
-    // NOTE: the first channel is the canvas background, i.e. the grid
+    // NOTE: the first channel is the canvas background
     return 1 + 2 * submission_idx;
 }
 
@@ -394,100 +353,20 @@ void DrawListActivateClickInteractionChannel()
         GImNodes->CanvasDrawList, GImNodes->CanvasDrawList->_Splitter._Count - 1);
 }
 
-void DrawListActivateCurrentNodeForeground()
+void DrawListActivateNodeBackground(const int node_submission_idx)
 {
-    const int foreground_channel_idx =
-        DrawListSubmissionIdxToForegroundChannelIdx(GImNodes->NodeIdxSubmissionOrder.Size - 1);
-    GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
-        GImNodes->CanvasDrawList, foreground_channel_idx);
-}
-
-void DrawListActivateNodeBackground(const int node_idx)
-{
-    const int submission_idx =
-        GImNodes->NodeIdxToSubmissionIdx.GetInt(static_cast<ImGuiID>(node_idx), -1);
-    // There is a discrepancy in the submitted node count and the rendered node count! Did you call
-    // one of the following functions
-    // * EditorContextMoveToNode
-    // * SetNodeScreenSpacePos
-    // * SetNodeGridSpacePos
-    // * SetNodeDraggable
-    // after the BeginNode/EndNode function calls?
-    assert(submission_idx != -1);
-    const int background_channel_idx = DrawListSubmissionIdxToBackgroundChannelIdx(submission_idx);
+    const int background_channel_idx =
+        DrawListSubmissionIdxToBackgroundChannelIdx(node_submission_idx);
     GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
         GImNodes->CanvasDrawList, background_channel_idx);
 }
 
-void DrawListSwapSubmissionIndices(const int lhs_idx, const int rhs_idx)
+void DrawListActivateNodeForeground(const int node_submission_idx)
 {
-    assert(lhs_idx != rhs_idx);
-
-    const int lhs_foreground_channel_idx = DrawListSubmissionIdxToForegroundChannelIdx(lhs_idx);
-    const int lhs_background_channel_idx = DrawListSubmissionIdxToBackgroundChannelIdx(lhs_idx);
-    const int rhs_foreground_channel_idx = DrawListSubmissionIdxToForegroundChannelIdx(rhs_idx);
-    const int rhs_background_channel_idx = DrawListSubmissionIdxToBackgroundChannelIdx(rhs_idx);
-
-    ImDrawListSplitterSwapChannels(
-        GImNodes->CanvasDrawList->_Splitter,
-        lhs_background_channel_idx,
-        rhs_background_channel_idx);
-    ImDrawListSplitterSwapChannels(
-        GImNodes->CanvasDrawList->_Splitter,
-        lhs_foreground_channel_idx,
-        rhs_foreground_channel_idx);
-}
-
-void DrawListSortChannelsByDepth(const ImVector<int>& node_idx_depth_order)
-{
-    if (GImNodes->NodeIdxToSubmissionIdx.Data.Size < 2)
-    {
-        return;
-    }
-
-    assert(node_idx_depth_order.Size == GImNodes->NodeIdxSubmissionOrder.Size);
-
-    int start_idx = node_idx_depth_order.Size - 1;
-
-    while (node_idx_depth_order[start_idx] == GImNodes->NodeIdxSubmissionOrder[start_idx])
-    {
-        if (--start_idx == 0)
-        {
-            // early out if submission order and depth order are the same
-            return;
-        }
-    }
-
-    // TODO: this is an O(N^2) algorithm. It might be worthwhile revisiting this to see if the time
-    // complexity can be reduced.
-
-    for (int depth_idx = start_idx; depth_idx > 0; --depth_idx)
-    {
-        const int node_idx = node_idx_depth_order[depth_idx];
-
-        // Find the current index of the node_idx in the submission order array
-        int submission_idx = -1;
-        for (int i = 0; i < GImNodes->NodeIdxSubmissionOrder.Size; ++i)
-        {
-            if (GImNodes->NodeIdxSubmissionOrder[i] == node_idx)
-            {
-                submission_idx = i;
-                break;
-            }
-        }
-        assert(submission_idx >= 0);
-
-        if (submission_idx == depth_idx)
-        {
-            continue;
-        }
-
-        for (int j = submission_idx; j < depth_idx; ++j)
-        {
-            DrawListSwapSubmissionIndices(j, j + 1);
-            ImSwap(GImNodes->NodeIdxSubmissionOrder[j], GImNodes->NodeIdxSubmissionOrder[j + 1]);
-        }
-    }
+    const int foreground_channel_idx =
+        DrawListSubmissionIdxToForegroundChannelIdx(node_submission_idx);
+    GImNodes->CanvasDrawList->_Splitter.SetCurrentChannel(
+        GImNodes->CanvasDrawList, foreground_channel_idx);
 }
 
 // [SECTION] ui state logic
@@ -1045,46 +924,9 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     }
 }
 
-void ResolveOccludedPins(const ImNodesEditorContext& editor, ImVector<int>& occluded_pin_indices)
-{
-    const ImVector<int>& depth_stack = editor.NodeDepthOrder;
+ImOptionalIndex ResolveHoveredNode() { return GImNodes->NodeOverlappingCursor; }
 
-    occluded_pin_indices.resize(0);
-
-    if (depth_stack.Size < 2)
-    {
-        return;
-    }
-
-    // For each node in the depth stack
-    for (int depth_idx = 0; depth_idx < (depth_stack.Size - 1); ++depth_idx)
-    {
-        const ImNodeData& node_below = editor.Nodes.Pool[depth_stack[depth_idx]];
-
-        // Iterate over the rest of the depth stack to find nodes overlapping the pins
-        for (int next_depth_idx = depth_idx + 1; next_depth_idx < depth_stack.Size;
-             ++next_depth_idx)
-        {
-            const ImRect& rect_above = editor.Nodes.Pool[depth_stack[next_depth_idx]].Rect;
-
-            // Iterate over each pin
-            for (int idx = 0; idx < node_below.PinIndices.Size; ++idx)
-            {
-                const int     pin_idx = node_below.PinIndices[idx];
-                const ImVec2& pin_pos = editor.Pins.Pool[pin_idx].Pos;
-
-                if (rect_above.Contains(pin_pos))
-                {
-                    occluded_pin_indices.push_back(pin_idx);
-                }
-            }
-        }
-    }
-}
-
-ImOptionalIndex ResolveHoveredPin(
-    const ImObjectPool<ImPinData>& pins,
-    const ImVector<int>&           occluded_pin_indices)
+ImOptionalIndex ResolveHoveredPin(const ImObjectPool<ImPinData>& pins)
 {
     float           smallest_distance = FLT_MAX;
     ImOptionalIndex pin_idx_with_smallest_distance;
@@ -1094,11 +936,6 @@ ImOptionalIndex ResolveHoveredPin(
     for (int idx = 0; idx < pins.Pool.Size; ++idx)
     {
         if (!pins.InUse[idx])
-        {
-            continue;
-        }
-
-        if (occluded_pin_indices.contains(idx))
         {
             continue;
         }
@@ -1118,38 +955,6 @@ ImOptionalIndex ResolveHoveredPin(
     }
 
     return pin_idx_with_smallest_distance;
-}
-
-ImOptionalIndex ResolveHoveredNode(const ImVector<int>& depth_stack)
-{
-    if (GImNodes->NodeIndicesOverlappingWithMouse.size() == 0)
-    {
-        return ImOptionalIndex();
-    }
-
-    if (GImNodes->NodeIndicesOverlappingWithMouse.size() == 1)
-    {
-        return ImOptionalIndex(GImNodes->NodeIndicesOverlappingWithMouse[0]);
-    }
-
-    int largest_depth_idx = -1;
-    int node_idx_on_top = -1;
-
-    for (int i = 0; i < GImNodes->NodeIndicesOverlappingWithMouse.size(); ++i)
-    {
-        const int node_idx = GImNodes->NodeIndicesOverlappingWithMouse[i];
-        for (int depth_idx = 0; depth_idx < depth_stack.size(); ++depth_idx)
-        {
-            if (depth_stack[depth_idx] == node_idx && (depth_idx > largest_depth_idx))
-            {
-                largest_depth_idx = depth_idx;
-                node_idx_on_top = node_idx;
-            }
-        }
-    }
-
-    assert(node_idx_on_top != -1);
-    return ImOptionalIndex(node_idx_on_top);
 }
 
 ImOptionalIndex ResolveHoveredLink(
@@ -2114,6 +1919,9 @@ void BeginNodeEditor()
     ObjectPoolReset(editor.Pins);
     ObjectPoolReset(editor.Links);
 
+    GImNodes->SubmissionIdx = 0;
+    GImNodes->NodeOverlappingCursor.Reset();
+
     GImNodes->HoveredNodeIdx.Reset();
     GImNodes->InteractiveNodeIdx.Reset();
     GImNodes->HoveredLinkIdx.Reset();
@@ -2121,8 +1929,6 @@ void BeginNodeEditor()
     GImNodes->HoveredPinFlags = ImNodesAttributeFlags_None;
     GImNodes->DeletedLinkIdx.Reset();
     GImNodes->SnapLinkIdx.Reset();
-
-    GImNodes->NodeIndicesOverlappingWithMouse.clear();
 
     GImNodes->ImNodesUIState = ImNodesUIState_None;
 
@@ -2189,16 +1995,12 @@ void EndNodeEditor()
 
     if (MouseInCanvas() && !IsMiniMapHovered())
     {
-        // Pins needs some special care. We need to check the depth stack to see which pins are
-        // being occluded by other nodes.
-        ResolveOccludedPins(editor, GImNodes->OccludedPinIndices);
-
-        GImNodes->HoveredPinIdx = ResolveHoveredPin(editor.Pins, GImNodes->OccludedPinIndices);
+        GImNodes->HoveredPinIdx = ResolveHoveredPin(editor.Pins);
 
         if (!GImNodes->HoveredPinIdx.HasValue())
         {
             // Resolve which node is actually on top and being hovered using the depth stack.
-            GImNodes->HoveredNodeIdx = ResolveHoveredNode(editor.NodeDepthOrder);
+            GImNodes->HoveredNodeIdx = ResolveHoveredNode();
         }
 
         // We don't need to check the depth stack for links. If a node occludes a link and is being
@@ -2255,8 +2057,6 @@ void EndNodeEditor()
     // node draw commands by depth.
     ObjectPoolUpdate(editor.Nodes);
     ObjectPoolUpdate(editor.Pins);
-
-    DrawListSortChannelsByDepth(editor.NodeDepthOrder);
 
     // After the links have been rendered, the link pool can be updated as well.
     ObjectPoolUpdate(editor.Links);
@@ -2330,8 +2130,9 @@ void BeginNode(const int node_id)
     // ImGui::SetCursorScreenPos to set the screen space coordinates directly.
     ImGui::SetCursorPos(GridSpaceToEditorSpace(editor, GetNodeTitleBarOrigin(node)));
 
-    DrawListAddNode(node_idx);
-    DrawListActivateCurrentNodeForeground();
+    DrawListAppendNodeChannels();
+    DrawListActivateNodeForeground(GImNodes->SubmissionIdx);
+    ++GImNodes->SubmissionIdx;
 
     ImGui::PushID(node.Id);
     ImGui::BeginGroup();
@@ -2354,7 +2155,7 @@ void EndNode()
 
     if (node.Rect.Contains(GImNodes->MousePos))
     {
-        GImNodes->NodeIndicesOverlappingWithMouse.push_back(GImNodes->CurrentNodeIdx);
+        GImNodes->NodeOverlappingCursor = GImNodes->CurrentNodeIdx;
     }
 }
 

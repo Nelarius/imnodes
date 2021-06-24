@@ -270,11 +270,13 @@ struct ImNodesContext
     ImNodesEditorContext* EditorCtx;
 
     // Canvas draw list and helper state
-    ImDrawList*   CanvasDrawList;
-    ImGuiStorage  NodeIdxToSubmissionIdx;
-    ImVector<int> NodeIdxSubmissionOrder;
-    ImVector<int> NodeIndicesOverlappingWithMouse;
-    ImVector<int> OccludedPinIndices;
+    ImDrawList* CanvasDrawList;
+
+    // Frame state
+    int SubmissionIdx; // TODO: this will be replaced with the actual node vector count
+    ImOptionalIndex
+        NodeOverlappingCursor; // TODO: this a temporary downgrade in functionality. When nodes
+                               // intersect, only the node created last will overlap.
 
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
