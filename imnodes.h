@@ -321,10 +321,21 @@ int NumSelectedLinks();
 // returned.
 void GetSelectedNodes(int* node_ids);
 void GetSelectedLinks(int* link_ids);
-
 // Clears the list of selected nodes/links. Useful if you want to delete a selected node or link.
 void ClearNodeSelection();
 void ClearLinkSelection();
+// Use the following functions to add or remove individual nodes or links from the current editors
+// selection. Note that all functions require the id to be an existing valid id for this editor.
+// Select-functions has the precondition that the object is currently considered unselected.
+// Clear-functions has the precondition that the object is currently considered selected.
+// Preconditions listed above can be checked via IsNodeSelected/IsLinkSelected if not already
+// known.
+void SelectNode(int node_id);
+void ClearNodeSelection(int node_id);
+bool IsNodeSelected(int node_id);
+void SelectLink(int link_id);
+void ClearLinkSelection(int link_id);
+bool IsLinkSelected(int link_id);
 
 // Was the previous attribute active? This will continuously return true while the left mouse button
 // is being pressed over the UI content of the attribute.
