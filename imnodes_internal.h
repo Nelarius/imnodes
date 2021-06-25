@@ -346,7 +346,7 @@ static inline ImNodesEditorContext& EditorContextGet()
 // [SECTION] ObjectPool implementation
 
 template<typename T>
-static inline int ObjectPoolFind(ImObjectPool<T>& objects, const int id)
+static inline int ObjectPoolFind(const ImObjectPool<T>& objects, const int id)
 {
     const int index = objects.IdMap.GetInt(static_cast<ImGuiID>(id), -1);
     return index;
