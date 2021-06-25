@@ -1903,10 +1903,7 @@ static void MiniMapUpdate()
 // [SECTION] selection helpers
 
 template<typename T>
-void SelectObject(
-    const ImObjectPool<T>& objects,
-    ImVector<int>&       selected_indices,
-    const int            id)
+void SelectObject(const ImObjectPool<T>& objects, ImVector<int>& selected_indices, const int id)
 {
     const int idx = ObjectPoolFind(objects, id);
     assert(idx >= 0);
@@ -1917,8 +1914,8 @@ void SelectObject(
 template<typename T>
 void ClearObjectSelection(
     const ImObjectPool<T>& objects,
-    ImVector<int>&       selected_indices,
-    const int            id) 
+    ImVector<int>&         selected_indices,
+    const int              id)
 {
     const int idx = ObjectPoolFind(objects, id);
     assert(idx >= 0);
@@ -1927,10 +1924,7 @@ void ClearObjectSelection(
 }
 
 template<typename T>
-bool IsObjectSelected(
-    const ImObjectPool<T>& objects, 
-    ImVector<int>& selected_indices, 
-    const int id) 
+bool IsObjectSelected(const ImObjectPool<T>& objects, ImVector<int>& selected_indices, const int id)
 {
     const int idx = ObjectPoolFind(objects, id);
     return selected_indices.find(idx) != selected_indices.end();

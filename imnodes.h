@@ -324,7 +324,7 @@ void GetSelectedLinks(int* link_ids);
 void ClearNodeSelection();
 void ClearLinkSelection();
 // Use the following functions to add or remove individual nodes or links from the current editors
-// selection. Note that all functions require the id to be an existing valid id for this editor. 
+// selection. Note that all functions require the id to be an existing valid id for this editor.
 // Select-functions has the precondition that the object is currently considered unselected.
 // Clear-functions has the precondition that the object is currently considered selected.
 // Preconditions listed above can be checked via IsNodeSelected/IsLinkSelected if not already
