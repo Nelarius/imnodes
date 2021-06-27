@@ -564,6 +564,7 @@ void BeginLinkDetach(ImNodesEditorContext& editor, const int link_idx, const int
 {
     const ImLinkData&        link = editor.Links.Pool[link_idx];
     ImClickInteractionState& state = editor.ClickInteraction;
+    state.Type = ImNodesClickInteractionType_LinkCreation;
     state.LinkCreation.EndPinIdx.Reset();
     state.LinkCreation.StartPinIdx =
         detach_pin_idx == link.StartPinIdx ? link.EndPinIdx : link.StartPinIdx;
@@ -572,15 +573,13 @@ void BeginLinkDetach(ImNodesEditorContext& editor, const int link_idx, const int
 
 void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx)
 {
-    // First check if we are clicking a link in the vicinity of a pin.
-    // This may result in a link detach via click and drag.
-    if (editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation)
+    // Check the 'click and drag to detach' case.
+    if (GImNodes->HoveredPinIdx.HasValue() &&
+        (editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()].Flags &
+         ImNodesAttributeFlags_EnableLinkDetachWithDragClick) != 0)
     {
-        if ((GImNodes->HoveredPinFlags & ImNodesAttributeFlags_EnableLinkDetachWithDragClick) != 0)
-        {
-            BeginLinkDetach(editor, link_idx, GImNodes->HoveredPinIdx.Value());
-            editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_FromDetach;
-        }
+        BeginLinkDetach(editor, link_idx, GImNodes->HoveredPinIdx.Value());
+        editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_FromDetach;
     }
     // If we aren't near a pin, check if we are clicking the link with the
     // modifier pressed. This may also result in a link detach via clicking.
@@ -1418,7 +1417,7 @@ void DrawPinShape(const ImVec2& pin_pos, const ImPinData& pin, const ImU32 pin_c
     }
 }
 
-void DrawPin(ImNodesEditorContext& editor, const int pin_idx, const bool left_mouse_clicked)
+void DrawPin(ImNodesEditorContext& editor, const int pin_idx)
 {
     ImPinData&    pin = editor.Pins.Pool[pin_idx];
     const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
@@ -1427,20 +1426,9 @@ void DrawPin(ImNodesEditorContext& editor, const int pin_idx, const bool left_mo
 
     ImU32 pin_color = pin.ColorStyle.Background;
 
-    const bool pin_hovered =
-        GImNodes->HoveredPinIdx == pin_idx &&
-        editor.ClickInteraction.Type != ImNodesClickInteractionType_BoxSelection;
-
-    if (pin_hovered)
+    if (GImNodes->HoveredPinIdx == pin_idx)
     {
-        GImNodes->HoveredPinIdx = pin_idx;
-        GImNodes->HoveredPinFlags = pin.Flags;
         pin_color = pin.ColorStyle.Hovered;
-
-        if (left_mouse_clicked)
-        {
-            BeginLinkCreation(editor, pin_idx);
-        }
     }
 
     DrawPinShape(pin.Pos, pin, pin_color);
@@ -1521,17 +1509,12 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
 
     for (int i = 0; i < node.PinIndices.size(); ++i)
     {
-        DrawPin(editor, node.PinIndices[i], GImNodes->LeftMouseClicked);
+        DrawPin(editor, node.PinIndices[i]);
     }
 
     if (node_hovered)
     {
         GImNodes->HoveredNodeIdx = node_idx;
-        const bool node_free_to_move = GImNodes->InteractiveNodeIdx != node_idx;
-        if (GImNodes->LeftMouseClicked && node_free_to_move)
-        {
-            BeginNodeSelection(editor, node_idx);
-        }
     }
 }
 
@@ -1551,10 +1534,6 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
     if (link_hovered)
     {
         GImNodes->HoveredLinkIdx = link_idx;
-        if (GImNodes->LeftMouseClicked)
-        {
-            BeginLinkInteraction(editor, link_idx);
-        }
     }
 
     // It's possible for a link to be deleted in begin_link_interaction. A user
@@ -2148,7 +2127,6 @@ void BeginNodeEditor()
     GImNodes->InteractiveNodeIdx.Reset();
     GImNodes->HoveredLinkIdx.Reset();
     GImNodes->HoveredPinIdx.Reset();
-    GImNodes->HoveredPinFlags = ImNodesAttributeFlags_None;
     GImNodes->DeletedLinkIdx.Reset();
     GImNodes->SnapLinkIdx.Reset();
 
@@ -2217,7 +2195,9 @@ void EndNodeEditor()
     // its an *overlay* with its own interaction behavior and must have precedence during mouse
     // interaction
 
-    if (MouseInCanvas() && !IsMiniMapHovered())
+    if ((editor.ClickInteraction.Type == ImNodesClickInteractionType_None ||
+         editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation) &&
+        MouseInCanvas() && !IsMiniMapHovered())
     {
         // Pins needs some special care. We need to check the depth stack to see which pins are
         // being occluded by other nodes.
@@ -2231,8 +2211,8 @@ void EndNodeEditor()
             GImNodes->HoveredNodeIdx = ResolveHoveredNode(editor.NodeDepthOrder);
         }
 
-        // We don't need to check the depth stack for links. If a node occludes a link and is being
-        // hovered, then we would not be able to detect the link anyway.
+        // We don't check for hovered pins here, because if we want to detach a link by clicking and
+        // dragging, we need to have both a link and pin hovered.
         if (!GImNodes->HoveredNodeIdx.HasValue())
         {
             GImNodes->HoveredLinkIdx = ResolveHoveredLink(editor.Links, editor.Pins);
@@ -2266,19 +2246,41 @@ void EndNodeEditor()
     DrawListAppendClickInteractionChannel();
     DrawListActivateClickInteractionChannel();
 
-    if (GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased || GImNodes->AltMouseClicked ||
-        GImNodes->AltMouseScrollDelta != 0.f)
-    {
-        BeginCanvasInteraction(editor);
-    }
-
     // Mini-map rect will be set with non-zero width if MiniMap(...) was called
     if (IsMiniMapActive())
     {
         MiniMapUpdate();
     }
 
-    ClickInteractionUpdate(editor);
+    // Handle events
+
+    {
+        if (GImNodes->LeftMouseClicked && GImNodes->HoveredLinkIdx.HasValue())
+        {
+            BeginLinkInteraction(editor, GImNodes->HoveredLinkIdx.Value());
+        }
+
+        else if (GImNodes->LeftMouseClicked && GImNodes->HoveredPinIdx.HasValue())
+        {
+            BeginLinkCreation(editor, GImNodes->HoveredPinIdx.Value());
+        }
+
+        else if (
+            GImNodes->LeftMouseClicked && GImNodes->HoveredNodeIdx.HasValue() &&
+            GImNodes->InteractiveNodeIdx != GImNodes->HoveredNodeIdx)
+        {
+            BeginNodeSelection(editor, GImNodes->HoveredNodeIdx.Value());
+        }
+
+        else if (
+            GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased ||
+            GImNodes->AltMouseClicked || GImNodes->AltMouseScrollDelta != 0.f)
+        {
+            BeginCanvasInteraction(editor);
+        }
+
+        ClickInteractionUpdate(editor);
+    }
 
     // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
     // to detect unused node slots and remove those indices from the depth stack before sorting the

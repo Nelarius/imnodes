@@ -309,7 +309,6 @@ struct ImNodesContext
     ImOptionalIndex InteractiveNodeIdx;
     ImOptionalIndex HoveredLinkIdx;
     ImOptionalIndex HoveredPinIdx;
-    int             HoveredPinFlags;
 
     ImOptionalIndex DeletedLinkIdx;
     ImOptionalIndex SnapLinkIdx;
