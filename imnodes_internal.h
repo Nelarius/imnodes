@@ -59,6 +59,7 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_MiniMapPanning,
     ImNodesClickInteractionType_MiniMapZooming,
     ImNodesClickInteractionType_MiniMapSnapping,
+    ImNodesClickInteractionType_ImGuiItem,
     ImNodesClickInteractionType_None
 };
 
@@ -306,7 +307,6 @@ struct ImNodesContext
     int CurrentAttributeId;
 
     ImOptionalIndex HoveredNodeIdx;
-    ImOptionalIndex InteractiveNodeIdx;
     ImOptionalIndex HoveredLinkIdx;
     ImOptionalIndex HoveredPinIdx;
 

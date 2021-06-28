@@ -1036,6 +1036,13 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
         editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
     }
     break;
+    case ImNodesClickInteractionType_ImGuiItem:
+    {
+        if (GImNodes->LeftMouseReleased)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
+        }
+    }
     case ImNodesClickInteractionType_None:
         break;
     default:
@@ -1612,7 +1619,6 @@ void EndPinAttribute()
     {
         GImNodes->ActiveAttribute = true;
         GImNodes->ActiveAttributeId = GImNodes->CurrentAttributeId;
-        GImNodes->InteractiveNodeIdx = GImNodes->CurrentNodeIdx;
     }
 
     ImNodesEditorContext& editor = EditorContextGet();
@@ -2124,7 +2130,6 @@ void BeginNodeEditor()
     ObjectPoolReset(editor.Links);
 
     GImNodes->HoveredNodeIdx.Reset();
-    GImNodes->InteractiveNodeIdx.Reset();
     GImNodes->HoveredLinkIdx.Reset();
     GImNodes->HoveredPinIdx.Reset();
     GImNodes->DeletedLinkIdx.Reset();
@@ -2188,12 +2193,19 @@ void EndNodeEditor()
 
     ImNodesEditorContext& editor = EditorContextGet();
 
+    // Detect ImGui interaction first, because it blocks interaction with the rest of the UI
+
+    if (GImNodes->LeftMouseClicked && ImGui::IsAnyItemActive())
+    {
+        editor.ClickInteraction.Type = ImNodesClickInteractionType_ImGuiItem;
+    }
+
     // Detect which UI element is being hovered over. Detection is done in a hierarchical fashion,
     // because a UI element being hovered excludes any other as being hovered over.
 
     // Don't do hovering detection for nodes/links/pins when interacting with the mini-map, since
     // its an *overlay* with its own interaction behavior and must have precedence during mouse
-    // interaction
+    // interaction.
 
     if ((editor.ClickInteraction.Type == ImNodesClickInteractionType_None ||
          editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation) &&
@@ -2252,7 +2264,7 @@ void EndNodeEditor()
         MiniMapUpdate();
     }
 
-    // Handle events
+    // Handle node graph interaction
 
     {
         if (GImNodes->LeftMouseClicked && GImNodes->HoveredLinkIdx.HasValue())
@@ -2265,9 +2277,7 @@ void EndNodeEditor()
             BeginLinkCreation(editor, GImNodes->HoveredPinIdx.Value());
         }
 
-        else if (
-            GImNodes->LeftMouseClicked && GImNodes->HoveredNodeIdx.HasValue() &&
-            GImNodes->InteractiveNodeIdx != GImNodes->HoveredNodeIdx)
+        else if (GImNodes->LeftMouseClicked && GImNodes->HoveredNodeIdx.HasValue())
         {
             BeginNodeSelection(editor, GImNodes->HoveredNodeIdx.Value());
         }
@@ -2458,7 +2468,6 @@ void EndStaticAttribute()
     {
         GImNodes->ActiveAttribute = true;
         GImNodes->ActiveAttributeId = GImNodes->CurrentAttributeId;
-        GImNodes->InteractiveNodeIdx = GImNodes->CurrentNodeIdx;
     }
 }
 
