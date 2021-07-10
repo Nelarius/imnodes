@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <limits.h>
 
+#include <map>
+
 // the structure of this file:
 //
 // [SECTION] internal enums
@@ -133,12 +135,17 @@ private:
     int _Index;
 };
 
-struct ImNodeData
+// This struct contains all data needed to draw the node in EndNodeEditor(). We duplicate
+// node-specific style and color state here, as we can't know whether the node is hovered or
+// selected until all the other nodes have been submitted.
+struct ImNodeDrawData
 {
-    int    Id;
-    ImVec2 GridSpacePos;
-    ImRect TitleBarContentRect;
-    ImRect Rect;
+    int Id;
+    // The coordinates of the node's upper left corner, relative to the editor canvas' upper left
+    // corner.
+    ImVec2 CanvasSpacePosition;
+    ImRect BaseRectangle;
+    ImRect TitleRectangle;
 
     struct
     {
@@ -152,18 +159,6 @@ struct ImNodeData
         ImVec2 Padding;
         float  BorderThickness;
     } LayoutStyle;
-
-    ImVector<int> PinIndices;
-    bool          Draggable;
-
-    ImNodeData(const int node_id)
-        : Id(node_id), GridSpacePos(0.0f, 0.0f), TitleBarContentRect(),
-          Rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), ColorStyle(), LayoutStyle(), PinIndices(),
-          Draggable(true)
-    {
-    }
-
-    ~ImNodeData() { Id = INT_MIN; }
 };
 
 struct ImPinData
@@ -244,7 +239,14 @@ struct ImNodesStyleVarElement
 
 struct ImNodesEditorContext
 {
-    ImObjectPool<ImNodeData> Nodes;
+    // Contains <node id, node origin> pairs. The node origin is the upper-left corner of the node,
+    // and is stored relative to the editor grid. See notes/coordinate_spaces.md for more
+    // information. Node origins have to be retained between frames, so that the user doesn't have
+    // to manage node position state.
+    //
+    // TODO: get rid of std::map.
+    std::map<int, ImVec2> GridSpaceNodeOrigins;
+
     ImObjectPool<ImPinData>  Pins;
     ImObjectPool<ImLinkData> Links;
 
@@ -253,14 +255,14 @@ struct ImNodesEditorContext
     // ui related fields
     ImVec2 Panning;
 
-    ImVector<int> SelectedNodeIndices;
+    ImVector<int> SelectedNodeIds;
     ImVector<int> SelectedLinkIndices;
 
     ImClickInteractionState ClickInteraction;
 
     ImNodesEditorContext()
-        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          ClickInteraction()
+        : GridSpaceNodeOrigins(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(),
+          SelectedLinkIndices(), ClickInteraction()
     {
     }
 };
@@ -274,7 +276,7 @@ struct ImNodesContext
     ImDrawList* CanvasDrawList;
 
     // Frame state
-    int SubmissionIdx; // TODO: this will be replaced with the actual node vector count
+    ImVector<ImNodeData> Nodes;
     ImOptionalIndex
         NodeOverlappingCursor; // TODO: this a temporary downgrade in functionality. When nodes
                                // intersect, only the node created last will overlap.
@@ -304,7 +306,7 @@ struct ImNodesContext
     ImVector<int> AttributeFlagStack;
 
     // UI element state
-    int CurrentNodeIdx;
+    int CurrentNodeIdx; // TODO: can this be deleted?
     int CurrentPinIdx;
     int CurrentAttributeId;
 
@@ -368,39 +370,6 @@ static inline void ObjectPoolUpdate(ImObjectPool<T>& objects)
     }
 }
 
-template<>
-inline void ObjectPoolUpdate(ImObjectPool<ImNodeData>& nodes)
-{
-    nodes.FreeList.clear();
-    for (int i = 0; i < nodes.InUse.size(); ++i)
-    {
-        if (nodes.InUse[i])
-        {
-            nodes.Pool[i].PinIndices.clear();
-        }
-        else
-        {
-            const int previous_id = nodes.Pool[i].Id;
-            const int previous_idx = nodes.IdMap.GetInt(previous_id, -1);
-
-            if (previous_idx != -1)
-            {
-                assert(previous_idx == i);
-                // Remove node idx form depth stack the first time we detect that this idx slot is
-                // unused
-                ImVector<int>&   depth_stack = EditorContextGet().NodeDepthOrder;
-                const int* const elem = depth_stack.find(i);
-                assert(elem != depth_stack.end());
-                depth_stack.erase(elem);
-            }
-
-            nodes.IdMap.SetInt(previous_id, -1);
-            nodes.FreeList.push_back(i);
-            (nodes.Pool.Data + i)->~ImNodeData();
-        }
-    }
-}
-
 template<typename T>
 static inline void ObjectPoolReset(ImObjectPool<T>& objects)
 {
@@ -439,40 +408,6 @@ static inline int ObjectPoolFindOrCreateIndex(ImObjectPool<T>& objects, const in
     objects.InUse[index] = true;
 
     return index;
-}
-
-template<>
-inline int ObjectPoolFindOrCreateIndex(ImObjectPool<ImNodeData>& nodes, const int node_id)
-{
-    int node_idx = nodes.IdMap.GetInt(static_cast<ImGuiID>(node_id), -1);
-
-    // Construct new node
-    if (node_idx == -1)
-    {
-        if (nodes.FreeList.empty())
-        {
-            node_idx = nodes.Pool.size();
-            IM_ASSERT(nodes.Pool.size() == nodes.InUse.size());
-            const int new_size = nodes.Pool.size() + 1;
-            nodes.Pool.resize(new_size);
-            nodes.InUse.resize(new_size);
-        }
-        else
-        {
-            node_idx = nodes.FreeList.back();
-            nodes.FreeList.pop_back();
-        }
-        IM_PLACEMENT_NEW(nodes.Pool.Data + node_idx) ImNodeData(node_id);
-        nodes.IdMap.SetInt(static_cast<ImGuiID>(node_id), node_idx);
-
-        ImNodesEditorContext& editor = EditorContextGet();
-        editor.NodeDepthOrder.push_back(node_idx);
-    }
-
-    // Flag node as used
-    nodes.InUse[node_idx] = true;
-
-    return node_idx;
 }
 
 template<typename T>
