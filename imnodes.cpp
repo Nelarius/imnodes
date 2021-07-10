@@ -398,7 +398,7 @@ bool MouseInCanvas()
            GImNodes->CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
 }
 
-void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
+void BeginNodeSelection(ImNodesEditorContext& editor, const int node_id)
 {
     // Don't start selecting a node if we are e.g. already creating and dragging
     // a new link! New link creation can happen when the mouse is clicked over
@@ -409,17 +409,13 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
     }
 
     editor.ClickInteraction.Type = ImNodesClickInteractionType_Node;
-    // If the node is not already contained in the selection, then we want only
-    // the interaction node to be selected, effective immediately.
-    //
-    // Otherwise, we want to allow for the possibility of multiple nodes to be
-    // moved at once.
-    if (!editor.SelectedNodeIndices.contains(node_idx))
-    {
-        editor.SelectedNodeIndices.clear();
-        editor.SelectedLinkIndices.clear();
-        editor.SelectedNodeIndices.push_back(node_idx);
-    }
+
+    // Precondition: the node should not be selected already.
+    assert(!editor.SelectedNodeIds.contains(node_id));
+
+    editor.SelectedNodeIds.resize(0);
+    editor.SelectedLinkIndices.clear();
+    editor.SelectedNodeIds.push_back(node_id);
 }
 
 void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
@@ -427,7 +423,7 @@ void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
     editor.ClickInteraction.Type = ImNodesClickInteractionType_Link;
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
-    editor.SelectedNodeIndices.clear();
+    editor.SelectedNodeIds.resize(0);
     editor.SelectedLinkIndices.clear();
     editor.SelectedLinkIndices.push_back(link_idx);
 }
@@ -1206,7 +1202,7 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
     ImU32 node_background = node.ColorStyle.Background;
     ImU32 titlebar_background = node.ColorStyle.Titlebar;
 
-    if (editor.SelectedNodeIndices.contains(node_idx))
+    if (editor.SelectedNodeIds.contains(node.Id))
     {
         node_background = node.ColorStyle.BackgroundSelected;
         titlebar_background = node.ColorStyle.TitlebarSelected;
@@ -1506,7 +1502,7 @@ static void MiniMapDrawNode(
         GImNodes->MiniMapRectSnappingOffset =
             editor_center - (node.BaseRectangle.Min + node.BaseRectangle.Max) * 0.5f;
     }
-    else if (editor.SelectedNodeIndices.contains(node_idx))
+    else if (editor.SelectedNodeIds.contains(node.Id))
     {
         mini_map_node_background = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundSelected];
     }
@@ -2030,7 +2026,7 @@ void EndNodeEditor()
 
         else if (GImNodes->LeftMouseClicked && GImNodes->HoveredNodeIdx.HasValue())
         {
-            BeginNodeSelection(editor, GImNodes->HoveredNodeIdx.Value());
+            BeginNodeSelection(editor, GImNodes->Nodes[GImNodes->HoveredNodeIdx.Value()].Id);
         }
 
         else if (
@@ -2547,7 +2543,7 @@ void SelectLink(int link_id)
 bool IsNodeSelected(int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    return IsObjectSelected(editor.Nodes, editor.SelectedNodeIndices, node_id);
+    return editor.SelectedNodeIds.contains(node_id);
 }
 
 bool IsLinkSelected(int link_id)

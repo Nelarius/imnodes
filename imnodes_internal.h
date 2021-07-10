@@ -259,7 +259,7 @@ struct ImNodesEditorContext
     ImClickInteractionState ClickInteraction;
 
     ImNodesEditorContext()
-        : GridSpaceNodeOrigins(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(),
+        : GridSpaceNodeOrigins(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIds(),
           SelectedLinkIndices(), ClickInteraction()
     {
     }
