@@ -419,13 +419,6 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
         editor.SelectedNodeIndices.clear();
         editor.SelectedLinkIndices.clear();
         editor.SelectedNodeIndices.push_back(node_idx);
-
-        // Ensure that individually selected nodes get rendered on top
-        ImVector<int>&   depth_stack = editor.NodeDepthOrder;
-        const int* const elem = depth_stack.find(node_idx);
-        assert(elem != depth_stack.end());
-        depth_stack.erase(elem);
-        depth_stack.push_back(node_idx);
     }
 }
 

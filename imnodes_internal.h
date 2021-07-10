@@ -250,8 +250,6 @@ struct ImNodesEditorContext
     ImObjectPool<ImPinData>  Pins;
     ImObjectPool<ImLinkData> Links;
 
-    ImVector<int> NodeDepthOrder;
-
     // ui related fields
     ImVec2 Panning;
 
