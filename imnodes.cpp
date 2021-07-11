@@ -2101,6 +2101,7 @@ void BeginNode(const int node_id)
     GImNodes->CurrentNodeIdx = GImNodes->Nodes.size();
 
     ImNodeDrawData node;
+    node.Id = node_id;
     node.ColorStyle.Background = GImNodes->Style.Colors[ImNodesCol_NodeBackground];
     node.ColorStyle.BackgroundHovered = GImNodes->Style.Colors[ImNodesCol_NodeBackgroundHovered];
     node.ColorStyle.BackgroundSelected = GImNodes->Style.Colors[ImNodesCol_NodeBackgroundSelected];
