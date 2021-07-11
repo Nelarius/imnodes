@@ -281,9 +281,6 @@ void PopAttributeFlag();
 // calls. The order of start_attr and end_attr doesn't make a difference for rendering the link.
 void Link(int id, int start_attribute_id, int end_attribute_id);
 
-// Enable or disable the ability to click and drag a specific node.
-void SetNodeDraggable(int node_id, const bool draggable);
-
 // A note on coordinate spaces.
 // * screen space coordinates -- the origin is the upper left corner of the window
 // * canvas space coordinates -- the origin is the upper left corner of the node editor canvas

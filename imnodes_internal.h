@@ -274,7 +274,8 @@ struct ImNodesContext
     ImDrawList* CanvasDrawList;
 
     // Frame state
-    ImVector<ImNodeData> Nodes;
+    ImVector<ImNodeDrawData> Nodes;
+    ImVector<ImVector<int> > NodeIdxToPinIndices;
     ImOptionalIndex
         NodeOverlappingCursor; // TODO: this a temporary downgrade in functionality. When nodes
                                // intersect, only the node created last will overlap.

@@ -34,6 +34,7 @@ PointerBindsToType: 'true'
 SortIncludes: 'false'
 SpaceAfterTemplateKeyword: 'false'
 SpaceBeforeParens: ControlStatements
+Standard: Cpp03
 TabWidth: 8
 UseTab: Never
 ...
