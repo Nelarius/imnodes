@@ -394,7 +394,7 @@ bool MouseInCanvas()
            GImNodes->CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
 }
 
-void BeginNodeSelection(ImNodesEditorContext& editor, const int node_id)
+void BeginNodeInteraction(ImNodesEditorContext& editor, const int node_id)
 {
     // Don't start selecting a node if we are e.g. already creating and dragging
     // a new link! New link creation can happen when the mouse is clicked over
@@ -406,12 +406,12 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_id)
 
     editor.ClickInteraction.Type = ImNodesClickInteractionType_Node;
 
-    // Precondition: the node should not be selected already.
-    assert(!editor.SelectedNodeIds.contains(node_id));
-
-    editor.SelectedNodeIds.resize(0);
-    editor.SelectedLinkIndices.clear();
-    editor.SelectedNodeIds.push_back(node_id);
+    if (!editor.SelectedNodeIds.contains(node_id))
+    {
+        editor.SelectedNodeIds.resize(0);
+        editor.SelectedLinkIndices.clear();
+        editor.SelectedNodeIds.push_back(node_id);
+    }
 }
 
 void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
@@ -595,17 +595,14 @@ void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
 
 void TranslateSelectedNodes(ImNodesEditorContext& editor)
 {
-    if (GImNodes->LeftMouseDragging)
+    const ImGuiIO&         io = ImGui::GetIO();
+    std::map<int, ImVec2>& node_origins = editor.GridSpaceNodeOrigins;
+    for (int i = 0; i < editor.SelectedNodeIds.size(); ++i)
     {
-        const ImGuiIO&         io = ImGui::GetIO();
-        std::map<int, ImVec2>& node_origins = editor.GridSpaceNodeOrigins;
-        for (int i = 0; i < editor.SelectedNodeIds.size(); ++i)
-        {
-            const int                       node_id = editor.SelectedNodeIds[i];
-            std::map<int, ImVec2>::iterator id_pos_pair = node_origins.find(node_id);
-            assert(id_pos_pair != node_origins.end());
-            id_pos_pair->second += io.MouseDelta;
-        }
+        const int                       node_id = editor.SelectedNodeIds[i];
+        std::map<int, ImVec2>::iterator id_pos_pair = node_origins.find(node_id);
+        assert(id_pos_pair != node_origins.end());
+        id_pos_pair->second += io.MouseDelta;
     }
 }
 
@@ -713,9 +710,11 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     break;
     case ImNodesClickInteractionType_Node:
     {
-        TranslateSelectedNodes(editor);
-
-        if (GImNodes->LeftMouseReleased)
+        if (GImNodes->LeftMouseDragging)
+        {
+            TranslateSelectedNodes(editor);
+        }
+        else if (GImNodes->LeftMouseReleased)
         {
             editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
         }
@@ -2032,7 +2031,7 @@ void EndNodeEditor()
 
         else if (GImNodes->LeftMouseClicked && GImNodes->HoveredNodeIdx.HasValue())
         {
-            BeginNodeSelection(editor, GImNodes->Nodes[GImNodes->HoveredNodeIdx.Value()].Id);
+            BeginNodeInteraction(editor, GImNodes->Nodes[GImNodes->HoveredNodeIdx.Value()].Id);
         }
 
         else if (
