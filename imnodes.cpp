@@ -1651,9 +1651,13 @@ const ImNodeDrawData& FindNode(const ImVector<ImNodeDrawData>& nodes, const int 
     const ImNodeDrawData* const data_end = nodes.end();
     while (data < data_end)
     {
-        if ((data++)->Id == node_id)
+        if (data->Id == node_id)
         {
             break;
+        }
+        else
+        {
+            ++data;
         }
     }
 
@@ -1753,8 +1757,8 @@ void EditorContextMoveToNode(const int node_id)
     const ImVec2 offset = node.BaseRectangle.GetCenter() - GImNodes->CanvasOriginScreenSpace;
 
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.Panning.x += offset.x;
-    editor.Panning.y += offset.y;
+    editor.Panning.x -= 0.5f * offset.x;
+    editor.Panning.y -= 0.5f * offset.y;
 }
 
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
