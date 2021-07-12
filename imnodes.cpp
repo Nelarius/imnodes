@@ -1179,6 +1179,8 @@ void DrawNodesAndPins(
     const ImOptionalIndex maybe_hovered_node_idx,
     const ImOptionalIndex maybe_hovered_pin_idx)
 {
+    assert(GImNodes->Nodes.size() == GImNodes->NodeIdxToPinIndices.size());
+
     for (int node_idx = 0; node_idx < GImNodes->Nodes.size(); ++node_idx)
     {
         DrawListActivateNodeBackground(node_idx);
@@ -1232,7 +1234,7 @@ void DrawNodesAndPins(
 
         // Submit the pin draw commands
 
-        for (int i = 0; i < GImNodes->NodeIdxToPinIndices.size(); ++i)
+        for (int i = 0; i < GImNodes->NodeIdxToPinIndices[node_idx].size(); ++i)
         {
             const int  pin_idx = GImNodes->NodeIdxToPinIndices[node_idx][i];
             ImPinData& pin = editor.Pins.Pool[pin_idx];
