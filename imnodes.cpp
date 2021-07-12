@@ -2122,7 +2122,7 @@ void BeginNode(const int node_id)
     {
         std::map<int, ImVec2>::const_iterator id_node_pair =
             editor.GridSpaceNodeOrigins.find(node_id);
-        if (id_node_pair != editor.GridSpaceNodeOrigins.cend())
+        if (id_node_pair != editor.GridSpaceNodeOrigins.end())
         {
             node.CanvasSpacePosition = GridSpaceToCanvasSpace(editor, id_node_pair->second);
         }
@@ -2755,7 +2755,7 @@ void NodeLineHandler(ImNodesEditorContext& editor, const char* const line)
         // Precondition: the node should not exist
         assert(
             editor.GridSpaceNodeOrigins.find(deserialized_node.first) ==
-            editor.GridSpaceNodeOrigins.cend());
+            editor.GridSpaceNodeOrigins.end());
 
         deserialized_node.second = ImVec2((float)x, (float)y);
         editor.GridSpaceNodeOrigins.insert(deserialized_node);
@@ -2787,8 +2787,8 @@ const char* SaveEditorStateToIniString(
     GImNodes->TextBuffer.appendf(
         "[editor]\npanning=%i,%i\n", (int)editor.Panning.x, (int)editor.Panning.y);
 
-    for (std::map<int, ImVec2>::const_iterator iter = editor.GridSpaceNodeOrigins.cbegin();
-         iter != editor.GridSpaceNodeOrigins.cend();
+    for (std::map<int, ImVec2>::const_iterator iter = editor.GridSpaceNodeOrigins.begin();
+         iter != editor.GridSpaceNodeOrigins.end();
          ++iter)
     {
         const int     node_id = iter->first;
