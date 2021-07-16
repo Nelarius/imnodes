@@ -2016,12 +2016,6 @@ void EndNodeEditor()
     DrawListAppendClickInteractionChannel();
     DrawListActivateClickInteractionChannel();
 
-    // Mini-map rect will be set with non-zero width if MiniMap(...) was called
-    if (IsMiniMapActive())
-    {
-        MiniMapUpdate();
-    }
-
     // Handle node graph interaction
 
     {
@@ -2048,6 +2042,12 @@ void EndNodeEditor()
         }
 
         ClickInteractionUpdate(editor);
+    }
+
+    // Mini-map rect will be set with non-zero width if MiniMap(...) was called
+    if (IsMiniMapActive())
+    {
+        MiniMapUpdate();
     }
 
     ObjectPoolUpdate(editor.Pins);
