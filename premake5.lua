@@ -15,12 +15,18 @@ newoption {
     description = "Use the installed SDL2 framework (on MacOS)"
 }
 
-local projectlocation = os.getcwd()
+newoption {
+    trigger = "vcpkg",
+    value = "path",
+    description = "The path to vcpkg root directory."
+}
+
+local projectlocation = path.join(os.getcwd(), "build", _ACTION)
 local gl3wlocation = path.join(os.getcwd(), "dependencies/gl3w")
 local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.82")
 
-if _ACTION then
-    projectlocation = path.join(projectlocation, "build", _ACTION)
+if  _OPTIONS["vcpkg-root"] then
+    vcpkgroot = _OPTIONS["vcpkg-root"]
 end
 
 function imnodes_example_project(name, example_file)
@@ -152,3 +158,25 @@ workspace "imnodes"
     imnodes_example_project("colornode", "color_node_editor.cpp")
 
     imnodes_example_project("multieditor", "multi_editor.cpp")
+
+    group "test"
+
+    project "test"
+        location(projectlocation)
+        kind "ConsoleApp"
+        language "C++"
+        targetdir "bin/%{cfg.buildcfg}"
+        debugdir "bin/%{cfg.buildcfg}"
+        files { "test/**.cpp" }
+
+        includedirs { imguilocation, os.getcwd() }
+
+        links { "imgui", "UnitTest++" }
+
+        filter "system:windows"
+            includedirs { path.join(vcpkgroot, "installed/x64-windows/include") }
+            libdirs { path.join(vcpkgroot, "installed/x64-windows/lib") }
+
+        filter "system:macosx"
+            includedirs { path.join(vcpkgroot, "installed/x64-osx/include") }
+            libdirs { path.join(vcpkgroot, "installed/x64-osx/lib") }

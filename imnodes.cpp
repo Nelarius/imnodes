@@ -873,8 +873,8 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     break;
     case ImNodesClickInteractionType_MiniMapSnapping:
     {
-        editor.Panning += GImNodes->MiniMapRectSnappingOffset;
-        GImNodes->MiniMapRectSnappingOffset = ImVec2(0.f, 0.f);
+        editor.Panning += GImNodes->MiniMapRectPanningOffset;
+        GImNodes->MiniMapRectPanningOffset = ImVec2(0.f, 0.f);
 
         editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
     }
@@ -1364,7 +1364,7 @@ void Initialize(ImNodesContext* context)
     context->CurrentScope = ImNodesScope_None;
 
     context->MiniMapRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
-    context->MiniMapRectSnappingOffset = ImVec2(0.f, 0.f);
+    context->MiniMapRectPanningOffset = ImVec2(0.f, 0.f);
     context->MiniMapZoom = 0.1f;
     context->MiniMapNodeHoveringCallback = NULL;
     context->MiniMapNodeHoveringCallbackUserData = NULL;
@@ -1479,8 +1479,8 @@ static void MiniMapDrawNodes(
             }
 
             // Compute the amount to pan editor to center node selected in the minimap
-            GImNodes->MiniMapRectSnappingOffset =
-                editor_center - (node.BaseRectangle.Min + node.BaseRectangle.Max) * 0.5f;
+            GImNodes->MiniMapRectPanningOffset =
+                CalculatePanningOffsetToNode(editor_center, node.BaseRectangle.GetCenter());
         }
         else if (editor.SelectedNodeIds.contains(node.Id))
         {
@@ -1567,15 +1567,11 @@ static void MiniMapUpdate()
 
     const ImRect& editor_rect = GImNodes->CanvasRectScreenSpace;
 
-    const ImVec2 editor_center(
-        0.5f * (editor_rect.Min.x + editor_rect.Max.x),
-        0.5f * (editor_rect.Min.y + editor_rect.Max.y));
+    const ImVec2 editor_center = editor_rect.GetCenter();
 
     const ImRect& mini_map_rect = GImNodes->MiniMapRectScreenSpace;
 
-    const ImVec2 mini_map_center(
-        0.5f * (mini_map_rect.Min.x + mini_map_rect.Max.x),
-        0.5f * (mini_map_rect.Min.y + mini_map_rect.Max.y));
+    const ImVec2 mini_map_center = mini_map_rect.GetCenter();
 
     // Draw minimap background and border
     GImNodes->CanvasDrawList->AddRectFilled(
@@ -1753,12 +1749,9 @@ void EditorContextResetPanning(const ImVec2& pos)
 void EditorContextMoveToNode(const int node_id)
 {
     const ImNodeDrawData& node = FindNode(GImNodes->Nodes, node_id);
-
-    const ImVec2 offset = node.BaseRectangle.GetCenter() - GImNodes->CanvasOriginScreenSpace;
-
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.Panning.x -= 0.5f * offset.x;
-    editor.Panning.y -= 0.5f * offset.y;
+    editor.Panning += CalculatePanningOffsetToNode(
+        GImNodes->CanvasRectScreenSpace.GetCenter(), node.BaseRectangle.GetCenter());
 }
 
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }

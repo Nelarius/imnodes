@@ -14,6 +14,7 @@
 // [SECTION] internal enums
 // [SECTION] internal data structures
 // [SECTION] global and editor context structs
+// [SECTION] api helpers
 // [SECTION] object pool implementation
 
 struct ImNodesContext;
@@ -286,7 +287,7 @@ struct ImNodesContext
 
     // MiniMap state
     ImRect                             MiniMapRectScreenSpace;
-    ImVec2                             MiniMapRectSnappingOffset;
+    ImVec2                             MiniMapRectPanningOffset;
     float                              MiniMapZoom;
     ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
     void*                              MiniMapNodeHoveringCallbackUserData;
@@ -345,7 +346,16 @@ static inline ImNodesEditorContext& EditorContextGet()
     return *GImNodes->EditorCtx;
 }
 
-// [SECTION] ObjectPool implementation
+// [SECTION] api helpers
+
+static inline ImVec2 CalculatePanningOffsetToNode(
+    const ImVec2& ss_canvas_center,
+    const ImVec2& ss_node_center)
+{
+    return ss_canvas_center - ss_node_center;
+}
+
+// [SECTION] object pool implementation
 
 template<typename T>
 static inline int ObjectPoolFind(const ImObjectPool<T>& objects, const int id)
