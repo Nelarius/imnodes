@@ -215,7 +215,7 @@ struct ImClickInteractionState
 
     struct
     {
-        ImRect Rect;
+        ImRect Rect; // Coordinates in grid space
     } BoxSelector;
 
     ImClickInteractionState() : Type(ImNodesClickInteractionType_None) {}
@@ -252,6 +252,7 @@ struct ImNodesEditorContext
 
     // ui related fields
     ImVec2 Panning;
+    ImVec2 AutoPanningDelta;
 
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;

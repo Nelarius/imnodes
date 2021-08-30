@@ -252,6 +252,33 @@ inline bool RectangleOverlapsLink(
     return false;
 }
 
+// [SECTION] coordinate space conversion helpers
+
+inline ImVec2 ScreenSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
+{
+    return v - GImNodes->CanvasOriginScreenSpace - editor.Panning;
+}
+
+inline ImVec2 GridSpaceToScreenSpace(const ImNodesEditorContext& editor, const ImVec2& v)
+{
+    return v + GImNodes->CanvasOriginScreenSpace + editor.Panning;
+}
+
+inline ImVec2 GridSpaceToEditorSpace(const ImNodesEditorContext& editor, const ImVec2& v)
+{
+    return v + editor.Panning;
+}
+
+inline ImVec2 EditorSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
+{
+    return v - editor.Panning;
+}
+
+inline ImVec2 EditorSpaceToScreenSpace(const ImVec2& v)
+{
+    return GImNodes->CanvasOriginScreenSpace + v;
+}
+
 // [SECTION] draw list helper
 
 void ImDrawListGrowChannels(ImDrawList* draw_list, const int num_channels)
@@ -664,7 +691,7 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
         else if (GImNodes->LeftMouseClicked)
         {
             editor.ClickInteraction.Type = ImNodesClickInteractionType_BoxSelection;
-            editor.ClickInteraction.BoxSelector.Rect.Min = GImNodes->MousePos;
+            editor.ClickInteraction.BoxSelector.Rect.Min = ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
         }
     }
 }
@@ -743,7 +770,7 @@ void TranslateSelectedNodes(ImNodesEditorContext& editor)
             ImNodeData& node = editor.Nodes.Pool[node_idx];
             if (node.Draggable)
             {
-                node.Origin += io.MouseDelta;
+                node.Origin += io.MouseDelta - editor.AutoPanningDelta;
             }
         }
     }
@@ -835,8 +862,11 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     {
     case ImNodesClickInteractionType_BoxSelection:
     {
-        ImRect& box_rect = editor.ClickInteraction.BoxSelector.Rect;
-        box_rect.Max = GImNodes->MousePos;
+        editor.ClickInteraction.BoxSelector.Rect.Max = ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
+
+        ImRect box_rect = editor.ClickInteraction.BoxSelector.Rect;
+        box_rect.Min = GridSpaceToScreenSpace(editor, box_rect.Min);
+        box_rect.Max = GridSpaceToScreenSpace(editor, box_rect.Max);
 
         BoxSelectorUpdateSelection(editor, box_rect);
 
@@ -1224,31 +1254,6 @@ ImOptionalIndex ResolveHoveredLink(
 }
 
 // [SECTION] render helpers
-
-inline ImVec2 ScreenSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
-{
-    return v - GImNodes->CanvasOriginScreenSpace - editor.Panning;
-}
-
-inline ImVec2 GridSpaceToScreenSpace(const ImNodesEditorContext& editor, const ImVec2& v)
-{
-    return v + GImNodes->CanvasOriginScreenSpace + editor.Panning;
-}
-
-inline ImVec2 GridSpaceToEditorSpace(const ImNodesEditorContext& editor, const ImVec2& v)
-{
-    return v + editor.Panning;
-}
-
-inline ImVec2 EditorSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
-{
-    return v - editor.Panning;
-}
-
-inline ImVec2 EditorSpaceToScreenSpace(const ImVec2& v)
-{
-    return GImNodes->CanvasOriginScreenSpace + v;
-}
 
 inline ImRect GetItemRect() { return ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()); }
 
@@ -1926,7 +1931,7 @@ ImNodesIO::LinkDetachWithModifierClick::LinkDetachWithModifierClick() : Modifier
 
 ImNodesIO::ImNodesIO()
     : EmulateThreeButtonMouse(), LinkDetachWithModifierClick(),
-      AltMouseButton(ImGuiMouseButton_Middle)
+      AltMouseButton(ImGuiMouseButton_Middle), AutoPanningSpeed(1000.0f)
 {
 }
 
@@ -2125,6 +2130,7 @@ void BeginNodeEditor()
     // Reset state from previous pass
 
     ImNodesEditorContext& editor = EditorContextGet();
+    editor.AutoPanningDelta = ImVec2(0, 0);
     ObjectPoolReset(editor.Nodes);
     ObjectPoolReset(editor.Pins);
     ObjectPoolReset(editor.Links);
@@ -2281,6 +2287,21 @@ void EndNodeEditor()
             GImNodes->AltMouseClicked || GImNodes->AltMouseScrollDelta != 0.f)
         {
             BeginCanvasInteraction(editor);
+        }
+
+        bool shouldAutoPan =
+            editor.ClickInteraction.Type == ImNodesClickInteractionType_BoxSelection ||
+            editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation ||
+            editor.ClickInteraction.Type == ImNodesClickInteractionType_Node;
+        if (shouldAutoPan && !MouseInCanvas())
+        {
+            auto mouse = ImGui::GetMousePos();
+            auto center = GImNodes->CanvasRectScreenSpace.GetCenter();
+            auto direction = (center - mouse);
+            direction = direction * ImInvLength(direction, 0.0);
+
+            editor.AutoPanningDelta = direction * ImGui::GetIO().DeltaTime * GImNodes->Io.AutoPanningSpeed;
+            editor.Panning += editor.AutoPanningDelta;
         }
 
         ClickInteractionUpdate(editor);
