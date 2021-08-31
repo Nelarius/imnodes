@@ -2295,9 +2295,9 @@ void EndNodeEditor()
             editor.ClickInteraction.Type == ImNodesClickInteractionType_Node;
         if (shouldAutoPan && !MouseInCanvas())
         {
-            auto mouse = ImGui::GetMousePos();
-            auto center = GImNodes->CanvasRectScreenSpace.GetCenter();
-            auto direction = (center - mouse);
+            ImVec2 mouse = ImGui::GetMousePos();
+            ImVec2 center = GImNodes->CanvasRectScreenSpace.GetCenter();
+            ImVec2 direction = (center - mouse);
             direction = direction * ImInvLength(direction, 0.0);
 
             editor.AutoPanningDelta = direction * ImGui::GetIO().DeltaTime * GImNodes->Io.AutoPanningSpeed;
