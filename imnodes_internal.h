@@ -58,9 +58,7 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_LinkCreation,
     ImNodesClickInteractionType_Panning,
     ImNodesClickInteractionType_BoxSelection,
-    ImNodesClickInteractionType_MiniMapPanning,
-    ImNodesClickInteractionType_MiniMapZooming,
-    ImNodesClickInteractionType_MiniMapSnapping,
+    ImNodesClickInteractionType_CenterOnRequest,
     ImNodesClickInteractionType_ImGuiItem,
     ImNodesClickInteractionType_None
 };
@@ -252,15 +250,38 @@ struct ImNodesEditorContext
     // ui related fields
     ImVec2 Panning;
     ImVec2 AutoPanningDelta;
+    // Minimum and maximum extents of all content in grid space. Valid after final
+    // ImNodes::EndNode() call.
+    ImRect GridContentBounds;
+
+    // When ImNodesClickInteractionType_CenterOnRequest is set, indicates location in grid space to
+    // center on.
+    ImVec2 CenterOnRequest;
 
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
 
     ImClickInteractionState ClickInteraction;
 
+    // Mini-map state set by MiniMap()
+
+    bool                               MiniMapEnabled;
+    ImNodesMiniMapLocation             MiniMapLocation;
+    float                              MiniMapSizeFraction;
+    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
+    void*                              MiniMapNodeHoveringCallbackUserData;
+
+    // Mini-map state set during EndNodeEditor() call
+
+    ImRect                             MiniMapRectScreenSpace;
+    ImRect                             MiniMapContentScreenSpace;
+    float                              MiniMapScaling;
+
     ImNodesEditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          ClickInteraction()
+          ClickInteraction(), MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
+          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
+          MiniMapScaling(0.0f)
     {
     }
 };
@@ -280,13 +301,6 @@ struct ImNodesContext
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
     ImRect CanvasRectScreenSpace;
-
-    // MiniMap state
-    ImRect                             MiniMapRectScreenSpace;
-    ImVec2                             MiniMapRectSnappingOffset;
-    float                              MiniMapZoom;
-    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    void*                              MiniMapNodeHoveringCallbackUserData;
 
     // Debug helpers
     ImNodesScope CurrentScope;

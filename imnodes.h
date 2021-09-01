@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <imgui.h>
 
 #ifndef IMNODES_NAMESPACE
 #define IMNODES_NAMESPACE ImNodes
@@ -41,6 +42,8 @@ enum ImNodesCol_
     ImNodesCol_MiniMapNodeOutline,
     ImNodesCol_MiniMapLink,
     ImNodesCol_MiniMapLinkSelected,
+    ImNodesCol_MiniMapCanvas,
+    ImNodesCol_MiniMapCanvasOutline,
     ImNodesCol_COUNT
 };
 
@@ -167,6 +170,11 @@ struct ImNodesStyle
     float PinHoverRadius;
     // Offsets the pins' positions from the edge of the node to the outside of the node.
     float PinOffset;
+
+    // Mini-map padding size between mini-map edge and mini-map content.
+    ImVec2 MiniMapPadding;
+    // Mini-map offset from the screen side.
+    ImVec2 MiniMapOffset;
 
     // By default, ImNodesStyleFlags_NodeOutline and ImNodesStyleFlags_Gridlines are enabled.
     ImNodesStyleFlags Flags;
