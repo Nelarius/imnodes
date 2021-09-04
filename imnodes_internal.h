@@ -356,12 +356,13 @@ static inline int ObjectPoolFind(const ImObjectPool<T>& objects, const int id)
 template<typename T>
 static inline void ObjectPoolUpdate(ImObjectPool<T>& objects)
 {
-    objects.FreeList.clear();
     for (int i = 0; i < objects.InUse.size(); ++i)
     {
-        if (!objects.InUse[i])
+        const int id = objects.Pool[i].Id;
+
+        if (!objects.InUse[i] && objects.IdMap.GetInt(id, -1) == i)
         {
-            objects.IdMap.SetInt(objects.Pool[i].Id, -1);
+            objects.IdMap.SetInt(id, -1);
             objects.FreeList.push_back(i);
             (objects.Pool.Data + i)->~T();
         }
@@ -371,32 +372,30 @@ static inline void ObjectPoolUpdate(ImObjectPool<T>& objects)
 template<>
 inline void ObjectPoolUpdate(ImObjectPool<ImNodeData>& nodes)
 {
-    nodes.FreeList.clear();
     for (int i = 0; i < nodes.InUse.size(); ++i)
     {
         if (nodes.InUse[i])
         {
             nodes.Pool[i].PinIndices.clear();
         }
-        else
+        else 
         {
-            const int previous_id = nodes.Pool[i].Id;
-            const int previous_idx = nodes.IdMap.GetInt(previous_id, -1);
+            const int id = nodes.Pool[i].Id;
 
-            if (previous_idx != -1)
+            if (nodes.IdMap.GetInt(id, -1) == i)
             {
-                assert(previous_idx == i);
                 // Remove node idx form depth stack the first time we detect that this idx slot is
                 // unused
                 ImVector<int>&   depth_stack = EditorContextGet().NodeDepthOrder;
                 const int* const elem = depth_stack.find(i);
                 assert(elem != depth_stack.end());
                 depth_stack.erase(elem);
+
+                nodes.IdMap.SetInt(id, -1);
+                nodes.FreeList.push_back(i);
+                (nodes.Pool.Data + i)->~ImNodeData();
             }
 
-            nodes.IdMap.SetInt(previous_id, -1);
-            nodes.FreeList.push_back(i);
-            (nodes.Pool.Data + i)->~ImNodeData();
         }
     }
 }
