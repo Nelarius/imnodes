@@ -581,7 +581,7 @@ void BeginLinkCreation(ImNodesEditorContext& editor, const int hovered_pin_idx)
 }
 
 void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx,
-    const ImOptionalIndex pin_idx = {})
+    const ImOptionalIndex pin_idx = ImOptionalIndex())
 {
     // Check if we are clicking the link with the modifier pressed.
     // This will in a link detach via clicking.
