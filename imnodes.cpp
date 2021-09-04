@@ -459,9 +459,9 @@ void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx)
             const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
             const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
             const ImVec2&     mouse_pos = GImNodes->MousePos;
-            const float       dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
-            const float       dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
-            const int         closest_pin_idx =
+            const float dist_to_start = ImLengthSqr(start_pin.ScreenSpacePosition - mouse_pos);
+            const float dist_to_end = ImLengthSqr(end_pin.ScreenSpacePosition - mouse_pos);
+            const int   closest_pin_idx =
                 dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
 
             editor.ClickInteraction.Type = ImNodesClickInteractionType_LinkCreation;
@@ -576,16 +576,11 @@ void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
 
             const ImPinData& pin_start = editor.Pins.Pool[link.StartPinIdx];
             const ImPinData& pin_end = editor.Pins.Pool[link.EndPinIdx];
-            const ImRect& node_start_rect = GImNodes->Nodes[pin_start.ParentNodeIdx].BaseRectangle;
-            const ImRect& node_end_rect = GImNodes->Nodes[pin_end.ParentNodeIdx].BaseRectangle;
 
-            const ImVec2 start = GetScreenSpacePinCoordinates(
-                node_start_rect, pin_start.AttributeRect, pin_start.Type);
-            const ImVec2 end =
-                GetScreenSpacePinCoordinates(node_end_rect, pin_end.AttributeRect, pin_end.Type);
+            const ImVec2& start_pos = pin_start.ScreenSpacePosition;
+            const ImVec2& end_pos = pin_end.ScreenSpacePosition;
 
-            // Test
-            if (RectangleOverlapsLink(box_rect, start, end, pin_start.Type))
+            if (RectangleOverlapsLink(box_rect, start_pos, end_pos, pin_start.Type))
             {
                 editor.SelectedLinkIndices.push_back(link_idx);
             }
@@ -761,18 +756,15 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
                 editor.ClickInteraction.LinkCreation.EndPinIdx.Value());
         }
 
-        const ImVec2 start_pos = GetScreenSpacePinCoordinates(
-            GImNodes->Nodes[start_pin.ParentNodeIdx].BaseRectangle,
-            start_pin.AttributeRect,
-            start_pin.Type);
+        const ImVec2& start_pos = start_pin.ScreenSpacePosition;
+
         // If we are within the hover radius of a receiving pin, snap the link endpoint to it
         ImVec2 end_pos;
         {
             if (should_snap)
             {
-                const ImPinData& pin = editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()];
-                end_pos = GetScreenSpacePinCoordinates(
-                    GImNodes->Nodes[pin.ParentNodeIdx].BaseRectangle, pin.AttributeRect, pin.Type);
+                const ImPinData& end_pin = editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()];
+                end_pos = end_pin.ScreenSpacePosition;
             }
             else
             {
@@ -910,7 +902,7 @@ ImOptionalIndex ResolveHoveredPin(const ImObjectPool<ImPinData>& pins)
             continue;
         }
 
-        const ImVec2& pin_pos = pins.Pool[idx].Pos;
+        const ImVec2& pin_pos = pins.Pool[idx].ScreenSpacePosition;
         const float   distance_sqr = ImLengthSqr(pin_pos - GImNodes->MousePos);
 
         // TODO: GImNodes->Style.PinHoverRadius needs to be copied into pin data and the pin-local
@@ -963,7 +955,10 @@ ImOptionalIndex ResolveHoveredLink(
         // rendering the links
 
         const CubicBezier cubic_bezier = GetCubicBezier(
-            start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
+            start_pin.ScreenSpacePosition,
+            end_pin.ScreenSpacePosition,
+            start_pin.Type,
+            GImNodes->Style.LinkLineSegmentsPerLength);
 
         // The distance test
         {
@@ -1175,9 +1170,9 @@ void DrawPinShape(const ImVec2& pin_pos, const ImPinData& pin, const ImU32 pin_c
 }
 
 void DrawNodesAndPins(
-    ImNodesEditorContext& editor,
-    const ImOptionalIndex maybe_hovered_node_idx,
-    const ImOptionalIndex maybe_hovered_pin_idx)
+    const ImNodesEditorContext& editor,
+    const ImOptionalIndex       maybe_hovered_node_idx,
+    const ImOptionalIndex       maybe_hovered_pin_idx)
 {
     assert(GImNodes->Nodes.size() == GImNodes->NodeIdxToPinIndices.size());
 
@@ -1236,11 +1231,8 @@ void DrawNodesAndPins(
 
         for (int i = 0; i < GImNodes->NodeIdxToPinIndices[node_idx].size(); ++i)
         {
-            const int  pin_idx = GImNodes->NodeIdxToPinIndices[node_idx][i];
-            ImPinData& pin = editor.Pins.Pool[pin_idx];
-
-            // TODO: we should not be setting state while rendering
-            pin.Pos = GetScreenSpacePinCoordinates(node.BaseRectangle, pin.AttributeRect, pin.Type);
+            const int        pin_idx = GImNodes->NodeIdxToPinIndices[node_idx][i];
+            const ImPinData& pin = editor.Pins.Pool[pin_idx];
 
             ImU32 pin_color = pin.ColorStyle.Background;
 
@@ -1249,7 +1241,7 @@ void DrawNodesAndPins(
                 pin_color = pin.ColorStyle.Hovered;
             }
 
-            DrawPinShape(pin.Pos, pin, pin_color);
+            DrawPinShape(pin.ScreenSpacePosition, pin, pin_color);
         }
     }
 }
@@ -1261,7 +1253,10 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
     const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
 
     const CubicBezier cubic_bezier = GetCubicBezier(
-        start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
+        start_pin.ScreenSpacePosition,
+        end_pin.ScreenSpacePosition,
+        start_pin.Type,
+        GImNodes->Style.LinkLineSegmentsPerLength);
 
     const bool link_hovered =
         GImNodes->HoveredLinkIdx == link_idx &&
@@ -1352,9 +1347,8 @@ void EndPinAttribute()
         GImNodes->ActiveAttributeId = GImNodes->CurrentAttributeId;
     }
 
-    ImNodesEditorContext& editor = EditorContextGet();
-    ImPinData&            pin = editor.Pins.Pool[GImNodes->CurrentPinIdx];
-    pin.AttributeRect = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+    GImNodes->PinAttributeRectangles.push_back(
+        ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()));
 }
 
 void Initialize(ImNodesContext* context)
@@ -1514,8 +1508,8 @@ static void MiniMapDrawLink(
     const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
 
     const CubicBezier cubic_bezier = GetCubicBezier(
-        (start_pin.Pos - editor_center) * scaling + mini_map_center,
-        (end_pin.Pos - editor_center) * scaling + mini_map_center,
+        (start_pin.ScreenSpacePosition - editor_center) * scaling + mini_map_center,
+        (end_pin.ScreenSpacePosition - editor_center) * scaling + mini_map_center,
         start_pin.Type,
         GImNodes->Style.LinkLineSegmentsPerLength / scaling);
 
@@ -1887,6 +1881,7 @@ void BeginNodeEditor()
         pin_indices.~ImVector();
     }
     GImNodes->NodeIdxToPinIndices.resize(0);
+    GImNodes->PinAttributeRectangles.resize(0);
 
     ObjectPoolReset(editor.Pins);
     ObjectPoolReset(editor.Links);
@@ -2169,6 +2164,20 @@ void EndNode()
     // Calculate the rectangle which fits tightly around the node's UI content group.
     node.BaseRectangle = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
     node.BaseRectangle.Expand(node.LayoutStyle.Padding);
+
+    {
+        const ImVector<int>&    pin_indices = GImNodes->NodeIdxToPinIndices.back();
+        const ImVector<ImRect>& pin_attribute_rects = GImNodes->PinAttributeRectangles;
+
+        for (int i = 0; i < pin_indices.size(); ++i)
+        {
+            const int pin_idx = pin_indices[i];
+
+            ImPinData& pin_draw_state = GImNodes->Pins[pin_idx];
+            pin_draw_state.ScreenSpacePosition = GetScreenSpacePinCoordinates(
+                node.BaseRectangle, pin_attribute_rects[pin_idx], pin_draw_state.Type);
+        }
+    }
 
     if (node.BaseRectangle.Contains(GImNodes->MousePos))
     {

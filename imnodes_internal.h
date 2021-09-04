@@ -165,11 +165,10 @@ struct ImNodeDrawData
 struct ImPinData
 {
     int                  Id;
-    int                  ParentNodeIdx;
-    ImRect               AttributeRect;
+    ImVec2               ScreenSpacePosition;
+    int                  ParentNodeIdx; // TODO: remove
     ImNodesAttributeType Type;
     ImNodesPinShape      Shape;
-    ImVec2               Pos; // screen-space coordinates
     int                  Flags;
 
     struct
@@ -178,9 +177,8 @@ struct ImPinData
     } ColorStyle;
 
     ImPinData(const int pin_id)
-        : Id(pin_id), ParentNodeIdx(), AttributeRect(), Type(ImNodesAttributeType_None),
-          Shape(ImNodesPinShape_CircleFilled), Pos(), Flags(ImNodesAttributeFlags_None),
-          ColorStyle()
+        : Id(pin_id), ScreenSpacePosition(), ParentNodeIdx(), Type(ImNodesAttributeType_None),
+          Shape(ImNodesPinShape_CircleFilled), Flags(ImNodesAttributeFlags_None), ColorStyle()
     {
     }
 };
@@ -280,6 +278,9 @@ struct ImNodesContext
     ImOptionalIndex
         NodeOverlappingCursor; // TODO: this a temporary downgrade in functionality. When nodes
                                // intersect, only the node created last will overlap.
+
+    ImVector<ImPinData> Pins;
+    ImVector<ImRect>    PinAttributeRectangles;
 
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
