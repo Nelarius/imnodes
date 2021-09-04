@@ -2,6 +2,10 @@
 
 #include <stddef.h>
 
+#ifndef IMNODES_NAMESPACE
+#define IMNODES_NAMESPACE ImNodes
+#endif
+
 typedef int ImNodesCol;             // -> enum ImNodesCol_
 typedef int ImNodesStyleVar;        // -> enum ImNodesStyleVar_
 typedef int ImNodesStyleFlags;      // -> enum ImNodesStyleFlags_
@@ -193,7 +197,7 @@ struct ImNodesEditorContext;
 // Callback type used to specify special behavior when hovering a node in the minimap
 typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
 
-namespace ImNodes
+namespace IMNODES_NAMESPACE
 {
 // Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
 // function sets the GImGui global variable, which is not shared across dll boundaries.
@@ -386,4 +390,4 @@ void SaveEditorStateToIniFile(const ImNodesEditorContext* editor, const char* fi
 
 void LoadCurrentEditorStateFromIniFile(const char* file_name);
 void LoadEditorStateFromIniFile(ImNodesEditorContext* editor, const char* file_name);
-} // namespace ImNodes
+} // namespace IMNODES_NAMESPACE

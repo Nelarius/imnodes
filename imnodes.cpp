@@ -30,7 +30,7 @@
 
 ImNodesContext* GImNodes = NULL;
 
-namespace ImNodes
+namespace IMNODES_NAMESPACE
 {
 namespace
 {
@@ -1916,7 +1916,7 @@ bool IsObjectSelected(const ImObjectPool<T>& objects, ImVector<int>& selected_in
 }
 
 } // namespace
-} // namespace ImNodes
+} // namespace IMNODES_NAMESPACE
 
 // [SECTION] API implementation
 
@@ -1940,7 +1940,7 @@ ImNodesStyle::ImNodesStyle()
 {
 }
 
-namespace ImNodes
+namespace IMNODES_NAMESPACE
 {
 ImNodesContext* CreateContext()
 {
@@ -3120,4 +3120,4 @@ void LoadEditorStateFromIniFile(ImNodesEditorContext* const editor, const char* 
     LoadEditorStateFromIniString(editor, file_data, data_size);
     ImGui::MemFree(file_data);
 }
-} // namespace ImNodes
+} // namespace IMNODES_NAMESPACE

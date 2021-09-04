@@ -1,5 +1,7 @@
 #pragma once
 
+#include "imnodes.h"
+
 #include <imgui.h>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
@@ -333,7 +335,7 @@ struct ImNodesContext
     float AltMouseScrollDelta;
 };
 
-namespace ImNodes
+namespace IMNODES_NAMESPACE
 {
 static inline ImNodesEditorContext& EditorContextGet()
 {
@@ -479,4 +481,4 @@ static inline T& ObjectPoolFindOrCreateObject(ImObjectPool<T>& objects, const in
     const int index = ObjectPoolFindOrCreateIndex(objects, id);
     return objects.Pool[index];
 }
-} // namespace ImNodes
+} // namespace IMNODES_NAMESPACE
