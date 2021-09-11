@@ -775,9 +775,12 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
             GImNodes->Style.LinkThickness,
             cubic_bezier.NumSegments);
 
+        const bool link_creation_on_snap = GImNodes->HoveredPinIdx.HasValue() &&
+                                           (GImNodes->Pins[GImNodes->HoveredPinIdx.Value()].Flags &
+                                            ImNodesAttributeFlags_EnableLinkCreationOnSnap);
+
         if (GImNodes->LeftMouseReleased)
         {
-            const int start_pin_id = editor.ClickInteraction.UnconnectedLink.StartPinId;
             const ImNodesLinkCreatedFrom created_from_type =
                 editor.ClickInteraction.UnconnectedLink.FromType;
 
@@ -793,11 +796,36 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
 
             editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
         }
+        else if (should_snap && link_creation_on_snap)
+        {
+            const int snapped_pin_id = GImNodes->Pins[GImNodes->HoveredPinIdx.Value()].Id;
+            GImNodes->UIEvent.CreateLink(
+                start_pin_id, snapped_pin_id, editor.ClickInteraction.UnconnectedLink.FromType);
+            editor.ClickInteraction.SnapUnconnectedLinkToPin(snapped_pin_id);
+        }
     }
     break;
-    case ImNodesClickInteractionType_SnappedToPin:
+    case ImNodesClickInteractionType_SnappedLink:
     {
-        // TODO:
+        // TODO: what if the pin id changes?
+        const bool snapping_pin_changed = !GImNodes->HoveredPinIdx.HasValue();
+
+        // Detach the link that was created by this link event if it's no longer in snap range
+        if (snapping_pin_changed)
+        {
+            editor.ClickInteraction.UnsnapLinkFromPin();
+            if (GImNodes->SnapLinkIdx.HasValue())
+            {
+                GImNodes->DeletedLinkIdx = GImNodes->SnapLinkIdx.Value();
+            }
+        }
+
+        // TODO: what if SnapLinkIdx doesn't have a value? Render the snapped link here?
+
+        if (GImNodes->LeftMouseReleased)
+        {
+            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
+        }
     }
     break;
     case ImNodesClickInteractionType_Panning:
@@ -1957,7 +1985,8 @@ void EndNodeEditor()
     // interaction.
 
     if ((editor.ClickInteraction.Type == ImNodesClickInteractionType_None ||
-         editor.ClickInteraction.Type == ImNodesClickInteractionType_UnconnectedLink) &&
+         (editor.ClickInteraction.Type == ImNodesClickInteractionType_UnconnectedLink ||
+          editor.ClickInteraction.Type == ImNodesClickInteractionType_SnappedLink)) &&
         MouseInCanvas() && !IsMiniMapHovered())
     {
         GImNodes->HoveredPinIdx = ResolveHoveredPin(GImNodes->Pins);
@@ -2290,11 +2319,11 @@ void Link(const int id, const int start_attr_id, const int end_attr_id)
     link.ColorStyle.Hovered = GImNodes->Style.Colors[ImNodesCol_LinkHovered];
     link.ColorStyle.Selected = GImNodes->Style.Colors[ImNodesCol_LinkSelected];
 
-    const ImNodesUIEvent& ui_event = GImNodes->UIEvent;
-    if (ui_event.IsLinkCreatedFromSnap() && ((ui_event.LinkCreated.StartPinId == start_attr_id &&
-                                              ui_event.LinkCreated.EndPinId == end_attr_id) ||
-                                             (ui_event.LinkCreated.StartPinId == end_attr_id &&
-                                              ui_event.LinkCreated.EndPinId == start_attr_id)))
+    if (editor.ClickInteraction.Type == ImNodesClickInteractionType_SnappedLink &&
+        ((editor.ClickInteraction.SnappedLink.StartPinId == start_attr_id &&
+          editor.ClickInteraction.SnappedLink.SnappedPinId == end_attr_id) ||
+         (editor.ClickInteraction.SnappedLink.StartPinId == end_attr_id &&
+          editor.ClickInteraction.SnappedLink.SnappedPinId == start_attr_id)))
     {
         GImNodes->SnapLinkIdx = link_idx;
     }

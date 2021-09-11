@@ -50,7 +50,7 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_Node,
     ImNodesClickInteractionType_Link,
     ImNodesClickInteractionType_UnconnectedLink,
-    ImNodesClickInteractionType_SnappedToPin,
+    ImNodesClickInteractionType_SnappedLink,
     ImNodesClickInteractionType_Panning,
     ImNodesClickInteractionType_BoxSelection,
     ImNodesClickInteractionType_MiniMapPanning,
@@ -199,26 +199,6 @@ struct ImLinkData
     ImLinkData(const int link_id) : Id(link_id), StartPinId(), EndPinId(), ColorStyle() {}
 };
 
-struct ImBoxSelector
-{
-    ImRect Rectangle;
-
-    ImBoxSelector() : Rectangle() {}
-};
-
-// A link which is connected to the mouse cursor at the other end
-struct ImUnconnectedLink
-{
-    int                    StartPinId;
-    ImNodesLinkCreatedFrom FromType; // TODO: this could be replaced with a bool
-};
-
-struct ImSnappedLink
-{
-    int StartPinId;
-    int SnappedPinId;
-};
-
 struct ImLinkStartedEvent
 {
     int StartPinId;
@@ -287,12 +267,33 @@ struct ImNodesUIEvent
     }
 };
 
+struct ImBoxSelector
+{
+    ImRect Rectangle;
+
+    ImBoxSelector() : Rectangle() {}
+};
+
+// A link which is connected to the mouse cursor at the other end
+struct ImUnconnectedLink
+{
+    int                    StartPinId;
+    ImNodesLinkCreatedFrom FromType; // TODO: this could be replaced with a bool
+};
+
+struct ImSnappedLink
+{
+    int StartPinId;
+    int SnappedPinId;
+};
+
 struct ImClickInteractionState
 {
     ImNodesClickInteractionType Type;
 
-    // TODO: union
-
+    // NOTE: these can't be placed in a union, because SnappedLink state gets pushed on top of
+    // UnconnectedLink state.
+    // TODO: state stack
     ImUnconnectedLink UnconnectedLink;
     ImSnappedLink     SnappedLink;
     ImBoxSelector     BoxSelector;
@@ -308,10 +309,16 @@ struct ImClickInteractionState
     inline void SnapUnconnectedLinkToPin(const int snap_pin_id)
     {
         assert(Type == ImNodesClickInteractionType_UnconnectedLink);
-        Type = ImNodesClickInteractionType_SnappedToPin;
+        Type = ImNodesClickInteractionType_SnappedLink;
         const int start_pin_id = UnconnectedLink.StartPinId;
         SnappedLink.StartPinId = start_pin_id;
         SnappedLink.SnappedPinId = snap_pin_id;
+    }
+
+    inline void UnsnapLinkFromPin()
+    {
+        assert(Type == ImNodesClickInteractionType_SnappedLink);
+        Type = ImNodesClickInteractionType_UnconnectedLink;
     }
 
     ImClickInteractionState()
