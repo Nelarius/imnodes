@@ -111,6 +111,8 @@ int main(int, char**)
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
+
+        SDL_Delay(16);
     }
 
     example::NodeEditorShutdown();
