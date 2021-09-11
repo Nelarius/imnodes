@@ -27,7 +27,8 @@ typedef int ImNodesScope;
 typedef int ImNodesAttributeType;
 typedef int ImNodesUIState;
 typedef int ImNodesClickInteractionType;
-typedef int ImNodesLinkCreationType;
+typedef int ImNodesLinkCreatedFrom;
+typedef int ImNodesUIEventType;
 
 enum ImNodesScope_
 {
@@ -44,19 +45,12 @@ enum ImNodesAttributeType_
     ImNodesAttributeType_Output
 };
 
-enum ImNodesUIState_
-{
-    ImNodesUIState_None = 0,
-    ImNodesUIState_LinkStarted = 1 << 0,
-    ImNodesUIState_LinkDropped = 1 << 1,
-    ImNodesUIState_LinkCreated = 1 << 2
-};
-
 enum ImNodesClickInteractionType_
 {
     ImNodesClickInteractionType_Node,
     ImNodesClickInteractionType_Link,
-    ImNodesClickInteractionType_LinkCreation,
+    ImNodesClickInteractionType_UnconnectedLink,
+    ImNodesClickInteractionType_SnappedToPin,
     ImNodesClickInteractionType_Panning,
     ImNodesClickInteractionType_BoxSelection,
     ImNodesClickInteractionType_MiniMapPanning,
@@ -66,10 +60,19 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_None
 };
 
-enum ImNodesLinkCreationType_
+enum ImNodesLinkCreatedFrom_
 {
-    ImNodesLinkCreationType_Standard,
-    ImNodesLinkCreationType_FromDetach
+    ImNodesLinkCreatedFrom_None,
+    ImNodesLinkCreatedFrom_Pin,
+    ImNodesLinkCreatedFrom_Detach
+};
+
+enum ImNodesUIEventType_
+{
+    ImNodesUIEventType_None = 0,
+    ImNodesUIEventType_LinkStarted = 1 << 0,
+    ImNodesUIEventType_LinkDropped = 1 << 1,
+    ImNodesUIEventType_LinkCreated = 1 << 2
 };
 
 // Callback type used to specify special behavior when hovering a node in the minimap
@@ -186,33 +189,135 @@ struct ImPinData
 struct ImLinkData
 {
     int Id;
-    int StartPinIdx, EndPinIdx;
+    int StartPinId, EndPinId;
 
     struct
     {
         ImU32 Base, Hovered, Selected;
     } ColorStyle;
 
-    ImLinkData(const int link_id) : Id(link_id), StartPinIdx(), EndPinIdx(), ColorStyle() {}
+    ImLinkData(const int link_id) : Id(link_id), StartPinId(), EndPinId(), ColorStyle() {}
+};
+
+struct ImBoxSelector
+{
+    ImRect Rectangle;
+
+    ImBoxSelector() : Rectangle() {}
+};
+
+// A link which is connected to the mouse cursor at the other end
+struct ImUnconnectedLink
+{
+    int                    StartPinId;
+    ImNodesLinkCreatedFrom FromType; // TODO: this could be replaced with a bool
+};
+
+struct ImSnappedLink
+{
+    int StartPinId;
+    int SnappedPinId;
+};
+
+struct ImLinkStartedEvent
+{
+    int StartPinId;
+};
+
+struct ImLinkDroppedEvent
+{
+    int                    StartPinId;
+    ImNodesLinkCreatedFrom CreatedFromType;
+};
+
+struct ImLinkCreatedEvent
+{
+    int                    StartPinId, EndPinId;
+    ImNodesLinkCreatedFrom CreatedFromType;
+};
+
+struct ImNodesUIEvent
+{
+    ImNodesUIEventType Type;
+
+    union
+    {
+        ImLinkStartedEvent LinkStarted;
+        ImLinkDroppedEvent LinkDropped;
+        ImLinkCreatedEvent LinkCreated;
+    };
+
+    // Modifiers
+
+    inline void Reset() { Type = ImNodesUIEventType_None; }
+
+    inline void StartLink(const int start_pin_id)
+    {
+        Type = ImNodesUIEventType_LinkStarted;
+        LinkStarted.StartPinId = start_pin_id;
+    }
+
+    inline void DropLink(const int start_pin_id, const ImNodesLinkCreatedFrom created_from_type)
+    {
+        Type = ImNodesUIEventType_LinkDropped;
+        LinkDropped.StartPinId = start_pin_id;
+        LinkDropped.CreatedFromType = created_from_type;
+    }
+
+    inline void CreateLink(
+        const int                    start_pin_id,
+        const int                    end_pin_id,
+        const ImNodesLinkCreatedFrom created_from_type)
+    {
+        Type = ImNodesUIEventType_LinkCreated;
+        LinkCreated.StartPinId = start_pin_id;
+        LinkCreated.EndPinId = end_pin_id;
+        LinkCreated.CreatedFromType = created_from_type;
+    }
+
+    // Accessors
+
+    inline bool IsLinkStarted() const { return (Type & ImNodesUIEventType_LinkStarted) != 0; }
+    inline bool IsLinkDropped() const { return (Type & ImNodesUIEventType_LinkDropped) != 0; }
+    inline bool IsLinkCreated() const { return (Type & ImNodesUIEventType_LinkCreated) != 0; }
+    inline bool IsLinkCreatedFromSnap() const
+    {
+        return (Type & ImNodesUIEventType_LinkCreated) != 0 &&
+               LinkCreated.CreatedFromType == ImNodesLinkCreatedFrom_Detach;
+    }
 };
 
 struct ImClickInteractionState
 {
     ImNodesClickInteractionType Type;
 
-    struct
-    {
-        int                     StartPinIdx;
-        ImOptionalIndex         EndPinIdx;
-        ImNodesLinkCreationType Type;
-    } LinkCreation;
+    // TODO: union
 
-    struct
-    {
-        ImRect Rect;
-    } BoxSelector;
+    ImUnconnectedLink UnconnectedLink;
+    ImSnappedLink     SnappedLink;
+    ImBoxSelector     BoxSelector;
 
-    ImClickInteractionState() : Type(ImNodesClickInteractionType_None) {}
+    inline void StartUnconnectedLink(const int start_pin_id, const ImNodesLinkCreatedFrom from_type)
+    {
+        assert(Type == ImNodesClickInteractionType_None);
+        Type = ImNodesClickInteractionType_UnconnectedLink;
+        UnconnectedLink.StartPinId = start_pin_id;
+        UnconnectedLink.FromType = from_type;
+    }
+
+    inline void SnapUnconnectedLinkToPin(const int snap_pin_id)
+    {
+        assert(Type == ImNodesClickInteractionType_UnconnectedLink);
+        Type = ImNodesClickInteractionType_SnappedToPin;
+        const int start_pin_id = UnconnectedLink.StartPinId;
+        SnappedLink.StartPinId = start_pin_id;
+        SnappedLink.SnappedPinId = snap_pin_id;
+    }
+
+    ImClickInteractionState()
+        : Type(ImNodesClickInteractionType_None), UnconnectedLink(), SnappedLink(), BoxSelector()
+    {
+    }
 };
 
 struct ImNodesColElement
@@ -243,10 +348,9 @@ struct ImNodesEditorContext
     // information. Node origins have to be retained between frames, so that the user doesn't have
     // to manage node position state.
     //
-    // TODO: get rid of std::map.
+    // TODO: get rid of std::map. Replace with ImPool?
     std::map<int, ImVec2> GridSpaceNodeOrigins;
 
-    ImObjectPool<ImPinData>  Pins;
     ImObjectPool<ImLinkData> Links;
 
     // ui related fields
@@ -258,7 +362,7 @@ struct ImNodesEditorContext
     ImClickInteractionState ClickInteraction;
 
     ImNodesEditorContext()
-        : GridSpaceNodeOrigins(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIds(),
+        : GridSpaceNodeOrigins(), Links(), Panning(0.f, 0.f), SelectedNodeIds(),
           SelectedLinkIndices(), ClickInteraction()
     {
     }
@@ -281,6 +385,7 @@ struct ImNodesContext
 
     ImVector<ImPinData> Pins;
     ImVector<ImRect>    PinAttributeRectangles;
+    std::map<int, int>  PinIdToPinIdx;
 
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
@@ -319,9 +424,8 @@ struct ImNodesContext
     ImOptionalIndex SnapLinkIdx;
 
     // Event helper state
-    // TODO: this should be a part of a state machine, and not a member of the global struct.
-    // Unclear what parts of the code this relates to.
-    int ImNodesUIState;
+
+    ImNodesUIEvent UIEvent;
 
     int  ActiveAttributeId;
     bool ActiveAttribute;
