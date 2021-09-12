@@ -71,9 +71,6 @@ enum ImNodesLinkCreationType_
     ImNodesLinkCreationType_FromDetach
 };
 
-// Callback type used to specify special behavior when hovering a node in the minimap
-typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
-
 // [SECTION] internal data structures
 
 // The object T must have the following interface:
