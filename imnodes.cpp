@@ -691,7 +691,8 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
         else if (GImNodes->LeftMouseClicked)
         {
             editor.ClickInteraction.Type = ImNodesClickInteractionType_BoxSelection;
-            editor.ClickInteraction.BoxSelector.Rect.Min = ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
+            editor.ClickInteraction.BoxSelector.Rect.Min =
+                ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
         }
     }
 }
@@ -862,7 +863,8 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     {
     case ImNodesClickInteractionType_BoxSelection:
     {
-        editor.ClickInteraction.BoxSelector.Rect.Max = ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
+        editor.ClickInteraction.BoxSelector.Rect.Max =
+            ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
 
         ImRect box_rect = editor.ClickInteraction.BoxSelector.Rect;
         box_rect.Min = GridSpaceToScreenSpace(editor, box_rect.Min);
@@ -2289,18 +2291,19 @@ void EndNodeEditor()
             BeginCanvasInteraction(editor);
         }
 
-        bool shouldAutoPan =
+        bool should_auto_pan =
             editor.ClickInteraction.Type == ImNodesClickInteractionType_BoxSelection ||
             editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation ||
             editor.ClickInteraction.Type == ImNodesClickInteractionType_Node;
-        if (shouldAutoPan && !MouseInCanvas())
+        if (should_auto_pan && !MouseInCanvas())
         {
             ImVec2 mouse = ImGui::GetMousePos();
             ImVec2 center = GImNodes->CanvasRectScreenSpace.GetCenter();
             ImVec2 direction = (center - mouse);
             direction = direction * ImInvLength(direction, 0.0);
 
-            editor.AutoPanningDelta = direction * ImGui::GetIO().DeltaTime * GImNodes->Io.AutoPanningSpeed;
+            editor.AutoPanningDelta =
+                direction * ImGui::GetIO().DeltaTime * GImNodes->Io.AutoPanningSpeed;
             editor.Panning += editor.AutoPanningDelta;
         }
 
