@@ -129,6 +129,9 @@ struct ImNodesIO
     // Set based on ImGuiMouseButton values
     int AltMouseButton;
 
+    // Panning speed when dragging an element and mouse is outside the main editor view.
+    float AutoPanningSpeed;
+
     ImNodesIO();
 };
 
