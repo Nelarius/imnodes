@@ -1336,7 +1336,6 @@ void Initialize(ImNodesContext* context)
     context->MiniMapNodeHoveringCallback = NULL;
     context->MiniMapNodeHoveringCallbackUserData = NULL;
 
-    context->CurrentPinIdx = INT_MAX;
     context->CurrentNodeIdx = INT_MAX;
 
     context->DefaultEditorCtx = EditorContextCreate();

@@ -407,7 +407,6 @@ struct ImNodesContext
 
     // UI element state
     int CurrentNodeIdx; // TODO: can this be deleted?
-    int CurrentPinIdx;
     int CurrentAttributeId;
 
     ImOptionalIndex HoveredNodeIdx;
