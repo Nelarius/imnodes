@@ -2564,6 +2564,10 @@ static const ImNodesStyleVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinHoverRadius) },
     // ImNodesStyleVar_PinOffset
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinOffset) },
+    // ImNodesStyleVar_MiniMapPadding
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, MiniMapPadding) },
+    // ImNodesStyleVar_MiniMapOffset
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, MiniMapOffset) },
 };
 
 static const ImNodesStyleVarInfo* GetStyleVarInfo(ImNodesStyleVar idx)

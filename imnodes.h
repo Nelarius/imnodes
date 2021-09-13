@@ -63,6 +63,8 @@ enum ImNodesStyleVar_
     ImNodesStyleVar_PinLineThickness,
     ImNodesStyleVar_PinHoverRadius,
     ImNodesStyleVar_PinOffset,
+    ImNodesStyleVar_MiniMapPadding,
+    ImNodesStyleVar_MiniMapOffset,
     ImNodesStyleVar_COUNT
 };
 
