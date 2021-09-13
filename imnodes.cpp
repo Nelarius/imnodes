@@ -1908,7 +1908,7 @@ ImNodesStyle::ImNodesStyle()
       LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f), PinCircleRadius(4.f),
       PinQuadSideLength(7.f), PinTriangleSideLength(9.5), PinLineThickness(1.f),
       PinHoverRadius(10.f), PinOffset(0.f),
-      MiniMapPadding(4.0f, 4.0f), MiniMapOffset(4.0f, 4.0f),
+      MiniMapPadding(8.0f, 8.0f), MiniMapOffset(4.0f, 4.0f),
       Flags(ImNodesStyleFlags_NodeOutline | ImNodesStyleFlags_GridLines), Colors()
 {
 }
