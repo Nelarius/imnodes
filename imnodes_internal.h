@@ -229,11 +229,19 @@ struct ImNodesColElement
 struct ImNodesStyleVarElement
 {
     ImNodesStyleVar Item;
-    float           Value;
+    float           FloatValue[2];
 
-    ImNodesStyleVarElement(const float value, const ImNodesStyleVar variable)
-        : Item(variable), Value(value)
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const float value)
+        : Item(variable)
     {
+        FloatValue[0] = value;
+    }
+
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const ImVec2 value)
+        : Item(variable)
+    {
+        FloatValue[0] = value.x;
+        FloatValue[1] = value.y;
     }
 };
 

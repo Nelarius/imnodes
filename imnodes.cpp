@@ -2526,77 +2526,100 @@ void PopColorStyle()
     GImNodes->ColorModifierStack.pop_back();
 }
 
-float& LookupStyleVar(const ImNodesStyleVar item)
+struct ImNodesStyleVarInfo
 {
-    // TODO: once the switch gets too big and unwieldy to work with, we could do
-    // a byte-offset lookup into the Style struct, using the StyleVar as an
-    // index. This is how ImGui does it.
-    float* style_var = 0;
-    switch (item)
-    {
-    case ImNodesStyleVar_GridSpacing:
-        style_var = &GImNodes->Style.GridSpacing;
-        break;
-    case ImNodesStyleVar_NodeCornerRounding:
-        style_var = &GImNodes->Style.NodeCornerRounding;
-        break;
-    case ImNodesStyleVar_NodePaddingHorizontal:
-        style_var = &GImNodes->Style.NodePaddingHorizontal;
-        break;
-    case ImNodesStyleVar_NodePaddingVertical:
-        style_var = &GImNodes->Style.NodePaddingVertical;
-        break;
-    case ImNodesStyleVar_NodeBorderThickness:
-        style_var = &GImNodes->Style.NodeBorderThickness;
-        break;
-    case ImNodesStyleVar_LinkThickness:
-        style_var = &GImNodes->Style.LinkThickness;
-        break;
-    case ImNodesStyleVar_LinkLineSegmentsPerLength:
-        style_var = &GImNodes->Style.LinkLineSegmentsPerLength;
-        break;
-    case ImNodesStyleVar_LinkHoverDistance:
-        style_var = &GImNodes->Style.LinkHoverDistance;
-        break;
-    case ImNodesStyleVar_PinCircleRadius:
-        style_var = &GImNodes->Style.PinCircleRadius;
-        break;
-    case ImNodesStyleVar_PinQuadSideLength:
-        style_var = &GImNodes->Style.PinQuadSideLength;
-        break;
-    case ImNodesStyleVar_PinTriangleSideLength:
-        style_var = &GImNodes->Style.PinTriangleSideLength;
-        break;
-    case ImNodesStyleVar_PinLineThickness:
-        style_var = &GImNodes->Style.PinLineThickness;
-        break;
-    case ImNodesStyleVar_PinHoverRadius:
-        style_var = &GImNodes->Style.PinHoverRadius;
-        break;
-    case ImNodesStyleVar_PinOffset:
-        style_var = &GImNodes->Style.PinOffset;
-        break;
-    default:
-        assert(!"Invalid StyleVar value!");
-    }
+    ImGuiDataType   Type;
+    ImU32           Count;
+    ImU32           Offset;
+    void*           GetVarPtr(ImNodesStyle* style) const { return (void*)((unsigned char*)style + Offset); }
+};
 
-    return *style_var;
+static const ImNodesStyleVarInfo GStyleVarInfo[] =
+{
+    // ImNodesStyleVar_GridSpacing
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, GridSpacing) },
+    // ImNodesStyleVar_NodeCornerRounding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeCornerRounding) },
+    // ImNodesStyleVar_NodePaddingHorizontal
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodePaddingHorizontal) },
+    // ImNodesStyleVar_NodePaddingVertical
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodePaddingVertical) },
+    // ImNodesStyleVar_NodeBorderThickness
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeBorderThickness) },
+    // ImNodesStyleVar_LinkThickness
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkThickness) },
+    // ImNodesStyleVar_LinkLineSegmentsPerLength
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkLineSegmentsPerLength) },
+    // ImNodesStyleVar_LinkHoverDistance
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkHoverDistance) },
+    // ImNodesStyleVar_PinCircleRadius
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinCircleRadius) },
+    // ImNodesStyleVar_PinQuadSideLength
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinQuadSideLength) },
+    // ImNodesStyleVar_PinTriangleSideLength
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinTriangleSideLength) },
+    // ImNodesStyleVar_PinLineThickness
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinLineThickness) },
+    // ImNodesStyleVar_PinHoverRadius
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinHoverRadius) },
+    // ImNodesStyleVar_PinOffset
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinOffset) },
+};
+
+static const ImNodesStyleVarInfo* GetStyleVarInfo(ImNodesStyleVar idx)
+{
+    IM_ASSERT(idx >= 0 && idx < ImNodesStyleVar_COUNT);
+    IM_ASSERT(IM_ARRAYSIZE(GStyleVarInfo) == ImNodesStyleVar_COUNT);
+    return &GStyleVarInfo[idx];
 }
 
 void PushStyleVar(const ImNodesStyleVar item, const float value)
 {
-    float& style_var = LookupStyleVar(item);
-    GImNodes->StyleModifierStack.push_back(ImNodesStyleVarElement(style_var, item));
-    style_var = value;
+    const ImNodesStyleVarInfo* var_info = GetStyleVarInfo(item);
+    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
+    {
+        ImGuiContext& g = *GImGui;
+        float& style_var = *(float*)var_info->GetVarPtr(&GImNodes->Style);
+        GImNodes->StyleModifierStack.push_back(ImNodesStyleVarElement(item, style_var));
+        style_var = value;
+        return;
+    }
+    IM_ASSERT(0 && "Called PushStyleVar() float variant but variable is not a float!");
 }
 
-void PopStyleVar()
+void PushStyleVar(const ImNodesStyleVar item, const ImVec2& value)
 {
-    assert(GImNodes->StyleModifierStack.size() > 0);
-    const ImNodesStyleVarElement style_elem = GImNodes->StyleModifierStack.back();
-    GImNodes->StyleModifierStack.pop_back();
-    float& style_var = LookupStyleVar(style_elem.Item);
-    style_var = style_elem.Value;
+    const ImNodesStyleVarInfo* var_info = GetStyleVarInfo(item);
+    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
+    {
+        ImGuiContext& g = *GImGui;
+        ImVec2& style_var = *(ImVec2*)var_info->GetVarPtr(&GImNodes->Style);
+        GImNodes->StyleModifierStack.push_back(ImNodesStyleVarElement(item, style_var));
+        style_var = value;
+        return;
+    }
+    IM_ASSERT(0 && "Called PushStyleVar() ImVec2 variant but variable is not a ImVec2!");
+}
+
+void PopStyleVar(int count)
+{
+    while (count > 0) {
+        assert(GImNodes->StyleModifierStack.size() > 0);
+        const ImNodesStyleVarElement style_backup = GImNodes->StyleModifierStack.back();
+        GImNodes->StyleModifierStack.pop_back();
+        const ImNodesStyleVarInfo* var_info = GetStyleVarInfo(style_backup.Item);
+        void* style_var = var_info->GetVarPtr(&GImNodes->Style);
+        if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
+        {
+            ((float*)style_var)[0] = style_backup.FloatValue[0];
+        }
+        else if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
+        {
+            ((float*)style_var)[0] = style_backup.FloatValue[0];
+            ((float*)style_var)[1] = style_backup.FloatValue[1];
+        }
+        count--;
+    }
 }
 
 void SetNodeScreenSpacePos(const int node_id, const ImVec2& screen_space_pos)
