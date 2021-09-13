@@ -15,7 +15,6 @@
 // [SECTION] internal data structures
 // [SECTION] global and editor context structs
 // [SECTION] api helpers
-// [SECTION] object pool implementation
 
 struct ImNodesContext;
 
@@ -79,25 +78,6 @@ enum ImNodesUIEventType_
 typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
 
 // [SECTION] internal data structures
-
-// The object T must have the following interface:
-//
-// struct T
-// {
-//     T();
-//
-//     int id;
-// };
-template<typename T>
-struct ImObjectPool
-{
-    ImVector<T>    Pool;
-    ImVector<bool> InUse;
-    ImVector<int>  FreeList;
-    ImGuiStorage   IdMap;
-
-    ImObjectPool() : Pool(), InUse(), FreeList(), IdMap() {}
-};
 
 // Emulates std::optional<int> using the sentinel value `INVALID_INDEX`.
 struct ImOptionalIndex
@@ -197,6 +177,12 @@ struct ImLinkData
     } ColorStyle;
 
     ImLinkData(const int link_id) : Id(link_id), StartPinId(), EndPinId(), ColorStyle() {}
+};
+
+struct ImLinkGeometry
+{
+    int         LinkId;
+    CubicBezier Curve;
 };
 
 struct ImLinkStartedEvent
@@ -358,19 +344,17 @@ struct ImNodesEditorContext
     // TODO: get rid of std::map. Replace with ImPool?
     std::map<int, ImVec2> GridSpaceNodeOrigins;
 
-    ImObjectPool<ImLinkData> Links;
-
     // ui related fields
     ImVec2 Panning;
 
     ImVector<int> SelectedNodeIds;
-    ImVector<int> SelectedLinkIndices;
+    ImVector<int> SelectedLinkIds;
 
     ImClickInteractionState ClickInteraction;
 
     ImNodesEditorContext()
-        : GridSpaceNodeOrigins(), Links(), Panning(0.f, 0.f), SelectedNodeIds(),
-          SelectedLinkIndices(), ClickInteraction()
+        : GridSpaceNodeOrigins(), Panning(0.f, 0.f), SelectedNodeIds(), SelectedLinkIds(),
+          ClickInteraction()
     {
     }
 };
@@ -393,6 +377,9 @@ struct ImNodesContext
     ImVector<ImPinData> Pins;
     ImVector<ImRect>    PinAttributeRectangles;
     std::map<int, int>  PinIdToPinIdx;
+
+    ImVector<ImLinkData>    Links;
+    ImVector<ImLinkDrawCmd> LinkGeometries;
 
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
@@ -465,76 +452,5 @@ static inline ImVec2 CalculatePanningOffsetToNode(
     const ImVec2& ss_node_center)
 {
     return ss_canvas_center - ss_node_center;
-}
-
-// [SECTION] object pool implementation
-
-template<typename T>
-static inline int ObjectPoolFind(const ImObjectPool<T>& objects, const int id)
-{
-    const int index = objects.IdMap.GetInt(static_cast<ImGuiID>(id), -1);
-    return index;
-}
-
-template<typename T>
-static inline void ObjectPoolUpdate(ImObjectPool<T>& objects)
-{
-    objects.FreeList.clear();
-    for (int i = 0; i < objects.InUse.size(); ++i)
-    {
-        if (!objects.InUse[i])
-        {
-            objects.IdMap.SetInt(objects.Pool[i].Id, -1);
-            objects.FreeList.push_back(i);
-            (objects.Pool.Data + i)->~T();
-        }
-    }
-}
-
-template<typename T>
-static inline void ObjectPoolReset(ImObjectPool<T>& objects)
-{
-    if (!objects.InUse.empty())
-    {
-        memset(objects.InUse.Data, 0, objects.InUse.size_in_bytes());
-    }
-}
-
-template<typename T>
-static inline int ObjectPoolFindOrCreateIndex(ImObjectPool<T>& objects, const int id)
-{
-    int index = objects.IdMap.GetInt(static_cast<ImGuiID>(id), -1);
-
-    // Construct new object
-    if (index == -1)
-    {
-        if (objects.FreeList.empty())
-        {
-            index = objects.Pool.size();
-            IM_ASSERT(objects.Pool.size() == objects.InUse.size());
-            const int new_size = objects.Pool.size() + 1;
-            objects.Pool.resize(new_size);
-            objects.InUse.resize(new_size);
-        }
-        else
-        {
-            index = objects.FreeList.back();
-            objects.FreeList.pop_back();
-        }
-        IM_PLACEMENT_NEW(objects.Pool.Data + index) T(id);
-        objects.IdMap.SetInt(static_cast<ImGuiID>(id), index);
-    }
-
-    // Flag it as used
-    objects.InUse[index] = true;
-
-    return index;
-}
-
-template<typename T>
-static inline T& ObjectPoolFindOrCreateObject(ImObjectPool<T>& objects, const int id)
-{
-    const int index = ObjectPoolFindOrCreateIndex(objects, id);
-    return objects.Pool[index];
 }
 } // namespace ImNodes
