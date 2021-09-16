@@ -1805,9 +1805,10 @@ static void MiniMapUpdate()
     ImGui::InvisibleButton("minimap", editor.MiniMapRectScreenSpace.GetSize());
 
     bool center_on_click =
+        ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
         editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
         ImGui::IsItemActive() &&
-        ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        !editor.Nodes.Pool.empty();
     if (center_on_click)
     {
         editor.ClickInteraction.Type = ImNodesClickInteractionType_CenterOnRequest;
