@@ -183,6 +183,10 @@ struct ImLinkGeometry
 {
     int         LinkId;
     CubicBezier Curve;
+
+    ImLinkGeometry(const int id, const CubicBezier& cubic_bezier) : LinkId(id), Curve(cubic_bezier)
+    {
+    }
 };
 
 struct ImLinkStartedEvent
@@ -378,8 +382,8 @@ struct ImNodesContext
     ImVector<ImRect>    PinAttributeRectangles;
     std::map<int, int>  PinIdToPinIdx;
 
-    ImVector<ImLinkData>    Links;
-    ImVector<ImLinkDrawCmd> LinkGeometries;
+    ImVector<ImLinkData>     Links;
+    ImVector<ImLinkGeometry> LinkGeometries;
 
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;

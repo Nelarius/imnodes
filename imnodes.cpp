@@ -37,12 +37,6 @@ namespace
 {
 // [SECTION] bezier curve helpers
 
-struct CubicBezier
-{
-    ImVec2 P0, P1, P2, P3;
-    int    NumSegments;
-};
-
 inline ImVec2 EvalCubicBezier(
     const float   t,
     const ImVec2& P0,
@@ -63,7 +57,10 @@ inline ImVec2 EvalCubicBezier(
 }
 
 // Calculates the closest point along each bezier curve segment.
-ImVec2 GetClosestPointOnCubicBezier(const int num_segments, const ImVec2& p, const CubicBezier& cb)
+ImVec2 GetClosestPointOnCubicBezier(
+    const int            num_segments,
+    const ImVec2&        p,
+    const ImCubicBezier& cb)
 {
     IM_ASSERT(num_segments > 0);
     ImVec2 p_last = cb.P0;
@@ -86,9 +83,9 @@ ImVec2 GetClosestPointOnCubicBezier(const int num_segments, const ImVec2& p, con
 }
 
 inline float GetDistanceToCubicBezier(
-    const ImVec2&      pos,
-    const CubicBezier& cubic_bezier,
-    const int          num_segments)
+    const ImVec2&        pos,
+    const ImCubicBezier& cubic_bezier,
+    const int            num_segments)
 {
     const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(num_segments, pos, cubic_bezier);
 
@@ -96,7 +93,7 @@ inline float GetDistanceToCubicBezier(
     return ImSqrt(ImLengthSqr(to_curve));
 }
 
-inline ImRect GetContainingRectForCubicBezier(const CubicBezier& cb)
+inline ImRect GetContainingRectForCubicBezier(const ImCubicBezier& cb)
 {
     const ImVec2 min = ImVec2(ImMin(cb.P0.x, cb.P3.x), ImMin(cb.P0.y, cb.P3.y));
     const ImVec2 max = ImVec2(ImMax(cb.P0.x, cb.P3.x), ImMax(cb.P0.y, cb.P3.y));
@@ -111,7 +108,7 @@ inline ImRect GetContainingRectForCubicBezier(const CubicBezier& cb)
     return rect;
 }
 
-inline CubicBezier GetCubicBezier(
+inline ImCubicBezier GetCubicBezier(
     ImVec2                     start,
     ImVec2                     end,
     const ImNodesAttributeType start_type,
@@ -124,9 +121,9 @@ inline CubicBezier GetCubicBezier(
         ImSwap(start, end);
     }
 
-    const float  link_length = ImSqrt(ImLengthSqr(end - start));
-    const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
-    CubicBezier  cubic_bezier;
+    const float   link_length = ImSqrt(ImLengthSqr(end - start));
+    const ImVec2  offset = ImVec2(0.25f * link_length, 0.f);
+    ImCubicBezier cubic_bezier;
     cubic_bezier.P0 = start;
     cubic_bezier.P1 = start + offset;
     cubic_bezier.P2 = end - offset;
@@ -191,7 +188,7 @@ inline bool RectangleOverlapsLineSegment(const ImRect& rect, const ImVec2& p1, c
     return abs(sum) != sum_abs;
 }
 
-inline bool RectangleOverlapsBezier(const ImRect& rectangle, const CubicBezier& cubic_bezier)
+inline bool RectangleOverlapsBezier(const ImRect& rectangle, const ImCubicBezier& cubic_bezier)
 {
     ImVec2 current =
         EvalCubicBezier(0.f, cubic_bezier.P0, cubic_bezier.P1, cubic_bezier.P2, cubic_bezier.P3);
@@ -213,7 +210,7 @@ inline bool RectangleOverlapsBezier(const ImRect& rectangle, const CubicBezier& 
     return false;
 }
 
-inline bool RectangleOverlapsLink(const ImRect& rectangle, const CubicBezier& cubic_bezier)
+inline bool RectangleOverlapsLink(const ImRect& rectangle, const ImCubicBezier& cubic_bezier)
 {
     // First level: simple rejection test via rectangle overlap:
 
@@ -615,19 +612,20 @@ struct LinkPredicate
 };
 
 ImOptionalIndex FindDuplicateLink(
-    const ImNodesEditorContext& editor,
+    const ImVector<ImLinkData>& links,
     const int                   start_pin_id,
     const int                   end_pin_id)
 {
     ImLinkData test_link(0);
     test_link.StartPinId = start_pin_id;
     test_link.EndPinId = end_pin_id;
-    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
+
+    for (int idx = 0; idx < links.size(); ++idx)
     {
-        const ImLinkData& link = editor.Links.Pool[link_idx];
-        if (LinkPredicate()(test_link, link) && editor.Links.InUse[link_idx])
+        const ImLinkData& link = links[idx];
+        if (LinkPredicate()(test_link, link))
         {
-            return ImOptionalIndex(link_idx);
+            return ImOptionalIndex(idx);
         }
     }
 
@@ -717,7 +715,9 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
         const ImOptionalIndex maybe_duplicate_link_idx =
             GImNodes->HoveredPinIdx.HasValue()
                 ? FindDuplicateLink(
-                      editor, start_pin_id, GImNodes->Pins[GImNodes->HoveredPinIdx.Value()].Id)
+                      GImNodes->Links,
+                      start_pin_id,
+                      GImNodes->Pins[GImNodes->HoveredPinIdx.Value()].Id)
                 : ImOptionalIndex();
 
         const bool should_snap =
@@ -741,7 +741,7 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
             }
         }
 
-        const CubicBezier cubic_bezier = GetCubicBezier(
+        const ImCubicBezier cubic_bezier = GetCubicBezier(
             start_pos, end_pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
 #if IMGUI_VERSION_NUM < 18000
         GImNodes->CanvasDrawList->AddBezierCurve(
@@ -901,7 +901,8 @@ ImOptionalIndex ResolveHoveredPin(const ImVector<ImPinData>& pins)
 }
 
 ImOptionalIndex ResolveHoveredLink(
-    const ImObjectPool<ImLinkData>& links,
+    const ImVector<ImLinkData>&     links,
+    const ImVector<ImLinkGeometry>& link_geometries,
     const ImVector<ImPinData>&      pins)
 {
     float           smallest_distance = FLT_MAX;
@@ -915,44 +916,29 @@ ImOptionalIndex ResolveHoveredLink(
     // The latter is a requirement for link detaching with drag click to work, as both a link and
     // pin are required to be hovered over for the feature to work.
 
-    for (int idx = 0; idx < links.Pool.Size; ++idx)
+    assert(links.size() == link_geometries.size());
+
+    const bool is_pin_hovered = GImNodes->HoveredPinIdx.HasValue();
+    const int  hovered_pin_id = is_pin_hovered ? pins[GImNodes->HoveredPinIdx.Value()].Id : 0;
+
+    for (int idx = 0; idx < links.size(); ++idx)
     {
-        if (!links.InUse[idx])
-        {
-            continue;
-        }
+        const ImLinkData&    link = links[idx];
+        const ImCubicBezier& cubic_bezier = link_geometries[idx].Curve;
 
-        const ImLinkData& link = links.Pool[idx];
-
-        assert(GImNodes->PinIdToPinIdx.find(link.StartPinId) != GImNodes->PinIdToPinIdx.end());
-        assert(GImNodes->PinIdToPinIdx.find(link.EndPinId) != GImNodes->PinIdToPinIdx.end());
-
-        const int        start_pin_idx = GImNodes->PinIdToPinIdx[link.StartPinId];
-        const int        end_pin_idx = GImNodes->PinIdToPinIdx[link.EndPinId];
-        const ImPinData& start_pin = pins[start_pin_idx];
-        const ImPinData& end_pin = pins[end_pin_idx];
-
-        if (GImNodes->HoveredPinIdx == start_pin_idx || GImNodes->HoveredPinIdx == end_pin_idx)
+        if (is_pin_hovered &&
+            (hovered_pin_id == link.StartPinId || hovered_pin_id == link.EndPinId))
         {
             return idx;
         }
 
-        // TODO: the calculated CubicBeziers could be cached since we generate them again when
-        // rendering the links
-
-        const CubicBezier cubic_bezier = GetCubicBezier(
-            start_pin.ScreenSpacePosition,
-            end_pin.ScreenSpacePosition,
-            start_pin.Type,
-            GImNodes->Style.LinkLineSegmentsPerLength);
-
         // The distance test
         {
-            const ImRect link_rect = GetContainingRectForCubicBezier(cubic_bezier);
+            const ImRect curve_bounds = GetContainingRectForCubicBezier(cubic_bezier);
 
             // First, do a simple bounding box test against the box containing the link
             // to see whether calculating the distance to the link is worth doing.
-            if (link_rect.Contains(GImNodes->MousePos))
+            if (curve_bounds.Contains(GImNodes->MousePos))
             {
                 const float distance = GetDistanceToCubicBezier(
                     GImNodes->MousePos, cubic_bezier, cubic_bezier.NumSegments);
@@ -1232,6 +1218,35 @@ void DrawNodesAndPins(
     }
 }
 
+void CalcLinkGeometries(
+    const ImVector<ImLinkData>& links,
+    const ImVector<ImPinData>&  pins,
+    ImVector<ImLinkGeometry>&   link_geometries)
+{
+    assert(GImNodes->LinkGeometries.empty());
+
+    for (int idx = 0; idx < links.size(); ++idx)
+    {
+        const ImLinkData& link_data = links[idx];
+
+        assert(GImNodes->PinIdToPinIdx.find(link_data.StartPinId) != GImNodes->PinIdToPinIdx.end());
+        assert(GImNodes->PinIdToPinIdx.find(link_data.EndPinId) != GImNodes->PinIdToPinIdx.end());
+
+        const int        start_pin_idx = GImNodes->PinIdToPinIdx[link_data.StartPinId];
+        const int        end_pin_idx = GImNodes->PinIdToPinIdx[link_data.EndPinId];
+        const ImPinData& start_pin = pins[start_pin_idx];
+        const ImPinData& end_pin = pins[end_pin_idx];
+
+        link_geometries.push_back(ImLinkGeometry(
+            link_data.Id,
+            GetCubicBezier(
+                start_pin.ScreenSpacePosition,
+                end_pin.ScreenSpacePosition,
+                start_pin.Type,
+                GImNodes->Style.LinkLineSegmentsPerLength)));
+    }
+}
+
 void DrawLinks(const ImNodesEditorContext& editor)
 {
     assert(GImNodes->Links.size() == GImNodes->LinkGeometries.size());
@@ -1240,8 +1255,8 @@ void DrawLinks(const ImNodesEditorContext& editor)
     {
         // TODO: if ColorStyle was in ImLinkGeometry, we wouldn't need ImLinkData at all
 
-        const ImLinkData&  link_data = GImNodes->Links[link_idx];
-        const CubicBezier& cubic_bezier = GImNodes->LinkGeometries[link_idx].Curve;
+        const ImLinkData&    link_data = GImNodes->Links[link_idx];
+        const ImCubicBezier& cubic_bezier = GImNodes->LinkGeometries[link_idx].Curve;
 
         const bool link_hovered = GImNodes->HoveredLinkIdx == link_idx;
 
@@ -1407,6 +1422,39 @@ static inline ImRect ToMiniMapRect(
     return ImRect(editor_rect.Min + corner_offset, editor_rect.Min + corner_offset + mini_map_size);
 }
 
+static void MiniMapDrawLinks(
+    const ImNodesEditorContext&     editor,
+    const ImVector<ImLinkGeometry>& link_geometries,
+    const ImVec2&                   editor_center,
+    const ImVec2&                   mini_map_center,
+    const float                     scaling)
+{
+    for (int idx = 0; idx < link_geometries.size(); ++idx)
+    {
+        const ImLinkGeometry& geom = link_geometries[idx];
+
+        // TODO: handle DeletedLinkIdx?
+
+        const ImU32 link_color =
+            GImNodes->Style.Colors
+                [editor.SelectedLinkIds.contains(geom.LinkId) ? ImNodesCol_MiniMapLinkSelected
+                                                              : ImNodesCol_MiniMapLink];
+
+#if IMGUI_VERSION_NUM < 18000
+        GImNodes->CanvasDrawList->AddBezierCurve(
+#else
+        GImNodes->CanvasDrawList->AddBezierCubic(
+#endif
+            geom.Curve.P0,
+            geom.Curve.P1,
+            geom.Curve.P2,
+            geom.Curve.P3,
+            link_color,
+            GImNodes->Style.LinkThickness * scaling,
+            geom.Curve.NumSegments);
+    }
+}
+
 static void MiniMapDrawNodes(
     const ImNodesEditorContext& editor,
     const ImVec2&               editor_center,
@@ -1468,58 +1516,6 @@ static void MiniMapDrawNodes(
     }
 }
 
-static void MiniMapDrawLink(
-    ImNodesEditorContext& editor,
-    const int             link_idx,
-    const ImVec2&         editor_center,
-    const ImVec2&         mini_map_center,
-    const float           scaling)
-{
-    const ImLinkData& link = editor.Links.Pool[link_idx];
-
-    assert(GImNodes->PinIdToPinIdx.find(link.StartPinId) != GImNodes->PinIdToPinIdx.end());
-    assert(GImNodes->PinIdToPinIdx.find(link.EndPinId) != GImNodes->PinIdToPinIdx.end());
-
-    const int        start_pin_idx = GImNodes->PinIdToPinIdx[link.StartPinId];
-    const int        end_pin_idx = GImNodes->PinIdToPinIdx[link.EndPinId];
-    const ImPinData& start_pin = GImNodes->Pins[start_pin_idx];
-    const ImPinData& end_pin = GImNodes->Pins[end_pin_idx];
-
-    const CubicBezier cubic_bezier = GetCubicBezier(
-        (start_pin.ScreenSpacePosition - editor_center) * scaling + mini_map_center,
-        (end_pin.ScreenSpacePosition - editor_center) * scaling + mini_map_center,
-        start_pin.Type,
-        GImNodes->Style.LinkLineSegmentsPerLength / scaling);
-
-    // It's possible for a link to be deleted in begin_link_interaction. A user
-    // may detach a link, resulting in the link wire snapping to the mouse
-    // position.
-    //
-    // In other words, skip rendering the link if it was deleted.
-    if (GImNodes->DeletedLinkIdx == link_idx)
-    {
-        return;
-    }
-
-    const ImU32 link_color =
-        GImNodes->Style.Colors
-            [editor.SelectedLinkIds.contains(link.Id) ? ImNodesCol_MiniMapLinkSelected
-                                                      : ImNodesCol_MiniMapLink];
-
-#if IMGUI_VERSION_NUM < 18000
-    GImNodes->CanvasDrawList->AddBezierCurve(
-#else
-    GImNodes->CanvasDrawList->AddBezierCubic(
-#endif
-        cubic_bezier.P0,
-        cubic_bezier.P1,
-        cubic_bezier.P2,
-        cubic_bezier.P3,
-        link_color,
-        GImNodes->Style.LinkThickness * scaling,
-        cubic_bezier.NumSegments);
-}
-
 static void MiniMapUpdate()
 {
     ImNodesEditorContext& editor = EditorContextGet();
@@ -1560,13 +1556,7 @@ static void MiniMapUpdate()
     const float scaling = GImNodes->MiniMapZoom;
 
     // Draw links first so they appear under nodes, and we can use the same draw channel
-    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
-    {
-        if (editor.Links.InUse[link_idx])
-        {
-            MiniMapDrawLink(editor, link_idx, editor_center, mini_map_center, scaling);
-        }
-    }
+    MiniMapDrawLinks(editor, GImNodes->LinkGeometries, editor_center, mini_map_center, scaling);
 
     MiniMapDrawNodes(editor, editor_center, mini_map_center, scaling);
 
@@ -1899,6 +1889,8 @@ void EndNodeEditor()
     assert(GImNodes->CurrentScope == ImNodesScope_Editor);
     GImNodes->CurrentScope = ImNodesScope_None;
 
+    CalcLinkGeometries(GImNodes->Links, GImNodes->Pins, GImNodes->LinkGeometries);
+
     ImNodesEditorContext& editor = EditorContextGet();
 
     // Detect ImGui interaction first, because it blocks interaction with the rest of the UI
@@ -1932,7 +1924,8 @@ void EndNodeEditor()
         // dragging, we need to have both a link and pin hovered.
         if (!GImNodes->HoveredNodeIdx.HasValue())
         {
-            GImNodes->HoveredLinkIdx = ResolveHoveredLink(editor.Links, GImNodes->Pins);
+            GImNodes->HoveredLinkIdx =
+                ResolveHoveredLink(GImNodes->Links, GImNodes->LinkGeometries, GImNodes->Pins);
         }
     }
 
