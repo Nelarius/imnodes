@@ -258,6 +258,11 @@ inline ImVec2 ScreenSpaceToGridSpace(const ImNodesEditorContext& editor, const I
     return v - GImNodes->CanvasOriginScreenSpace - editor.Panning;
 }
 
+inline ImRect ScreenSpaceToGridSpace(const ImNodesEditorContext& editor, const ImRect& r)
+{
+    return ImRect(ScreenSpaceToGridSpace(editor, r.Min), ScreenSpaceToGridSpace(editor, r.Max));
+}
+
 inline ImVec2 GridSpaceToScreenSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
     return v + GImNodes->CanvasOriginScreenSpace + editor.Panning;
@@ -2176,6 +2181,12 @@ void EndNodeEditor()
     GImNodes->CurrentScope = ImNodesScope_None;
 
     ImNodesEditorContext& editor = EditorContextGet();
+
+    bool no_grid_content = editor.GridContentBounds.IsInverted();
+    if (no_grid_content)
+    {
+        editor.GridContentBounds = ScreenSpaceToGridSpace(editor, GImNodes->CanvasRectScreenSpace);
+    }
 
     // Detect ImGui interaction first, because it blocks interaction with the rest of the UI
 
