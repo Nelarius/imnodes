@@ -1039,14 +1039,6 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
         }
     }
     break;
-    case ImNodesClickInteractionType_CenterOnRequest:
-    {
-        ImVec2 center = GImNodes->CanvasRectScreenSpace.GetSize() * 0.5f;
-        editor.Panning = ImVec2(0.0f, 0.0f) - editor.CenterOnRequest + center;
-        editor.CenterOnRequest = ImVec2(0.f, 0.f);
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-    }
-    break;
     case ImNodesClickInteractionType_ImGuiItem:
     {
         if (GImNodes->LeftMouseReleased)
@@ -1802,18 +1794,6 @@ static void MiniMapUpdate()
     int flags = ImGuiWindowFlags_NoBackground;
     ImGui::SetCursorScreenPos(editor.MiniMapRectScreenSpace.Min);
     ImGui::BeginChild("minimap", editor.MiniMapRectScreenSpace.GetSize(), false, flags);
-    ImGui::InvisibleButton("minimap", editor.MiniMapRectScreenSpace.GetSize());
-
-    bool center_on_click =
-        ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
-        editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
-        ImGui::IsItemActive() &&
-        !editor.Nodes.Pool.empty();
-    if (center_on_click)
-    {
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_CenterOnRequest;
-        editor.CenterOnRequest = MiniMapSpaceToGridSpace(editor, ImGui::GetMousePos());
-    }
 
     const ImRect& mini_map_rect = editor.MiniMapRectScreenSpace;
 
@@ -1858,7 +1838,21 @@ static void MiniMapUpdate()
     // Have to pop mini-map clip rect
     GImNodes->CanvasDrawList->PopClipRect();
 
+    bool mini_map_is_hovered = ImGui::IsWindowHovered();
+
     ImGui::EndChild();
+
+    bool center_on_click =
+        mini_map_is_hovered &&
+        ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+        editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
+        !editor.Nodes.Pool.empty();
+    if (center_on_click)
+    {
+        ImVec2 target = MiniMapSpaceToGridSpace(editor, ImGui::GetMousePos());
+        ImVec2 center = GImNodes->CanvasRectScreenSpace.GetSize() * 0.5f;
+        editor.Panning = ImFloor(center - target);
+    }
 
     // Reset callback info after use
     editor.MiniMapNodeHoveringCallback = NULL;

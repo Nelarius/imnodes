@@ -58,7 +58,6 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_LinkCreation,
     ImNodesClickInteractionType_Panning,
     ImNodesClickInteractionType_BoxSelection,
-    ImNodesClickInteractionType_CenterOnRequest,
     ImNodesClickInteractionType_ImGuiItem,
     ImNodesClickInteractionType_None
 };
@@ -261,10 +260,6 @@ struct ImNodesEditorContext
     // Minimum and maximum extents of all content in grid space. Valid after final
     // ImNodes::EndNode() call.
     ImRect GridContentBounds;
-
-    // When ImNodesClickInteractionType_CenterOnRequest is set, indicates location in grid space to
-    // center on.
-    ImVec2 CenterOnRequest;
 
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
