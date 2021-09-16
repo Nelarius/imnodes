@@ -2590,7 +2590,6 @@ void PushStyleVar(const ImNodesStyleVar item, const float value)
     const ImNodesStyleVarInfo* var_info = GetStyleVarInfo(item);
     if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
     {
-        ImGuiContext& g = *GImGui;
         float& style_var = *(float*)var_info->GetVarPtr(&GImNodes->Style);
         GImNodes->StyleModifierStack.push_back(ImNodesStyleVarElement(item, style_var));
         style_var = value;
@@ -2604,7 +2603,6 @@ void PushStyleVar(const ImNodesStyleVar item, const ImVec2& value)
     const ImNodesStyleVarInfo* var_info = GetStyleVarInfo(item);
     if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
     {
-        ImGuiContext& g = *GImGui;
         ImVec2& style_var = *(ImVec2*)var_info->GetVarPtr(&GImNodes->Style);
         GImNodes->StyleModifierStack.push_back(ImNodesStyleVarElement(item, style_var));
         style_var = value;
