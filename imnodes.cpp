@@ -1905,8 +1905,8 @@ ImNodesIO::ImNodesIO()
 }
 
 ImNodesStyle::ImNodesStyle()
-    : GridSpacing(32.f), NodeCornerRounding(4.f), NodePaddingHorizontal(8.f),
-      NodePaddingVertical(8.f), NodeBorderThickness(1.f), LinkThickness(3.f),
+    : GridSpacing(32.f), NodeCornerRounding(4.f), NodePadding(8.f, 8.f),
+      NodeBorderThickness(1.f), LinkThickness(3.f),
       LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f), PinCircleRadius(4.f),
       PinQuadSideLength(7.f), PinTriangleSideLength(9.5), PinLineThickness(1.f),
       PinHoverRadius(10.f), PinOffset(0.f),
@@ -2368,8 +2368,7 @@ void BeginNode(const int node_id)
     node.ColorStyle.TitlebarHovered = GImNodes->Style.Colors[ImNodesCol_TitleBarHovered];
     node.ColorStyle.TitlebarSelected = GImNodes->Style.Colors[ImNodesCol_TitleBarSelected];
     node.LayoutStyle.CornerRounding = GImNodes->Style.NodeCornerRounding;
-    node.LayoutStyle.Padding =
-        ImVec2(GImNodes->Style.NodePaddingHorizontal, GImNodes->Style.NodePaddingVertical);
+    node.LayoutStyle.Padding = GImNodes->Style.NodePadding;
     node.LayoutStyle.BorderThickness = GImNodes->Style.NodeBorderThickness;
 
     // ImGui::SetCursorPos sets the cursor position, local to the current widget
@@ -2548,10 +2547,8 @@ static const ImNodesStyleVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, GridSpacing) },
     // ImNodesStyleVar_NodeCornerRounding
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeCornerRounding) },
-    // ImNodesStyleVar_NodePaddingHorizontal
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodePaddingHorizontal) },
-    // ImNodesStyleVar_NodePaddingVertical
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodePaddingVertical) },
+    // ImNodesStyleVar_NodePadding
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, NodePadding) },
     // ImNodesStyleVar_NodeBorderThickness
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeBorderThickness) },
     // ImNodesStyleVar_LinkThickness

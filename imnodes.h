@@ -51,8 +51,7 @@ enum ImNodesStyleVar_
 {
     ImNodesStyleVar_GridSpacing = 0,
     ImNodesStyleVar_NodeCornerRounding,
-    ImNodesStyleVar_NodePaddingHorizontal,
-    ImNodesStyleVar_NodePaddingVertical,
+    ImNodesStyleVar_NodePadding,
     ImNodesStyleVar_NodeBorderThickness,
     ImNodesStyleVar_LinkThickness,
     ImNodesStyleVar_LinkLineSegmentsPerLength,
@@ -146,8 +145,7 @@ struct ImNodesStyle
     float GridSpacing;
 
     float NodeCornerRounding;
-    float NodePaddingHorizontal;
-    float NodePaddingVertical;
+    ImVec2 NodePadding;
     float NodeBorderThickness;
 
     float LinkThickness;
