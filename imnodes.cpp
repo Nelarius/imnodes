@@ -1846,7 +1846,7 @@ static void MiniMapUpdate()
         mini_map_is_hovered &&
         ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
         editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
-        !editor.Nodes.Pool.empty();
+        !GImNodes->NodeIdxSubmissionOrder.empty();
     if (center_on_click)
     {
         ImVec2 target = MiniMapSpaceToGridSpace(editor, ImGui::GetMousePos());
