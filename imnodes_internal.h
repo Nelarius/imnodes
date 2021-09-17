@@ -286,7 +286,7 @@ struct ImNodesContext
     ImVec2                             MiniMapRectSnappingOffset;
     float                              MiniMapZoom;
     ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    void*                              MiniMapNodeHoveringCallbackUserData;
+    ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
 
     // Debug helpers
     ImNodesScope CurrentScope;

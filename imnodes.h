@@ -198,7 +198,13 @@ struct ImNodesContext;
 struct ImNodesEditorContext;
 
 // Callback type used to specify special behavior when hovering a node in the minimap
+#ifndef ImNodesMiniMapNodeHoveringCallback
 typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
+#endif
+
+#ifndef ImNodesMiniMapNodeHoveringCallbackUserData
+typedef void* ImNodesMiniMapNodeHoveringCallbackUserData;
+#endif
 
 namespace IMNODES_NAMESPACE
 {
