@@ -582,48 +582,31 @@ void TranslateSelectedNodes(ImNodesEditorContext& editor)
     }
 }
 
-struct LinkPredicate
-{
-    bool operator()(const ImLinkData& lhs, const ImLinkData& rhs) const
-    {
-        // Do a unique compare by sorting the pins' addresses.
-        // This catches duplicate links, whether they are in the
-        // same direction or not.
-        // Sorting by pin index should have the uniqueness guarantees as sorting
-        // by id -- each unique id will get one slot in the link pool array.
-
-        int lhs_start = lhs.StartPinId;
-        int lhs_end = lhs.EndPinId;
-        int rhs_start = rhs.StartPinId;
-        int rhs_end = rhs.EndPinId;
-
-        if (lhs_start > lhs_end)
-        {
-            ImSwap(lhs_start, lhs_end);
-        }
-
-        if (rhs_start > rhs_end)
-        {
-            ImSwap(rhs_start, rhs_end);
-        }
-
-        return lhs_start == rhs_start && lhs_end == rhs_end;
-    }
-};
-
 ImOptionalIndex FindDuplicateLink(
     const ImVector<ImLinkData>& links,
     const int                   start_pin_id,
     const int                   end_pin_id)
 {
-    ImLinkData test_link(0);
-    test_link.StartPinId = start_pin_id;
-    test_link.EndPinId = end_pin_id;
-
     for (int idx = 0; idx < links.size(); ++idx)
     {
         const ImLinkData& link = links[idx];
-        if (LinkPredicate()(test_link, link))
+
+        int lhs_start_id = start_pin_id;
+        int lhs_end_id = end_pin_id;
+        int rhs_start_id = link.StartPinId;
+        int rhs_end_id = link.EndPinId;
+
+        if (lhs_start_id > lhs_end_id)
+        {
+            ImSwap(lhs_start_id, lhs_end_id);
+        }
+
+        if (rhs_start_id > rhs_end_id)
+        {
+            ImSwap(rhs_start_id, rhs_end_id);
+        }
+
+        if (lhs_start_id == rhs_start_id && lhs_end_id == rhs_end_id)
         {
             return ImOptionalIndex(idx);
         }
