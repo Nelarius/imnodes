@@ -2,6 +2,10 @@
 
 #include <stddef.h>
 
+#ifdef IMNODES_USER_CONFIG
+#include IMNODES_USER_CONFIG
+#endif
+
 #ifndef IMNODES_NAMESPACE
 #define IMNODES_NAMESPACE ImNodes
 #endif
