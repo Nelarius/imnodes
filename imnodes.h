@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <imgui.h>
 
 #ifndef IMNODES_NAMESPACE
 #define IMNODES_NAMESPACE ImNodes
@@ -41,6 +42,8 @@ enum ImNodesCol_
     ImNodesCol_MiniMapNodeOutline,
     ImNodesCol_MiniMapLink,
     ImNodesCol_MiniMapLinkSelected,
+    ImNodesCol_MiniMapCanvas,
+    ImNodesCol_MiniMapCanvasOutline,
     ImNodesCol_COUNT
 };
 
@@ -48,8 +51,7 @@ enum ImNodesStyleVar_
 {
     ImNodesStyleVar_GridSpacing = 0,
     ImNodesStyleVar_NodeCornerRounding,
-    ImNodesStyleVar_NodePaddingHorizontal,
-    ImNodesStyleVar_NodePaddingVertical,
+    ImNodesStyleVar_NodePadding,
     ImNodesStyleVar_NodeBorderThickness,
     ImNodesStyleVar_LinkThickness,
     ImNodesStyleVar_LinkLineSegmentsPerLength,
@@ -59,7 +61,10 @@ enum ImNodesStyleVar_
     ImNodesStyleVar_PinTriangleSideLength,
     ImNodesStyleVar_PinLineThickness,
     ImNodesStyleVar_PinHoverRadius,
-    ImNodesStyleVar_PinOffset
+    ImNodesStyleVar_PinOffset,
+    ImNodesStyleVar_MiniMapPadding,
+    ImNodesStyleVar_MiniMapOffset,
+    ImNodesStyleVar_COUNT
 };
 
 enum ImNodesStyleFlags_
@@ -140,8 +145,7 @@ struct ImNodesStyle
     float GridSpacing;
 
     float NodeCornerRounding;
-    float NodePaddingHorizontal;
-    float NodePaddingVertical;
+    ImVec2 NodePadding;
     float NodeBorderThickness;
 
     float LinkThickness;
@@ -167,6 +171,11 @@ struct ImNodesStyle
     float PinHoverRadius;
     // Offsets the pins' positions from the edge of the node to the outside of the node.
     float PinOffset;
+
+    // Mini-map padding size between mini-map edge and mini-map content.
+    ImVec2 MiniMapPadding;
+    // Mini-map offset from the screen side.
+    ImVec2 MiniMapOffset;
 
     // By default, ImNodesStyleFlags_NodeOutline and ImNodesStyleFlags_Gridlines are enabled.
     ImNodesStyleFlags Flags;
@@ -244,7 +253,8 @@ void MiniMap(
 void PushColorStyle(ImNodesCol item, unsigned int color);
 void PopColorStyle();
 void PushStyleVar(ImNodesStyleVar style_item, float value);
-void PopStyleVar();
+void PushStyleVar(ImNodesStyleVar style_item, const ImVec2& value);
+void PopStyleVar(int count = 1);
 
 // id can be any positive or negative integer, but INT_MIN is currently reserved for internal use.
 void BeginNode(int id);
