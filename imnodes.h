@@ -144,9 +144,9 @@ struct ImNodesStyle
 {
     float GridSpacing;
 
-    float NodeCornerRounding;
+    float  NodeCornerRounding;
     ImVec2 NodePadding;
-    float NodeBorderThickness;
+    float  NodeBorderThickness;
 
     float LinkThickness;
     float LinkLineSegmentsPerLength;

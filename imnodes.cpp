@@ -285,23 +285,22 @@ inline ImVec2 EditorSpaceToScreenSpace(const ImVec2& v)
 
 inline ImVec2 MiniMapSpaceToGridSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
-    return (v - editor.MiniMapContentScreenSpace.Min) / editor.MiniMapScaling
-        + editor.GridContentBounds.Min;
+    return (v - editor.MiniMapContentScreenSpace.Min) / editor.MiniMapScaling +
+           editor.GridContentBounds.Min;
 };
 
 inline ImVec2 ScreenSpaceToMiniMapSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
-    return (ScreenSpaceToGridSpace(editor, v) - editor.GridContentBounds.Min)
-        * editor.MiniMapScaling + editor.MiniMapContentScreenSpace.Min;
+    return (ScreenSpaceToGridSpace(editor, v) - editor.GridContentBounds.Min) *
+               editor.MiniMapScaling +
+           editor.MiniMapContentScreenSpace.Min;
 };
 
 inline ImRect ScreenSpaceToMiniMapSpace(const ImNodesEditorContext& editor, const ImRect& r)
 {
     return ImRect(
-        ScreenSpaceToMiniMapSpace(editor, r.Min),
-        ScreenSpaceToMiniMapSpace(editor, r.Max));
+        ScreenSpaceToMiniMapSpace(editor, r.Min), ScreenSpaceToMiniMapSpace(editor, r.Max));
 };
-
 
 // [SECTION] draw list helper
 
@@ -1628,7 +1627,8 @@ void Shutdown(ImNodesContext* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
 
 // [SECTION] minimap
 
-static inline bool IsMiniMapActive() {
+static inline bool IsMiniMapActive()
+{
     ImNodesEditorContext& editor = EditorContextGet();
     return editor.MiniMapEnabled && editor.MiniMapSizeFraction > 0.0f;
 }
@@ -1644,23 +1644,25 @@ static inline bool IsMiniMapHovered()
 static inline void CalcMiniMapLayout()
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    const ImVec2 offset = GImNodes->Style.MiniMapOffset;
-    const ImVec2 border = GImNodes->Style.MiniMapPadding;
-    const ImRect editor_rect = GImNodes->CanvasRectScreenSpace;
+    const ImVec2          offset = GImNodes->Style.MiniMapOffset;
+    const ImVec2          border = GImNodes->Style.MiniMapPadding;
+    const ImRect          editor_rect = GImNodes->CanvasRectScreenSpace;
 
     // Compute the size of the mini-map area
     ImVec2 mini_map_size;
-    float mini_map_scaling;
+    float  mini_map_scaling;
     {
-        const ImVec2 max_size = ImFloor(editor_rect.GetSize() * editor.MiniMapSizeFraction - border * 2.0f);
+        const ImVec2 max_size =
+            ImFloor(editor_rect.GetSize() * editor.MiniMapSizeFraction - border * 2.0f);
         const float  max_size_aspect_ratio = max_size.x / max_size.y;
         const ImVec2 grid_content_size = editor.GridContentBounds.IsInverted()
-            ? max_size
-            : ImFloor(editor.GridContentBounds.GetSize());
+                                             ? max_size
+                                             : ImFloor(editor.GridContentBounds.GetSize());
         const float  grid_content_aspect_ratio = grid_content_size.x / grid_content_size.y;
-        mini_map_size = ImFloor(grid_content_aspect_ratio > max_size_aspect_ratio
-            ? ImVec2(max_size.x, max_size.x / grid_content_aspect_ratio)
-            : ImVec2(max_size.y * grid_content_aspect_ratio, max_size.y));
+        mini_map_size = ImFloor(
+            grid_content_aspect_ratio > max_size_aspect_ratio
+                ? ImVec2(max_size.x, max_size.x / grid_content_aspect_ratio)
+                : ImVec2(max_size.y * grid_content_aspect_ratio, max_size.y));
         mini_map_scaling = mini_map_size.x / grid_content_size.x;
     }
 
@@ -1671,26 +1673,37 @@ static inline void CalcMiniMapLayout()
 
         switch (editor.MiniMapLocation)
         {
-        case ImNodesMiniMapLocation_BottomRight: align.x = 1.0f; align.y = 1.0f; break;
-        case ImNodesMiniMapLocation_BottomLeft:  align.x = 0.0f; align.y = 1.0f; break;
-        case ImNodesMiniMapLocation_TopRight:    align.x = 1.0f; align.y = 0.0f; break;
-        case ImNodesMiniMapLocation_TopLeft:     // [[fallthrough]]
-        default:                                 align.x = 0.0f; align.y = 0.0f; break;
+        case ImNodesMiniMapLocation_BottomRight:
+            align.x = 1.0f;
+            align.y = 1.0f;
+            break;
+        case ImNodesMiniMapLocation_BottomLeft:
+            align.x = 0.0f;
+            align.y = 1.0f;
+            break;
+        case ImNodesMiniMapLocation_TopRight:
+            align.x = 1.0f;
+            align.y = 0.0f;
+            break;
+        case ImNodesMiniMapLocation_TopLeft: // [[fallthrough]]
+        default:
+            align.x = 0.0f;
+            align.y = 0.0f;
+            break;
         }
 
-        const ImVec2 top_left_pos     = editor_rect.Min + offset + border;
+        const ImVec2 top_left_pos = editor_rect.Min + offset + border;
         const ImVec2 bottom_right_pos = editor_rect.Max - offset - border - mini_map_size;
         mini_map_pos = ImFloor(ImLerp(top_left_pos, bottom_right_pos, align));
     }
 
-    editor.MiniMapRectScreenSpace = ImRect(mini_map_pos - border, mini_map_pos + mini_map_size + border);
+    editor.MiniMapRectScreenSpace =
+        ImRect(mini_map_pos - border, mini_map_pos + mini_map_size + border);
     editor.MiniMapContentScreenSpace = ImRect(mini_map_pos, mini_map_pos + mini_map_size);
     editor.MiniMapScaling = mini_map_scaling;
 }
 
-static void MiniMapDrawNode(
-    ImNodesEditorContext& editor,
-    const int             node_idx)
+static void MiniMapDrawNode(ImNodesEditorContext& editor, const int node_idx)
 {
     const ImNodeData& node = editor.Nodes.Pool[node_idx];
 
@@ -1710,8 +1723,7 @@ static void MiniMapDrawNode(
         // Run user callback when hovering a mini-map node
         if (editor.MiniMapNodeHoveringCallback)
         {
-            editor.MiniMapNodeHoveringCallback(
-                node.Id, editor.MiniMapNodeHoveringCallbackUserData);
+            editor.MiniMapNodeHoveringCallback(node.Id, editor.MiniMapNodeHoveringCallbackUserData);
         }
     }
     else if (editor.SelectedNodeIndices.contains(node_idx))
@@ -1732,9 +1744,7 @@ static void MiniMapDrawNode(
         node_rect.Min, node_rect.Max, mini_map_node_outline, mini_map_node_rounding);
 }
 
-static void MiniMapDrawLink(
-    ImNodesEditorContext& editor,
-    const int             link_idx)
+static void MiniMapDrawLink(ImNodesEditorContext& editor, const int link_idx)
 {
     const ImLinkData& link = editor.Links.Pool[link_idx];
     const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
@@ -1827,8 +1837,8 @@ static void MiniMapUpdate()
 
     // Draw editor canvas rect inside mini-map
     {
-        const ImU32 canvas_color = GImNodes->Style.Colors[ImNodesCol_MiniMapCanvas];
-        const ImU32 outline_color = GImNodes->Style.Colors[ImNodesCol_MiniMapCanvasOutline];
+        const ImU32  canvas_color = GImNodes->Style.Colors[ImNodesCol_MiniMapCanvas];
+        const ImU32  outline_color = GImNodes->Style.Colors[ImNodesCol_MiniMapCanvasOutline];
         const ImRect rect = ScreenSpaceToMiniMapSpace(editor, GImNodes->CanvasRectScreenSpace);
 
         GImNodes->CanvasDrawList->AddRectFilled(rect.Min, rect.Max, canvas_color);
@@ -1842,11 +1852,9 @@ static void MiniMapUpdate()
 
     ImGui::EndChild();
 
-    bool center_on_click =
-        mini_map_is_hovered &&
-        ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
-        editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
-        !GImNodes->NodeIdxSubmissionOrder.empty();
+    bool center_on_click = mini_map_is_hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+                           editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
+                           !GImNodes->NodeIdxSubmissionOrder.empty();
     if (center_on_click)
     {
         ImVec2 target = MiniMapSpaceToGridSpace(editor, ImGui::GetMousePos());
@@ -1905,13 +1913,12 @@ ImNodesIO::ImNodesIO()
 }
 
 ImNodesStyle::ImNodesStyle()
-    : GridSpacing(32.f), NodeCornerRounding(4.f), NodePadding(8.f, 8.f),
-      NodeBorderThickness(1.f), LinkThickness(3.f),
-      LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f), PinCircleRadius(4.f),
-      PinQuadSideLength(7.f), PinTriangleSideLength(9.5), PinLineThickness(1.f),
-      PinHoverRadius(10.f), PinOffset(0.f),
-      MiniMapPadding(8.0f, 8.0f), MiniMapOffset(4.0f, 4.0f),
-      Flags(ImNodesStyleFlags_NodeOutline | ImNodesStyleFlags_GridLines), Colors()
+    : GridSpacing(32.f), NodeCornerRounding(4.f), NodePadding(8.f, 8.f), NodeBorderThickness(1.f),
+      LinkThickness(3.f), LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f),
+      PinCircleRadius(4.f), PinQuadSideLength(7.f), PinTriangleSideLength(9.5),
+      PinLineThickness(1.f), PinHoverRadius(10.f), PinOffset(0.f), MiniMapPadding(8.0f, 8.0f),
+      MiniMapOffset(4.0f, 4.0f), Flags(ImNodesStyleFlags_NodeOutline | ImNodesStyleFlags_GridLines),
+      Colors()
 {
 }
 
@@ -2535,44 +2542,43 @@ void PopColorStyle()
 
 struct ImNodesStyleVarInfo
 {
-    ImGuiDataType   Type;
-    ImU32           Count;
-    ImU32           Offset;
-    void*           GetVarPtr(ImNodesStyle* style) const { return (void*)((unsigned char*)style + Offset); }
+    ImGuiDataType Type;
+    ImU32         Count;
+    ImU32         Offset;
+    void* GetVarPtr(ImNodesStyle* style) const { return (void*)((unsigned char*)style + Offset); }
 };
 
-static const ImNodesStyleVarInfo GStyleVarInfo[] =
-{
+static const ImNodesStyleVarInfo GStyleVarInfo[] = {
     // ImNodesStyleVar_GridSpacing
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, GridSpacing) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, GridSpacing)},
     // ImNodesStyleVar_NodeCornerRounding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeCornerRounding) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeCornerRounding)},
     // ImNodesStyleVar_NodePadding
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, NodePadding) },
+    {ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, NodePadding)},
     // ImNodesStyleVar_NodeBorderThickness
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeBorderThickness) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, NodeBorderThickness)},
     // ImNodesStyleVar_LinkThickness
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkThickness) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkThickness)},
     // ImNodesStyleVar_LinkLineSegmentsPerLength
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkLineSegmentsPerLength) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkLineSegmentsPerLength)},
     // ImNodesStyleVar_LinkHoverDistance
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkHoverDistance) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, LinkHoverDistance)},
     // ImNodesStyleVar_PinCircleRadius
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinCircleRadius) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinCircleRadius)},
     // ImNodesStyleVar_PinQuadSideLength
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinQuadSideLength) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinQuadSideLength)},
     // ImNodesStyleVar_PinTriangleSideLength
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinTriangleSideLength) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinTriangleSideLength)},
     // ImNodesStyleVar_PinLineThickness
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinLineThickness) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinLineThickness)},
     // ImNodesStyleVar_PinHoverRadius
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinHoverRadius) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinHoverRadius)},
     // ImNodesStyleVar_PinOffset
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinOffset) },
+    {ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImNodesStyle, PinOffset)},
     // ImNodesStyleVar_MiniMapPadding
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, MiniMapPadding) },
+    {ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, MiniMapPadding)},
     // ImNodesStyleVar_MiniMapOffset
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, MiniMapOffset) },
+    {ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImNodesStyle, MiniMapOffset)},
 };
 
 static const ImNodesStyleVarInfo* GetStyleVarInfo(ImNodesStyleVar idx)
@@ -2610,12 +2616,13 @@ void PushStyleVar(const ImNodesStyleVar item, const ImVec2& value)
 
 void PopStyleVar(int count)
 {
-    while (count > 0) {
+    while (count > 0)
+    {
         assert(GImNodes->StyleModifierStack.size() > 0);
         const ImNodesStyleVarElement style_backup = GImNodes->StyleModifierStack.back();
         GImNodes->StyleModifierStack.pop_back();
         const ImNodesStyleVarInfo* var_info = GetStyleVarInfo(style_backup.Item);
-        void* style_var = var_info->GetVarPtr(&GImNodes->Style);
+        void*                      style_var = var_info->GetVarPtr(&GImNodes->Style);
         if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
         {
             ((float*)style_var)[0] = style_backup.FloatValue[0];

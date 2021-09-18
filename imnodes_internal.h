@@ -230,14 +230,12 @@ struct ImNodesStyleVarElement
     ImNodesStyleVar Item;
     float           FloatValue[2];
 
-    ImNodesStyleVarElement(const ImNodesStyleVar variable, const float value)
-        : Item(variable)
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const float value) : Item(variable)
     {
         FloatValue[0] = value;
     }
 
-    ImNodesStyleVarElement(const ImNodesStyleVar variable, const ImVec2 value)
-        : Item(variable)
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const ImVec2 value) : Item(variable)
     {
         FloatValue[0] = value.x;
         FloatValue[1] = value.y;
@@ -276,9 +274,9 @@ struct ImNodesEditorContext
 
     // Mini-map state set during EndNodeEditor() call
 
-    ImRect                             MiniMapRectScreenSpace;
-    ImRect                             MiniMapContentScreenSpace;
-    float                              MiniMapScaling;
+    ImRect MiniMapRectScreenSpace;
+    ImRect MiniMapContentScreenSpace;
+    float  MiniMapScaling;
 
     ImNodesEditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
