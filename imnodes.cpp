@@ -1644,8 +1644,8 @@ void Initialize(ImNodesContext* context)
     context->MiniMapRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
     context->MiniMapRectSnappingOffset = ImVec2(0.f, 0.f);
     context->MiniMapZoom = 0.1f;
-    context->MiniMapNodeHoveringCallback = NULL;
-    context->MiniMapNodeHoveringCallbackUserData = NULL;
+    context->MiniMapNodeHoveringCallback = ImNodesMiniMapNodeHoveringCallbackDefault;
+    context->MiniMapNodeHoveringCallbackUserData = ImNodesMiniMapNodeHoveringCallbackUserDataDefault;
 
     context->CurrentPinIdx = INT_MAX;
     context->CurrentNodeIdx = INT_MAX;
@@ -1885,8 +1885,8 @@ static void MiniMapUpdate()
     GImNodes->CanvasDrawList->PopClipRect();
 
     // Reset callback info after use
-    GImNodes->MiniMapNodeHoveringCallback = NULL;
-    GImNodes->MiniMapNodeHoveringCallbackUserData = NULL;
+    GImNodes->MiniMapNodeHoveringCallback = ImNodesMiniMapNodeHoveringCallbackDefault;
+    GImNodes->MiniMapNodeHoveringCallbackUserData = ImNodesMiniMapNodeHoveringCallbackUserDataDefault;
 
     // Reset mini-map area so that it will disappear if MiniMap(...) is not called on the next frame
     GImNodes->MiniMapRectScreenSpace = ImRect(ImVec2(0.f, 0.f), ImVec2(0.f, 0.f));
@@ -2342,7 +2342,7 @@ void MiniMap(
     const float                              minimap_size_fraction,
     const ImNodesMiniMapLocation             location,
     const ImNodesMiniMapNodeHoveringCallback node_hovering_callback,
-    void*                                    node_hovering_callback_data)
+    const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data)
 {
     // Check that editor size fraction is sane; must be in the range (0, 1]
     assert(minimap_size_fraction > 0.f && minimap_size_fraction <= 1.f);
