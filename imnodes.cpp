@@ -297,19 +297,6 @@ inline ImRect ScreenSpaceToMiniMapSpace(const ImNodesEditorContext& editor, cons
         ScreenSpaceToMiniMapSpace(editor, r.Min), ScreenSpaceToMiniMapSpace(editor, r.Max));
 };
 
-inline ImVec2 CanvasSpaceToMiniMapSpace(const ImNodesEditorContext& editor, const ImVec2& v)
-{
-    return (CanvasSpaceToGridSpace(editor, v) - editor.GridContentBounds.Min) *
-               editor.MiniMapScaling +
-           editor.MiniMapContentScreenSpace.Min;
-}
-
-inline ImRect CanvasSpaceToMiniMapSpace(const ImNodesEditorContext& editor, const ImRect& r)
-{
-    return ImRect(
-        CanvasSpaceToMiniMapSpace(editor, r.Min), CanvasSpaceToMiniMapSpace(editor, r.Max));
-}
-
 // [SECTION] draw list helper
 
 void ImDrawListGrowChannels(ImDrawList* draw_list, const int num_channels)
@@ -1420,7 +1407,7 @@ static void MiniMapDrawNodes(const ImNodesEditorContext& editor)
     {
         const ImNodeDrawData& node = GImNodes->Nodes[node_idx];
 
-        const ImRect node_rect = CanvasSpaceToMiniMapSpace(editor, node.BaseRectangle);
+        const ImRect node_rect = ScreenSpaceToMiniMapSpace(editor, node.BaseRectangle);
 
         ImU32 mini_map_node_background;
 
