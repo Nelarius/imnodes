@@ -1,5 +1,7 @@
 #pragma once
 
+#include "imnodes.h"
+
 #include <imgui.h>
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
@@ -52,9 +54,6 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_SnappedLink,
     ImNodesClickInteractionType_Panning,
     ImNodesClickInteractionType_BoxSelection,
-    ImNodesClickInteractionType_MiniMapPanning,
-    ImNodesClickInteractionType_MiniMapZooming,
-    ImNodesClickInteractionType_MiniMapSnapping,
     ImNodesClickInteractionType_ImGuiItem,
     ImNodesClickInteractionType_None
 };
@@ -74,10 +73,13 @@ enum ImNodesUIEventType_
     ImNodesUIEventType_LinkCreated = 1 << 2
 };
 
-// Callback type used to specify special behavior when hovering a node in the minimap
-typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
-
 // [SECTION] internal data structures
+
+struct ImCubicBezier
+{
+    ImVec2 P0, P1, P2, P3;
+    int    NumSegments;
+};
 
 // Emulates std::optional<int> using the sentinel value `INVALID_INDEX`.
 struct ImOptionalIndex
@@ -181,10 +183,11 @@ struct ImLinkData
 
 struct ImLinkGeometry
 {
-    int         LinkId;
-    CubicBezier Curve;
+    int           LinkId;
+    ImCubicBezier Curve;
 
-    ImLinkGeometry(const int id, const CubicBezier& cubic_bezier) : LinkId(id), Curve(cubic_bezier)
+    ImLinkGeometry(const int id, const ImCubicBezier& cubic_bezier)
+        : LinkId(id), Curve(cubic_bezier)
     {
     }
 };
@@ -259,7 +262,7 @@ struct ImNodesUIEvent
 
 struct ImBoxSelector
 {
-    ImRect Rectangle;
+    ImRect Rectangle; // Coordinates in grid space
 
     ImBoxSelector() : Rectangle() {}
 };
@@ -328,11 +331,17 @@ struct ImNodesColElement
 struct ImNodesStyleVarElement
 {
     ImNodesStyleVar Item;
-    float           Value;
+    float           FloatValue[2];
 
-    ImNodesStyleVarElement(const float value, const ImNodesStyleVar variable)
-        : Item(variable), Value(value)
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const float value) : Item(variable)
     {
+        FloatValue[0] = value;
+    }
+
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const ImVec2 value) : Item(variable)
+    {
+        FloatValue[0] = value.x;
+        FloatValue[1] = value.y;
     }
 };
 
@@ -350,15 +359,35 @@ struct ImNodesEditorContext
 
     // ui related fields
     ImVec2 Panning;
+    ImVec2 AutoPanningDelta;
+    // Minimum and maximum extents of all content in grid space. Valid after final
+    // ImNodes::EndNode() call.
+    ImRect GridContentBounds;
 
     ImVector<int> SelectedNodeIds;
     ImVector<int> SelectedLinkIds;
 
     ImClickInteractionState ClickInteraction;
 
+    // Mini-map state set by MiniMap()
+
+    bool                               MiniMapEnabled;
+    ImNodesMiniMapLocation             MiniMapLocation;
+    float                              MiniMapSizeFraction;
+    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
+    void*                              MiniMapNodeHoveringCallbackUserData;
+
+    // Mini-map state set during EndNodeEditor() call
+
+    ImRect MiniMapRectScreenSpace;
+    ImRect MiniMapContentScreenSpace;
+    float  MiniMapScaling;
+
     ImNodesEditorContext()
         : GridSpaceNodeOrigins(), Panning(0.f, 0.f), SelectedNodeIds(), SelectedLinkIds(),
-          ClickInteraction()
+          ClickInteraction(), MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
+          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
+          MiniMapScaling(0.0f)
     {
     }
 };
@@ -388,13 +417,6 @@ struct ImNodesContext
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
     ImRect CanvasRectScreenSpace;
-
-    // MiniMap state
-    ImRect                             MiniMapRectScreenSpace;
-    ImVec2                             MiniMapRectPanningOffset;
-    float                              MiniMapZoom;
-    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    void*                              MiniMapNodeHoveringCallbackUserData;
 
     // Debug helpers
     ImNodesScope CurrentScope;
@@ -439,7 +461,7 @@ struct ImNodesContext
     float AltMouseScrollDelta;
 };
 
-namespace ImNodes
+namespace IMNODES_NAMESPACE
 {
 static inline ImNodesEditorContext& EditorContextGet()
 {
@@ -456,4 +478,4 @@ static inline ImVec2 CalculatePanningOffsetToNode(
 {
     return ss_canvas_center - ss_node_center;
 }
-} // namespace ImNodes
+} // namespace IMNODES_NAMESPACE
