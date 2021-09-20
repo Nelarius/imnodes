@@ -206,16 +206,8 @@ struct ImNodesEditorContext;
 typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
 #endif
 
-#ifndef ImNodesMiniMapNodeHoveringCallbackDefault
-#define ImNodesMiniMapNodeHoveringCallbackDefault NULL
-#endif
-
 #ifndef ImNodesMiniMapNodeHoveringCallbackUserData
 typedef void* ImNodesMiniMapNodeHoveringCallbackUserData;
-#endif
-
-#ifndef ImNodesMiniMapNodeHoveringCallbackUserDataDefault
-#define ImNodesMiniMapNodeHoveringCallbackUserDataDefault NULL
 #endif
 
 namespace IMNODES_NAMESPACE
@@ -255,8 +247,8 @@ void EndNodeEditor();
 void MiniMap(
     const float                              minimap_size_fraction = 0.2f,
     const ImNodesMiniMapLocation             location = ImNodesMiniMapLocation_TopLeft,
-    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback = ImNodesMiniMapNodeHoveringCallbackDefault,
-    const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data = ImNodesMiniMapNodeHoveringCallbackUserDataDefault);
+    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback = NULL,
+    const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data = NULL);
 
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
 void PushColorStyle(ImNodesCol item, unsigned int color);
