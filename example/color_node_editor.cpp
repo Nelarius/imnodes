@@ -123,15 +123,68 @@ ImU32 evaluate(const Graph<Node>& graph, const int root_node)
 class ColorNodeEditor
 {
 public:
-    ColorNodeEditor() : graph_(), nodes_(), root_node_id_(-1) {}
+    ColorNodeEditor() : graph_(), nodes_(), root_node_id_(-1),
+        minimap_location_(ImNodesMiniMapLocation_BottomRight) {}
 
     void show()
     {
         // Update timer context
         current_time_seconds = 0.001f * SDL_GetTicks();
 
+        auto flags = ImGuiWindowFlags_MenuBar;
+
         // The node editor window
-        ImGui::Begin("color node editor");
+        ImGui::Begin("color node editor", NULL, flags);
+
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("Mini-map"))
+            {
+                const char* names[] = {
+                    "Top Left",
+                    "Top Right",
+                    "Bottom Left",
+                    "Bottom Right",
+                };
+                int locations[] = {
+                    ImNodesMiniMapLocation_TopLeft,
+                    ImNodesMiniMapLocation_TopRight,
+                    ImNodesMiniMapLocation_BottomLeft,
+                    ImNodesMiniMapLocation_BottomRight,
+                };
+
+                for (int i = 0; i < 4; i++)
+                {
+                    bool selected = minimap_location_ == locations[i];
+                    if (ImGui::MenuItem(names[i], NULL, &selected))
+                        minimap_location_ = locations[i];
+                }
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Style"))
+            {
+                if (ImGui::MenuItem("Classic"))
+                {
+                    ImGui::StyleColorsClassic();
+                    ImNodes::StyleColorsClassic();
+                }
+                if (ImGui::MenuItem("Dark"))
+                {
+                    ImGui::StyleColorsDark();
+                    ImNodes::StyleColorsDark();
+                }
+                if (ImGui::MenuItem("Light"))
+                {
+                    ImGui::StyleColorsLight();
+                    ImNodes::StyleColorsLight();
+                }
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenuBar();
+        }
+
         ImGui::TextUnformatted("Edit the color of the output color window using nodes.");
         ImGui::Columns(2);
         ImGui::TextUnformatted("A -- add node");
@@ -489,6 +542,7 @@ public:
             ImNodes::Link(edge.id, edge.from, edge.to);
         }
 
+        ImNodes::MiniMap(0.2f, minimap_location_);
         ImNodes::EndNodeEditor();
 
         // Handle new links
@@ -635,9 +689,10 @@ private:
         };
     };
 
-    Graph<Node>         graph_;
-    std::vector<UiNode> nodes_;
-    int                 root_node_id_;
+    Graph<Node>            graph_;
+    std::vector<UiNode>    nodes_;
+    int                    root_node_id_;
+    ImNodesMiniMapLocation minimap_location_;
 };
 
 static ColorNodeEditor color_editor;

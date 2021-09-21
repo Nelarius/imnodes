@@ -58,9 +58,6 @@ enum ImNodesClickInteractionType_
     ImNodesClickInteractionType_LinkCreation,
     ImNodesClickInteractionType_Panning,
     ImNodesClickInteractionType_BoxSelection,
-    ImNodesClickInteractionType_MiniMapPanning,
-    ImNodesClickInteractionType_MiniMapZooming,
-    ImNodesClickInteractionType_MiniMapSnapping,
     ImNodesClickInteractionType_ImGuiItem,
     ImNodesClickInteractionType_None
 };
@@ -231,11 +228,17 @@ struct ImNodesColElement
 struct ImNodesStyleVarElement
 {
     ImNodesStyleVar Item;
-    float           Value;
+    float           FloatValue[2];
 
-    ImNodesStyleVarElement(const float value, const ImNodesStyleVar variable)
-        : Item(variable), Value(value)
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const float value) : Item(variable)
     {
+        FloatValue[0] = value;
+    }
+
+    ImNodesStyleVarElement(const ImNodesStyleVar variable, const ImVec2 value) : Item(variable)
+    {
+        FloatValue[0] = value.x;
+        FloatValue[1] = value.y;
     }
 };
 
@@ -252,15 +255,34 @@ struct ImNodesEditorContext
     // ui related fields
     ImVec2 Panning;
     ImVec2 AutoPanningDelta;
+    // Minimum and maximum extents of all content in grid space. Valid after final
+    // ImNodes::EndNode() call.
+    ImRect GridContentBounds;
 
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
 
     ImClickInteractionState ClickInteraction;
 
+    // Mini-map state set by MiniMap()
+
+    bool                               MiniMapEnabled;
+    ImNodesMiniMapLocation             MiniMapLocation;
+    float                              MiniMapSizeFraction;
+    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
+    ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
+
+    // Mini-map state set during EndNodeEditor() call
+
+    ImRect MiniMapRectScreenSpace;
+    ImRect MiniMapContentScreenSpace;
+    float  MiniMapScaling;
+
     ImNodesEditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          ClickInteraction()
+          ClickInteraction(), MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
+          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
+          MiniMapScaling(0.0f)
     {
     }
 };
@@ -280,13 +302,6 @@ struct ImNodesContext
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
     ImRect CanvasRectScreenSpace;
-
-    // MiniMap state
-    ImRect                             MiniMapRectScreenSpace;
-    ImVec2                             MiniMapRectSnappingOffset;
-    float                              MiniMapZoom;
-    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
 
     // Debug helpers
     ImNodesScope CurrentScope;
@@ -354,12 +369,13 @@ static inline int ObjectPoolFind(const ImObjectPool<T>& objects, const int id)
 template<typename T>
 static inline void ObjectPoolUpdate(ImObjectPool<T>& objects)
 {
-    objects.FreeList.clear();
     for (int i = 0; i < objects.InUse.size(); ++i)
     {
-        if (!objects.InUse[i])
+        const int id = objects.Pool[i].Id;
+
+        if (!objects.InUse[i] && objects.IdMap.GetInt(id, -1) == i)
         {
-            objects.IdMap.SetInt(objects.Pool[i].Id, -1);
+            objects.IdMap.SetInt(id, -1);
             objects.FreeList.push_back(i);
             (objects.Pool.Data + i)->~T();
         }
@@ -369,32 +385,30 @@ static inline void ObjectPoolUpdate(ImObjectPool<T>& objects)
 template<>
 inline void ObjectPoolUpdate(ImObjectPool<ImNodeData>& nodes)
 {
-    nodes.FreeList.clear();
     for (int i = 0; i < nodes.InUse.size(); ++i)
     {
         if (nodes.InUse[i])
         {
             nodes.Pool[i].PinIndices.clear();
         }
-        else
+        else 
         {
-            const int previous_id = nodes.Pool[i].Id;
-            const int previous_idx = nodes.IdMap.GetInt(previous_id, -1);
+            const int id = nodes.Pool[i].Id;
 
-            if (previous_idx != -1)
+            if (nodes.IdMap.GetInt(id, -1) == i)
             {
-                assert(previous_idx == i);
                 // Remove node idx form depth stack the first time we detect that this idx slot is
                 // unused
                 ImVector<int>&   depth_stack = EditorContextGet().NodeDepthOrder;
                 const int* const elem = depth_stack.find(i);
                 assert(elem != depth_stack.end());
                 depth_stack.erase(elem);
+
+                nodes.IdMap.SetInt(id, -1);
+                nodes.FreeList.push_back(i);
+                (nodes.Pool.Data + i)->~ImNodeData();
             }
 
-            nodes.IdMap.SetInt(previous_id, -1);
-            nodes.FreeList.push_back(i);
-            (nodes.Pool.Data + i)->~ImNodeData();
         }
     }
 }
