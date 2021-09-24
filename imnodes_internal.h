@@ -170,25 +170,32 @@ struct ImPinData
 
 struct ImLinkData
 {
-    int Id;
-    int StartPinId, EndPinId;
+    int   LinkId, StartPinId, EndPinId;
+    ImU32 BaseColor, HoveredColor, SelectedColor;
 
-    struct
+    ImLinkData(
+        const int link_id,
+        const int start_pin_id,
+        const int end_pin_id,
+        const unsigned int (&colors)[ImNodesCol_COUNT])
+        : LinkId(link_id), StartPinId(start_pin_id), EndPinId(end_pin_id),
+          BaseColor(colors[ImNodesCol_Link]), HoveredColor(colors[ImNodesCol_LinkHovered]),
+          SelectedColor(colors[ImNodesCol_LinkSelected])
     {
-        ImU32 Base, Hovered, Selected;
-    } ColorStyle;
-
-    ImLinkData(const int link_id) : Id(link_id), StartPinId(), EndPinId(), ColorStyle() {}
+    }
 };
 
-struct ImLinkGeometry
+struct ImLinks
 {
-    int           LinkId;
-    ImCubicBezier Curve;
+    ImVector<ImLinkData>    Data;
+    ImVector<ImCubicBezier> CubicBeziers;
 
-    ImLinkGeometry(const int id, const ImCubicBezier& cubic_bezier)
-        : LinkId(id), Curve(cubic_bezier)
+    inline int size() const { return Data.size(); }
+
+    inline void reset()
     {
+        Data.resize(0);
+        CubicBeziers.resize(0);
     }
 };
 
@@ -411,8 +418,7 @@ struct ImNodesContext
     ImVector<ImRect>    PinAttributeRectangles;
     std::map<int, int>  PinIdToPinIdx;
 
-    ImVector<ImLinkData>     Links;
-    ImVector<ImLinkGeometry> LinkGeometries;
+    ImLinks Links;
 
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
