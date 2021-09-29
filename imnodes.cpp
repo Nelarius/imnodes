@@ -476,53 +476,63 @@ void BeginLinkDetach(ImNodesEditorContext& editor, const int link_idx, const int
     editor.ClickInteraction.StartUnconnectedLink(start_pin_id, ImNodesLinkCreatedFrom_Detach);
 }
 
-void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx)
+void BeginLinkCreation(ImNodesEditorContext& editor, const int started_at_pin_id)
 {
-    // Check the 'click and drag to detach' case.
-    if (GImNodes->HoveredPinIdx.HasValue())
+    editor.ClickInteraction.StartUnconnectedLink(started_at_pin_id, ImNodesLinkCreatedFrom_Pin);
+    GImNodes->UIEvent.StartLink(started_at_pin_id);
+}
+
+void BeginLinkInteraction(
+    ImNodesEditorContext& editor,
+    const int             link_idx,
+    const ImOptionalIndex hovered_pin_idx = ImOptionalIndex())
+{
+    // Check if we are clicking the link with the modifier pressed.
+    // This will in a link detach via clicking.
+
+    const bool modifier_pressed = GImNodes->Io.LinkDetachWithModifierClick.Modifier == NULL
+                                      ? false
+                                      : *GImNodes->Io.LinkDetachWithModifierClick.Modifier;
+
+    if (modifier_pressed)
     {
-        const ImPinData& pin = GImNodes->Pins[GImNodes->HoveredPinIdx.Value()];
-        if ((pin.Flags & ImNodesAttributeFlags_EnableLinkDetachWithDragClick) != 0)
-        {
-            BeginLinkDetach(editor, link_idx, pin.Id);
-        }
+        const ImLinkData& link = GImNodes->Links.Data[link_idx];
+        assert(GImNodes->PinIdToPinIdx.find(link.StartPinId) != GImNodes->PinIdToPinIdx.end());
+        assert(GImNodes->PinIdToPinIdx.find(link.EndPinId) != GImNodes->PinIdToPinIdx.end());
+        const int        start_pin_idx = GImNodes->PinIdToPinIdx[link.StartPinId];
+        const int        end_pin_idx = GImNodes->PinIdToPinIdx[link.EndPinId];
+        const ImPinData& start_pin = GImNodes->Pins[start_pin_idx];
+        const ImPinData& end_pin = GImNodes->Pins[end_pin_idx];
+        const ImVec2&    mouse_pos = GImNodes->MousePos;
+        const float      dist_to_start = ImLengthSqr(start_pin.ScreenSpacePosition - mouse_pos);
+        const float      dist_to_end = ImLengthSqr(end_pin.ScreenSpacePosition - mouse_pos);
+        const int closest_pin_id = dist_to_start < dist_to_end ? link.StartPinId : link.EndPinId;
+
+        BeginLinkDetach(editor, link_idx, closest_pin_id);
     }
-    // If we aren't near a pin, check if we are clicking the link with the modifier pressed. This
-    // may also result in a link detach via clicking.
     else
     {
-        const bool modifier_pressed = GImNodes->Io.LinkDetachWithModifierClick.Modifier == NULL
-                                          ? false
-                                          : *GImNodes->Io.LinkDetachWithModifierClick.Modifier;
-
-        if (modifier_pressed)
+        if (hovered_pin_idx.HasValue())
         {
-            const ImLinkData& link = GImNodes->Links.Data[link_idx];
-            assert(GImNodes->PinIdToPinIdx.find(link.StartPinId) != GImNodes->PinIdToPinIdx.end());
-            assert(GImNodes->PinIdToPinIdx.find(link.EndPinId) != GImNodes->PinIdToPinIdx.end());
-            const int        start_pin_idx = GImNodes->PinIdToPinIdx[link.StartPinId];
-            const int        end_pin_idx = GImNodes->PinIdToPinIdx[link.EndPinId];
-            const ImPinData& start_pin = GImNodes->Pins[start_pin_idx];
-            const ImPinData& end_pin = GImNodes->Pins[end_pin_idx];
-            const ImVec2&    mouse_pos = GImNodes->MousePos;
-            const float      dist_to_start = ImLengthSqr(start_pin.ScreenSpacePosition - mouse_pos);
-            const float      dist_to_end = ImLengthSqr(end_pin.ScreenSpacePosition - mouse_pos);
-            const int        closest_pin_id =
-                dist_to_start < dist_to_end ? link.StartPinId : link.EndPinId;
+            const int pin_idx = hovered_pin_idx.Value();
+            const int pin_id = GImNodes->Pins[pin_idx].Id;
+            const int pin_flags = GImNodes->Pins[pin_idx].Flags;
 
-            BeginLinkDetach(editor, link_idx, closest_pin_id);
+            // Check the 'click and drag to detach' case.
+            if (pin_flags & ImNodesAttributeFlags_EnableLinkDetachWithDragClick)
+            {
+                BeginLinkDetach(editor, link_idx, pin_id);
+            }
+            else
+            {
+                BeginLinkCreation(editor, pin_id);
+            }
         }
         else
         {
             BeginLinkSelection(editor, link_idx);
         }
     }
-}
-
-void BeginLinkCreation(ImNodesEditorContext& editor, const int started_at_pin_id)
-{
-    editor.ClickInteraction.StartUnconnectedLink(started_at_pin_id, ImNodesLinkCreatedFrom_Pin);
-    GImNodes->UIEvent.StartLink(started_at_pin_id);
 }
 
 static inline bool IsMiniMapHovered();
@@ -909,10 +919,14 @@ ImOptionalIndex ResolveHoveredLink(const ImVector<ImPinData>& pins, const ImLink
         const ImLinkData&    link = links.Data[idx];
         const ImCubicBezier& cubic_bezier = links.CubicBeziers[idx];
 
-        if (is_pin_hovered &&
-            (hovered_pin_id == link.StartPinId || hovered_pin_id == link.EndPinId))
+        // If there is a hovered pin links can only be considered hovered if they use that pin
+        if (is_pin_hovered)
         {
-            return idx;
+            if (hovered_pin_id == link.StartPinId || hovered_pin_id == link.EndPinId)
+            {
+                return idx;
+            }
+            continue;
         }
 
         // The distance test
@@ -1936,7 +1950,7 @@ void EndNodeEditor()
     {
         if (GImNodes->LeftMouseClicked && GImNodes->HoveredLinkIdx.HasValue())
         {
-            BeginLinkInteraction(editor, GImNodes->HoveredLinkIdx.Value());
+            BeginLinkInteraction(editor, GImNodes->HoveredLinkIdx.Value(), GImNodes->HoveredPinIdx);
         }
 
         else if (GImNodes->LeftMouseClicked && GImNodes->HoveredPinIdx.HasValue())
