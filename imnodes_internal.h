@@ -270,7 +270,7 @@ struct ImNodesEditorContext
     ImNodesMiniMapLocation             MiniMapLocation;
     float                              MiniMapSizeFraction;
     ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    void*                              MiniMapNodeHoveringCallbackUserData;
+    ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
 
     // Mini-map state set during EndNodeEditor() call
 

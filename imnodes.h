@@ -3,6 +3,10 @@
 #include <stddef.h>
 #include <imgui.h>
 
+#ifdef IMNODES_USER_CONFIG
+#include IMNODES_USER_CONFIG
+#endif
+
 #ifndef IMNODES_NAMESPACE
 #define IMNODES_NAMESPACE ImNodes
 #endif
@@ -207,7 +211,13 @@ struct ImNodesContext;
 struct ImNodesEditorContext;
 
 // Callback type used to specify special behavior when hovering a node in the minimap
+#ifndef ImNodesMiniMapNodeHoveringCallback
 typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
+#endif
+
+#ifndef ImNodesMiniMapNodeHoveringCallbackUserData
+typedef void* ImNodesMiniMapNodeHoveringCallbackUserData;
+#endif
 
 namespace IMNODES_NAMESPACE
 {
@@ -247,7 +257,7 @@ void MiniMap(
     const float                              minimap_size_fraction = 0.2f,
     const ImNodesMiniMapLocation             location = ImNodesMiniMapLocation_TopLeft,
     const ImNodesMiniMapNodeHoveringCallback node_hovering_callback = NULL,
-    void*                                    node_hovering_callback_data = NULL);
+    const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data = NULL);
 
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
 void PushColorStyle(ImNodesCol item, unsigned int color);
