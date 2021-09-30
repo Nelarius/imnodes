@@ -266,10 +266,10 @@ struct ImNodesEditorContext
 
     // Mini-map state set by MiniMap()
 
-    bool                               MiniMapEnabled;
-    ImNodesMiniMapLocation             MiniMapLocation;
-    float                              MiniMapSizeFraction;
-    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
+    bool                                       MiniMapEnabled;
+    ImNodesMiniMapLocation                     MiniMapLocation;
+    float                                      MiniMapSizeFraction;
+    ImNodesMiniMapNodeHoveringCallback         MiniMapNodeHoveringCallback;
     ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
 
     // Mini-map state set during EndNodeEditor() call
@@ -391,7 +391,7 @@ inline void ObjectPoolUpdate(ImObjectPool<ImNodeData>& nodes)
         {
             nodes.Pool[i].PinIndices.clear();
         }
-        else 
+        else
         {
             const int id = nodes.Pool[i].Id;
 
@@ -408,7 +408,6 @@ inline void ObjectPoolUpdate(ImObjectPool<ImNodeData>& nodes)
                 nodes.FreeList.push_back(i);
                 (nodes.Pool.Data + i)->~ImNodeData();
             }
-
         }
     }
 }

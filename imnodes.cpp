@@ -630,12 +630,14 @@ void BeginLinkCreation(ImNodesEditorContext& editor, const int hovered_pin_idx)
     GImNodes->ImNodesUIState |= ImNodesUIState_LinkStarted;
 }
 
-void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx,
+void BeginLinkInteraction(
+    ImNodesEditorContext& editor,
+    const int             link_idx,
     const ImOptionalIndex pin_idx = ImOptionalIndex())
 {
     // Check if we are clicking the link with the modifier pressed.
     // This will in a link detach via clicking.
-    
+
     const bool modifier_pressed = GImNodes->Io.LinkDetachWithModifierClick.Modifier == NULL
                                       ? false
                                       : *GImNodes->Io.LinkDetachWithModifierClick.Modifier;
@@ -648,21 +650,20 @@ void BeginLinkInteraction(ImNodesEditorContext& editor, const int link_idx,
         const ImVec2&     mouse_pos = GImNodes->MousePos;
         const float       dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
         const float       dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
-        const int         closest_pin_idx =
-            dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
+        const int closest_pin_idx = dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
 
         editor.ClickInteraction.Type = ImNodesClickInteractionType_LinkCreation;
         BeginLinkDetach(editor, link_idx, closest_pin_idx);
-        editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_FromDetach;        
-    }    
+        editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_FromDetach;
+    }
     else
     {
         if (pin_idx.HasValue())
         {
-            const int hoveredPinFlags = editor.Pins.Pool[pin_idx.Value()].Flags;
+            const int hovered_pin_flags = editor.Pins.Pool[pin_idx.Value()].Flags;
 
             // Check the 'click and drag to detach' case.
-            if (hoveredPinFlags & ImNodesAttributeFlags_EnableLinkDetachWithDragClick)
+            if (hovered_pin_flags & ImNodesAttributeFlags_EnableLinkDetachWithDragClick)
             {
                 BeginLinkDetach(editor, link_idx, pin_idx.Value());
                 editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_FromDetach;
@@ -2281,8 +2282,7 @@ void EndNodeEditor()
     {
         if (GImNodes->LeftMouseClicked && GImNodes->HoveredLinkIdx.HasValue())
         {
-            BeginLinkInteraction(editor, GImNodes->HoveredLinkIdx.Value(),
-                GImNodes->HoveredPinIdx);
+            BeginLinkInteraction(editor, GImNodes->HoveredLinkIdx.Value(), GImNodes->HoveredPinIdx);
         }
 
         else if (GImNodes->LeftMouseClicked && GImNodes->HoveredPinIdx.HasValue())
@@ -2343,9 +2343,9 @@ void EndNodeEditor()
 }
 
 void MiniMap(
-    const float                              minimap_size_fraction,
-    const ImNodesMiniMapLocation             location,
-    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback,
+    const float                                      minimap_size_fraction,
+    const ImNodesMiniMapLocation                     location,
+    const ImNodesMiniMapNodeHoveringCallback         node_hovering_callback,
     const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data)
 {
     // Check that editor size fraction is sane; must be in the range (0, 1]

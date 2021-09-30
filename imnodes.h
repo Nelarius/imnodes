@@ -254,9 +254,9 @@ void EndNodeEditor();
 // Add a navigable minimap to the editor; call before EndNodeEditor after all
 // nodes and links have been specified
 void MiniMap(
-    const float                              minimap_size_fraction = 0.2f,
-    const ImNodesMiniMapLocation             location = ImNodesMiniMapLocation_TopLeft,
-    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback = NULL,
+    const float                                      minimap_size_fraction = 0.2f,
+    const ImNodesMiniMapLocation                     location = ImNodesMiniMapLocation_TopLeft,
+    const ImNodesMiniMapNodeHoveringCallback         node_hovering_callback = NULL,
     const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data = NULL);
 
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
