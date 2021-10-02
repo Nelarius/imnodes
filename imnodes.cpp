@@ -2278,7 +2278,7 @@ void EndNodeEditor()
 
     // Handle node graph interaction
 
-    if (not IsMiniMapHovered())
+    if (!IsMiniMapHovered())
     {
         if (GImNodes->LeftMouseClicked && GImNodes->HoveredLinkIdx.HasValue())
         {
