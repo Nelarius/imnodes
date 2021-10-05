@@ -25,8 +25,8 @@ local projectlocation = path.join(os.getcwd(), "build", _ACTION)
 local gl3wlocation = path.join(os.getcwd(), "dependencies/gl3w")
 local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.82")
 
-if  _OPTIONS["vcpkg-root"] then
-    vcpkgroot = _OPTIONS["vcpkg-root"]
+if  _OPTIONS["vcpkg"] then
+    vcpkgroot = _OPTIONS["vcpkg"]
 end
 
 function imnodes_example_project(name, example_file)

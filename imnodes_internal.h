@@ -7,6 +7,7 @@
 #include <imgui_internal.h>
 
 #include <assert.h>
+#include <cstdint>
 #include <limits.h>
 
 #include <map>
@@ -351,6 +352,39 @@ struct ImNodesStyleVarElement
         FloatValue[1] = value.y;
     }
 };
+
+namespace IMNODES_NAMESPACE
+{
+// An implementation of std::lower_bound.
+template<typename Iter, typename T>
+Iter LowerBound(Iter begin, Iter end, const T& value)
+{
+    if (begin == end)
+    {
+        return end;
+    }
+
+    Iter lhs = begin;
+    Iter rhs = end;
+
+    while (lhs < rhs)
+    {
+        Iter mid = lhs + std::size_t(rhs - lhs) / 2;
+
+        if (*mid < value)
+        {
+            // `lhs` is either less than `value`, or the very next element.
+            lhs = mid + 1;
+        }
+        else
+        {
+            rhs = mid;
+        }
+    }
+
+    return lhs;
+}
+} // namespace IMNODES_NAMESPACE
 
 // [SECTION] global and editor context structs
 
