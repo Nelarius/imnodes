@@ -357,7 +357,7 @@ namespace IMNODES_NAMESPACE
 {
 // An implementation of std::lower_bound.
 template<typename Iter, typename T>
-Iter LowerBound(Iter begin, Iter end, const T& value)
+Iter LowerBound(const Iter begin, const Iter end, const T& value)
 {
     if (begin == end)
     {
@@ -369,7 +369,7 @@ Iter LowerBound(Iter begin, Iter end, const T& value)
 
     while (lhs < rhs)
     {
-        Iter mid = lhs + std::size_t(rhs - lhs) / 2;
+        const Iter mid = lhs + std::size_t(rhs - lhs) / 2;
 
         if (*mid < value)
         {
