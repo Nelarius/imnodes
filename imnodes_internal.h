@@ -359,11 +359,6 @@ namespace IMNODES_NAMESPACE
 template<typename Iter, typename T>
 Iter LowerBound(const Iter begin, const Iter end, const T& value)
 {
-    if (begin == end)
-    {
-        return end;
-    }
-
     Iter lhs = begin;
     Iter rhs = end;
 
