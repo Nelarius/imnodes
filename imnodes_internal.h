@@ -132,7 +132,7 @@ private:
 struct ImNodeData
 {
     int    Id;
-    ImVec2 Origin; // The node origin is in editor space
+    ImVec2 Origin; // The node origin is in grid space
     ImRect TitleBarContentRect;
     ImRect Rect;
 
@@ -242,6 +242,15 @@ struct ImNodesStyleVarElement
     }
 };
 
+// Struct for backing up ImGui's mouse state
+struct ImGuiMouseState
+{
+    ImVec2 MousePos;
+    ImVec2 MouseDelta;
+    ImVec2 MousePosPrev;
+    ImVec2 MouseClickedPos[5];
+};
+
 // [SECTION] global and editor context structs
 
 struct ImNodesEditorContext
@@ -253,11 +262,16 @@ struct ImNodesEditorContext
     ImVector<int> NodeDepthOrder;
 
     // ui related fields
-    ImVec2 Panning;
-    ImVec2 AutoPanningDelta;
+    ImVec2 Panning; // In grid space
+    ImVec2 AutoPanningDelta; // In grid space
+    float  Zoom;
+    ImRect VisibleGridRect; // In grid space
     // Minimum and maximum extents of all content in grid space. Valid after final
     // ImNodes::EndNode() call.
     ImRect GridContentBounds;
+
+    ImGuiMouseState MouseInScreenSpace;
+    ImGuiMouseState MouseInGridSpace;
 
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
@@ -272,17 +286,18 @@ struct ImNodesEditorContext
     ImNodesMiniMapNodeHoveringCallback         MiniMapNodeHoveringCallback;
     ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
 
-    // Mini-map state set during EndNodeEditor() call
+    // Mini-map state set during EndNodeEditor() call after CalcMiniMapLayout()
 
+    bool MiniMapMouseIsHovering;
     ImRect MiniMapRectScreenSpace;
     ImRect MiniMapContentScreenSpace;
     float  MiniMapScaling;
 
     ImNodesEditorContext()
-        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          ClickInteraction(), MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
-          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
-          MiniMapScaling(0.0f)
+        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), Zoom(1.0f), SelectedNodeIndices(),
+          SelectedLinkIndices(), ClickInteraction(), MiniMapEnabled(false),
+          MiniMapSizeFraction(0.0f), MiniMapNodeHoveringCallback(NULL),
+          MiniMapNodeHoveringCallbackUserData(NULL), MiniMapScaling(0.0f)
     {
     }
 };
@@ -300,7 +315,6 @@ struct ImNodesContext
     ImVector<int> OccludedPinIndices;
 
     // Canvas extents
-    ImVec2 CanvasOriginScreenSpace;
     ImRect CanvasRectScreenSpace;
 
     // Debug helpers
@@ -350,6 +364,11 @@ struct ImNodesContext
 
 namespace IMNODES_NAMESPACE
 {
+
+void GetImGuiMouseState(ImGuiMouseState* state);
+void SetImGuiMouseState(const ImGuiMouseState& state);
+void TransformImGuiMouseStateToGridSpace(const ImNodesEditorContext& editor, ImGuiMouseState* state);
+
 static inline ImNodesEditorContext& EditorContextGet()
 {
     // No editor context was set! Did you forget to call ImNodes::CreateContext()?
