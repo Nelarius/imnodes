@@ -379,19 +379,61 @@ Iter LowerBound(const Iter begin, const Iter end, const T& value)
 
     return lhs;
 }
+
+// Both the node positions and depth order need to be retained between frames. This struct ensures
+// that the two data structures are updated in unison.
+struct NodeState
+{
+    typedef std::map<int, ImVec2>::iterator       GridSpaceOriginsIter;
+    typedef std::map<int, ImVec2>::const_iterator GridSpaceOriginsConstIter;
+
+    // Contains <node id, node origin> pairs. The node origin is the upper-left corner of the node,
+    // and is stored relative to the editor grid. See notes/coordinate_spaces.md for more
+    // information. Node origins have to be retained between frames, so that the user doesn't have
+    // to manage node position state.
+    //
+    // TODO: get rid of std::map
+    std::map<int, ImVec2> GridSpaceOrigins;
+    // TODO description
+    ImVector<int> IdDepthStack;
+
+    // TODO
+    // - add node
+    // - purge unused nodes
+
+    inline void InsertOrAssignGridSpaceOrigin(const int node_id, const ImVec2& grid_space_origin)
+    {
+        GridSpaceOriginsIter id_node_pair = GridSpaceOrigins.find(node_id);
+        if (id_node_pair != GridSpaceOrigins.cend())
+        {
+            id_node_pair->second = grid_space_origin;
+        }
+        else
+        {
+            GridSpaceOrigins.insert(std::make_pair(node_id, grid_space_origin));
+            IdDepthStack.push_back(node_id);
+        }
+    }
+
+    inline void InsertGridSpaceOrigin(const int node_id, const ImVec2& grid_space_origin)
+    {
+#ifdef NDEBUG
+        GridSpaceOrigins.insert(std::make_pair(node_id, grid_space_origin));
+#else
+        const std::pair<std::map<int, ImVec2>::iterator, bool> insert_result =
+            GridSpaceOrigins.insert(std::make_pair(node_id, grid_space_origin));
+        assert(insert_result.second);
+#endif
+        IdDepthStack.push_back(node_id);
+    }
+};
 } // namespace IMNODES_NAMESPACE
 
 // [SECTION] global and editor context structs
 
 struct ImNodesEditorContext
 {
-    // Contains <node id, node origin> pairs. The node origin is the upper-left corner of the node,
-    // and is stored relative to the editor grid. See notes/coordinate_spaces.md for more
-    // information. Node origins have to be retained between frames, so that the user doesn't have
-    // to manage node position state.
-    //
-    // TODO: get rid of std::map. Replace with ImPool?
-    std::map<int, ImVec2> GridSpaceNodeOrigins;
+    ImNodes::NodeState NodeState;
 
     // ui related fields
     ImVec2 Panning;
@@ -420,10 +462,9 @@ struct ImNodesEditorContext
     float  MiniMapScaling;
 
     ImNodesEditorContext()
-        : GridSpaceNodeOrigins(), Panning(0.f, 0.f), SelectedNodeIds(), SelectedLinkIds(),
-          ClickInteraction(), MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
-          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
-          MiniMapScaling(0.0f)
+        : NodeState(), Panning(0.f, 0.f), SelectedNodeIds(), SelectedLinkIds(), ClickInteraction(),
+          MiniMapEnabled(false), MiniMapSizeFraction(0.0f), MiniMapNodeHoveringCallback(NULL),
+          MiniMapNodeHoveringCallbackUserData(NULL), MiniMapScaling(0.0f)
     {
     }
 };

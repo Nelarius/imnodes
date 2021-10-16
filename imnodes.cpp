@@ -23,7 +23,6 @@
 #include <limits.h>
 #include <math.h>
 #include <new>
-#include <stdint.h>
 #include <stdio.h> // for fwrite, ssprintf, sscanf
 #include <stdlib.h>
 #include <string.h> // strlen, strncmp
@@ -614,7 +613,7 @@ void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
 void TranslateSelectedNodes(ImNodesEditorContext& editor)
 {
     const ImGuiIO&         io = ImGui::GetIO();
-    std::map<int, ImVec2>& node_origins = editor.GridSpaceNodeOrigins;
+    std::map<int, ImVec2>& node_origins = editor.NodeState.GridSpaceOrigins;
     for (int i = 0; i < editor.SelectedNodeIds.size(); ++i)
     {
         const int                       node_id = editor.SelectedNodeIds[i];
@@ -2051,18 +2050,19 @@ void BeginNode(const int node_id)
     node.LayoutStyle.BorderThickness = GImNodes->Style.NodeBorderThickness;
 
     {
-        std::map<int, ImVec2>::const_iterator id_node_pair =
-            editor.GridSpaceNodeOrigins.find(node_id);
-        if (id_node_pair != editor.GridSpaceNodeOrigins.end())
+        const NodeState::GridSpaceOriginsConstIter grid_space_origins_iter =
+            editor.NodeState.GridSpaceOrigins.find(node_id);
+        if (grid_space_origins_iter != editor.NodeState.GridSpaceOrigins.cend())
         {
-            node.CanvasSpacePosition = GridSpaceToCanvasSpace(editor, id_node_pair->second);
+            node.CanvasSpacePosition =
+                GridSpaceToCanvasSpace(editor, grid_space_origins_iter->second);
         }
         else
         {
-            const ImVec2 default_position = ImVec2(0.0f, 0.0f);
-            const ImVec2 grid_space_position = CanvasSpaceToGridSpace(editor, default_position);
-            editor.GridSpaceNodeOrigins.insert(std::make_pair(node_id, grid_space_position));
-            node.CanvasSpacePosition = default_position;
+            const ImVec2 canvas_space_default_pos = ImVec2(0.f, 0.f);
+            node.CanvasSpacePosition = canvas_space_default_pos;
+            editor.NodeState.InsertOrAssignGridSpaceOrigin(
+                node_id, CanvasSpaceToGridSpace(editor, canvas_space_default_pos));
         }
     }
 
@@ -2365,22 +2365,24 @@ void PopStyleVar(int count)
     }
 }
 
-void SetNodeScreenSpacePos(const int node_id, const ImVec2& screen_space_pos)
+void SetNodeScreenSpacePos(const int node_id, const ImVec2& screen_space_origin)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.GridSpaceNodeOrigins[node_id] = ScreenSpaceToGridSpace(editor, screen_space_pos);
+    editor.NodeState.InsertOrAssignGridSpaceOrigin(
+        node_id, ScreenSpaceToGridSpace(editor, screen_space_origin));
 }
 
-void SetNodeCanvasSpacePos(const int node_id, const ImVec2& canvas_space_pos)
+void SetNodeCanvasSpacePos(const int node_id, const ImVec2& canvas_space_origin)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.GridSpaceNodeOrigins[node_id] = CanvasSpaceToGridSpace(editor, canvas_space_pos);
+    editor.NodeState.InsertOrAssignGridSpaceOrigin(
+        node_id, CanvasSpaceToGridSpace(editor, canvas_space_origin));
 }
 
-void SetNodeGridSpacePos(const int node_id, const ImVec2& grid_pos)
+void SetNodeGridSpacePos(const int node_id, const ImVec2& grid_space_origin)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.GridSpaceNodeOrigins[node_id] = grid_pos;
+    editor.NodeState.InsertOrAssignGridSpaceOrigin(node_id, grid_space_origin);
 }
 
 ImVec2 GetNodeScreenSpacePos(const int node_id)
@@ -2699,8 +2701,8 @@ namespace
 {
 void NodeLineHandler(ImNodesEditorContext& editor, const char* const line)
 {
-    static std::pair<int, ImVec2> deserialized_node;
-    int                           x, y;
+    int node_id;
+    int x, y;
 
     // Each node will have the following entry:
     //
@@ -2708,17 +2710,12 @@ void NodeLineHandler(ImNodesEditorContext& editor, const char* const line)
     // origin=<x>,<y>
     //
     // This single funtion has to be able to parse both lines.
-    sscanf(line, "[node.%i", &deserialized_node.first);
+    sscanf(line, "[node.%i", &node_id);
 
     if (sscanf(line, "origin=%i,%i", &x, &y) == 2)
     {
-        // Precondition: the node should not exist
-        assert(
-            editor.GridSpaceNodeOrigins.find(deserialized_node.first) ==
-            editor.GridSpaceNodeOrigins.end());
-
-        deserialized_node.second = ImVec2((float)x, (float)y);
-        editor.GridSpaceNodeOrigins.insert(deserialized_node);
+        const ImVec2 coordinates = ImVec2((float)x, (float)y);
+        editor.NodeState.InsertGridSpaceOrigin(node_id, coordinates);
     }
 }
 
@@ -2742,13 +2739,13 @@ const char* SaveEditorStateToIniString(
 
     GImNodes->TextBuffer.clear();
     // TODO: check to make sure that the estimate is the upper bound of element
-    GImNodes->TextBuffer.reserve(64 * editor.GridSpaceNodeOrigins.size());
+    GImNodes->TextBuffer.reserve(64 * editor.NodeState.GridSpaceOrigins.size());
 
     GImNodes->TextBuffer.appendf(
         "[editor]\npanning=%i,%i\n", (int)editor.Panning.x, (int)editor.Panning.y);
 
-    for (std::map<int, ImVec2>::const_iterator iter = editor.GridSpaceNodeOrigins.begin();
-         iter != editor.GridSpaceNodeOrigins.end();
+    for (std::map<int, ImVec2>::const_iterator iter = editor.NodeState.GridSpaceOrigins.begin();
+         iter != editor.NodeState.GridSpaceOrigins.end();
          ++iter)
     {
         const int     node_id = iter->first;
