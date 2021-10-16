@@ -449,11 +449,11 @@ struct ImNodesEditorContext
 
     // Mini-map state set by MiniMap()
 
-    bool                               MiniMapEnabled;
-    ImNodesMiniMapLocation             MiniMapLocation;
-    float                              MiniMapSizeFraction;
-    ImNodesMiniMapNodeHoveringCallback MiniMapNodeHoveringCallback;
-    void*                              MiniMapNodeHoveringCallbackUserData;
+    bool                                       MiniMapEnabled;
+    ImNodesMiniMapLocation                     MiniMapLocation;
+    float                                      MiniMapSizeFraction;
+    ImNodesMiniMapNodeHoveringCallback         MiniMapNodeHoveringCallback;
+    ImNodesMiniMapNodeHoveringCallbackUserData MiniMapNodeHoveringCallbackUserData;
 
     // Mini-map state set during EndNodeEditor() call
 

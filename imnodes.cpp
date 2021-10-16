@@ -1945,7 +1945,7 @@ void EndNodeEditor()
 
     // Handle node graph interaction
 
-    if (not IsMiniMapHovered())
+    if (!IsMiniMapHovered())
     {
         if (GImNodes->LeftMouseClicked && GImNodes->HoveredLinkIdx.HasValue())
         {
@@ -1999,10 +1999,10 @@ void EndNodeEditor()
 }
 
 void MiniMap(
-    const float                              minimap_size_fraction,
-    const ImNodesMiniMapLocation             location,
-    const ImNodesMiniMapNodeHoveringCallback node_hovering_callback,
-    void*                                    node_hovering_callback_data)
+    const float                                      minimap_size_fraction,
+    const ImNodesMiniMapLocation                     location,
+    const ImNodesMiniMapNodeHoveringCallback         node_hovering_callback,
+    const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data)
 {
     // Check that editor size fraction is sane; must be in the range (0, 1]
     assert(minimap_size_fraction > 0.f && minimap_size_fraction <= 1.f);

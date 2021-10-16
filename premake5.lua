@@ -23,7 +23,7 @@ newoption {
 
 local projectlocation = path.join(os.getcwd(), "build", _ACTION)
 local gl3wlocation = path.join(os.getcwd(), "dependencies/gl3w")
-local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.82")
+local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.84.2")
 
 if  _OPTIONS["vcpkg"] then
     vcpkgroot = _OPTIONS["vcpkg"]
