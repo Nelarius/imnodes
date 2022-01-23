@@ -225,6 +225,38 @@ ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight, mini_map_node_hovering_c
 // 'custom_user_data' can be used to supply extra information needed for drawing within the callback
 ```
 
+## Customizing ImNodes
+
+ImNodes can be customized by providing an `imnodes_config.h` header and specifying defining `IMNODES_USER_CONFIG=imnodes_config.h` when compiling.
+
+It is currently possible to override the type of the minimap hovering callback function. This is useful when generating bindings for another language.
+
+Here's an example imnodes_config.h, which generates a pybind wrapper for the callback.
+```cpp
+#pragma once
+
+#include <pybind11/functional.h>
+
+namespace pybind11 {
+
+inline bool PyWrapper_Check(PyObject *o) { return true; }
+
+class wrapper : public object {
+public:
+    PYBIND11_OBJECT_DEFAULT(wrapper, object, PyWrapper_Check)
+    wrapper(void* x) { m_ptr = (PyObject*)x; }
+    explicit operator bool() const { return m_ptr != nullptr && m_ptr != Py_None; }
+};
+
+} //namespace pybind11
+
+namespace py = pybind11;
+
+#define ImNodesMiniMapNodeHoveringCallback py::wrapper
+
+#define ImNodesMiniMapNodeHoveringCallbackUserData py::wrapper
+```
+
 ## Known issues
 
 * `ImGui::Separator()` spans the current window span. As a result, using a separator inside a node will result in the separator spilling out of the node into the node editor grid.
