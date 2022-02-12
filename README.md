@@ -44,11 +44,12 @@ $ make all -j
   ```bash
   mkdir build;
   cd build
-  cmake ..
+  cmake -D{your-sdl-path} ..
   make -j
   ```
 
-  
+please **note** that: you should set the sdl2 path manually.
+
 
 ## A brief tour
 
