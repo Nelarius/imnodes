@@ -11,25 +11,37 @@ ENDIF (APPLE)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(SDL_DIR /usr/local/Cellar/sdl2/2.0.20)
+
+if(SDL_PATH)
+    #do something
+    set(SDL_DIR ${SDL_PATH})
+else()
+    #do something
+    set(SDL_PATH /usr/local/Cellar/sdl2/2.0.20)
+    message("[-] SDL2 not found; set ${SDL_PATH} default!")
+    set(SDL_DIR ${SDL_PATH})
+endif()
+
+
 
 include_directories(${SDL_DIR}/include/SDL2) # 添加SDL头文件搜索路径
 link_libraries(${SDL_DIR}/lib/) # 增加SDL链接库目录
 
 
-set(IMGUI  ${CMAKE_SOURCE_DIR}/dependencies/imgui-1.84.2)
+set(DEPENDENCIES_DIR ${CMAKE_SOURCE_DIR}/dependencies)
+
+
+set(IMGUI  ${DEPENDENCIES_DIR}/imgui-1.84.2)
+set(GL3W  ${DEPENDENCIES_DIR}/gl3w/include)
 
 set(IMNODES  ${CMAKE_SOURCE_DIR}/imnodes)
 
-set(GL3W  ${CMAKE_SOURCE_DIR}/dependencies/gl3w/include)
 
 include_directories(
     ${IMGUI} 
     ${IMNODES} 
     ${GL3W}
     )
-
-# set(GL3W_INCLUDE ${CMAKE_SOURCE_DIR}/dependencies/include)
 
 add_subdirectory(dependencies)
 

@@ -6,7 +6,5 @@ set(CMAKE_CXX_STANDARD 17)
 
 aux_source_directory(. imgui_src)
 
-
-
 add_library(${target} ${imgui_src})
 target_include_directories(${target} PUBLIC .)
