@@ -10,12 +10,24 @@ namespace example
 {
 namespace
 {
+enum class NodeType
+{
+    add,
+    multiply,
+    output,
+    sine,
+    time,
+    value
+};
+
 struct Node
 {
-    int   id;
-    float value;
+    NodeType type;
+    float    value;
 
-    Node(const int i, const float v) : id(i), value(v) {}
+    explicit Node(const NodeType t) : type(t), value(0.f) {}
+
+    Node(const NodeType t, const float v) : type(t), value(v) {}
 };
 
 struct Link
