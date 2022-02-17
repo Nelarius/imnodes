@@ -6,6 +6,8 @@ project(imnodes)
 IF (APPLE)
    FIND_LIBRARY(COREFOUNDATION_LIBRARY CoreFoundation )
    message("[+]CoreFoundation found in ${COREFOUNDATION_LIBRARY}")
+   FIND_LIBRARY(SYSTEMCONFIGURATION_LIBRARY SystemConfiguration )
+   message("[+]CoreFoundation found in ${SYSTEMCONFIGURATION_LIBRARY}") 
 ENDIF (APPLE)
 
 
@@ -27,6 +29,10 @@ endif()
 
 include_directories(${SDL_DIR}/include/SDL2) # 添加SDL头文件搜索路径
 link_libraries(${SDL_DIR}/lib/) # 增加SDL链接库目录
+
+set(PcapPlusPlus_DIR /usr/local/Cellar/pcapplusplus/21.11)
+
+
 
 
 set(DEPENDENCIES_DIR ${CMAKE_SOURCE_DIR}/dependencies)
@@ -51,6 +57,7 @@ include_directories(
     ${FMT}
     ${JSON}
     )
+include_directories( ${PcapPlusPlus_DIR}/include)
 
 add_subdirectory(dependencies)
 
