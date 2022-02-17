@@ -8,7 +8,7 @@ TODO.md
 ### Local build ###
 bin/
 build/
-lib/
+# lib/
 imnodes.sln
 
 # Created by https://www.toptal.com/developers/gitignore/api/sublimetext

@@ -17,8 +17,6 @@ target_link_directories(${target} PUBLIC
     ${DEPENDENCIES_DIR}/gl3w/
     ${SDL_DIR}/lib
     ${DEPENDENCIES_DIR}/fmt/
-
-    
 )
 
 set(LIBS gl3w imgui imnodes SDL2 ${COREFOUNDATION_LIBRARY} libgraph fmt nlohmann_json)
