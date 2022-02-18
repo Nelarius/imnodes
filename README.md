@@ -17,6 +17,7 @@ Features:
 * Multiple node and link selection with a box selector
 * Nodes, links, and pins are fully customizable, from color style to layout
 * Default themes match `dear imgui`'s default themes
+* Pcap Node (working), using pcapplusplus
 
 Scroll down for a brief tour, known issues, and further information!
 
