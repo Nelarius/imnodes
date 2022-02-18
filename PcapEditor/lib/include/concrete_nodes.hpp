@@ -96,32 +96,7 @@ namespace PcapEditor
         std::string m_value;
     };
 
-    class NodeComment : public Node {
-    public:
-        NodeComment() : Node("hex.builtin.nodes.constants.comment.header", {}) {
-            this->m_comment.resize(0xFFF, 0x00);
-        }
-
-        void drawNode() override {
-            ImGui::InputTextMultiline("##string", reinterpret_cast<char *>(this->m_comment.data()), this->m_comment.size() - 1, ImVec2(150, 100));
-        }
-
-        void process() override {
-        }
-
-        void store(nlohmann::json &j) override {
-            j = nlohmann::json::object();
-
-            j["comment"] = this->m_comment;
-        }
-
-        void load(nlohmann::json &j) override {
-            this->m_comment = j["comment"];
-        }
-
-    private:
-        std::string m_comment;
-    };
+    
     class NodeInteger : public Node {
     public:
         NodeInteger() : Node("hex.builtin.nodes.constants.int.header", { Attribute(Attribute::IOType::Out, Attribute::Type::Integer, "") }) { }

@@ -29,9 +29,14 @@ namespace utility {
     }
 
 
-    template<class _Dp, class _Bp>
+    // template<class _Dp, class _Bp>
+    // concept derived_from =
+    //     __is_base_of(_Bp, _Dp) && __is_convertible_to(const volatile _Dp *, const volatile _Bp *);
+
+    template< class Derived, class Base >
     concept derived_from =
-        __is_base_of(_Bp, _Dp) && __is_convertible_to(const volatile _Dp *, const volatile _Bp *);
+    std::is_base_of_v<Base, Derived> &&
+    std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
 
 
