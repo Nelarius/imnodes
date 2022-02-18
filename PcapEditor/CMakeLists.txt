@@ -11,7 +11,7 @@ add_executable(${target} main.cpp pcap_editor.cpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/include)
 
-target_link_directories(${target} PUBLIC
+link_directories(
     ${IMGUI} 
     ${IMNODES} 
     ${DEPENDENCIES_DIR}/gl3w/
@@ -19,6 +19,6 @@ target_link_directories(${target} PUBLIC
     ${DEPENDENCIES_DIR}/fmt/
 )
 
-set(LIBS gl3w imgui imnodes SDL2 ${COREFOUNDATION_LIBRARY} libgraph fmt nlohmann_json)
+set(LIBS gl3w imgui imnodes SDL2 ${COREFOUNDATION_LIBRARY} libgraph fmt nlohmann_json    -lpthread  ${unix_libs} )
 
 target_link_libraries(${target} ${LIBS})

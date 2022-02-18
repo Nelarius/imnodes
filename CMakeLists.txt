@@ -4,6 +4,8 @@ project(imnodes)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules;${CMAKE_MODULE_PATH}")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+
 IF (APPLE)
    FIND_LIBRARY(COREFOUNDATION_LIBRARY CoreFoundation )
    message("[+]CoreFoundation found in ${COREFOUNDATION_LIBRARY}")
@@ -19,23 +21,28 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(SDL2)
 if(SDL2_FOUND)
-    message("[+] found sdl2 include ${SDL2_INCLUDE_DIR}")
-    message("[+] found sdl2 library ${SDL2_LIBRARY}")
+    # message("[+] found sdl2 include ${SDL2_INCLUDE_DIR}")
+    # message("[+] found sdl2 library ${SDL2_LIBRARY}")
     include_directories(${SDL2_INCLUDE_DIR}) # 添加SDL头文件搜索路径
-    link_libraries(${SDL2_LIBRARY}) # 增加SDL链接库目录
+    link_directories(${SDL2_LIBRARY}) # 增加SDL链接库目录
+else()
+	message("[-]sdl2 not found")
 endif()
-
 
 
 find_package(PcapPlusPlus)
 if(PcapPlusPlus_FOUND)
-    message("${PcapPlusPlus_DIR}")
-endif(PcapPlusPlus_FOUND)
 
+    include_directories( ${PcapPlusPlus_INCLUDE_DIR} )
+    link_directories(${PcapPlusPlus_LIBS_DIR}) # 增加SDL链接库目录
+    # message("${PcapPlusPlus_LIBS_DIR}")
+else()
+	message("[-]pcapplusplus not found")
+endif()
 
 set(DEPENDENCIES_DIR ${CMAKE_SOURCE_DIR}/dependencies)
 set(CMAKE_BUILD_TYPE "Debug")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 set(IMGUI  ${DEPENDENCIES_DIR}/imgui)
 set(GL3W  ${DEPENDENCIES_DIR}/gl3w/include)
@@ -55,7 +62,7 @@ include_directories(
     ${FMT}
     ${JSON}
     )
-include_directories( ${PcapPlusPlus_DIR}/include)
+
 
 add_subdirectory(dependencies)
 
