@@ -31,13 +31,11 @@ IF(APPLE)
 ENDIF()
 
 target_link_libraries(${target}  
-    -lpthread ${unix_libs} 
-    -Wl,--start-group
-    Pcap++ 
-    Packet++ 
-    Common++ 
-    -Wl,--end-group
-    -lpcap
-    ) # caution! the order: 
+-lpthread ${unix_libs} 
+Pcap++ 
+Packet++ 
+Common++ 
+-lpcap
+) # caution! the order: 
 
 set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)

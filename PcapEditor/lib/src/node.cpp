@@ -76,6 +76,26 @@ namespace PcapEditor{
         return *reinterpret_cast<float *>(outputData->data());
     }
 
+    pcpp::GeneralFilter* Node::getFilterOnInput(u32 index) {
+        auto attribute = this->getConnectedInputAttribute(index);
+
+        if (attribute == nullptr)
+            throwNodeError(utility::format("Nothing connected to input '{0}'", (this->m_attributes[index].getUnlocalizedName().c_str())));;
+
+        if (attribute->getType() != Attribute::Type::Filter)
+            throw std::runtime_error("Tried to read buffer from non-buffer attribute");
+
+        markInputProcessed(index);
+        attribute->getParentNode()->process();
+
+        auto &outputData = attribute->getOutputData();
+
+        if (!outputData.has_value())
+            throw std::runtime_error("No data available at connected attribute");
+
+        return reinterpret_cast<pcpp::GeneralFilter *>(&(outputData.value()[0]));
+    }
+
     void Node::setBufferOnOutput(u32 index, std::vector<u8> data) {
         if (index >= this->getAttributes().size())
             throw std::runtime_error("Attribute index out of bounds!");
@@ -114,6 +134,21 @@ namespace PcapEditor{
 
         std::vector<u8> buffer(sizeof(float), 0);
         std::memcpy(buffer.data(), &floatingPoint, sizeof(float));
+
+        attribute.getOutputData() = buffer;
+    }
+
+    void Node::setFilterOnOutput(u32 index, pcpp::GeneralFilter* filter) {
+        if (index >= this->getAttributes().size())
+            throw std::runtime_error("Attribute index out of bounds!");
+
+        auto &attribute = this->getAttributes()[index];
+
+        if (attribute.getIOType() != Attribute::IOType::Out)
+            throw std::runtime_error("Tried to set output data of an input attribute!");
+
+        std::vector<u8> buffer(sizeof(pcpp::GeneralFilter*), 0);
+        std::memcpy(buffer.data(), filter, sizeof(pcpp::GeneralFilter*));
 
         attribute.getOutputData() = buffer;
     }

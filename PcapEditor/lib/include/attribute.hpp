@@ -16,7 +16,9 @@ namespace PcapEditor {
         enum class Type {
             Integer,
             Float,
-            Buffer
+            Buffer,
+            Filter,
+            Packet
         };
 
         enum class IOType {

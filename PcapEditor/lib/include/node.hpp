@@ -11,6 +11,7 @@
 #include <nlohmann/json_fwd.hpp>
 #include <utility.hpp>
 
+#include <pcapplusplus/PcapFilter.h>
 
 namespace PcapEditor {
     class Overlay {
@@ -104,10 +105,13 @@ namespace PcapEditor {
         std::vector<u8> getBufferOnInput(u32 index);
         u64 getIntegerOnInput(u32 index);
         float getFloatOnInput(u32 index);
+        pcpp::GeneralFilter* getFilterOnInput(u32 index);
+
 
         void setBufferOnOutput(u32 index, std::vector<u8> data);
         void setIntegerOnOutput(u32 index, u64 integer);
         void setFloatOnOutput(u32 index, float floatingPoint);
+        void setFilterOnOutput(u32 index, pcpp::GeneralFilter* filter);
 
         void setOverlayData(u64 address, const std::vector<u8> &data);
     };

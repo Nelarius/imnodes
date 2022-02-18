@@ -193,6 +193,13 @@ void PcapEditor::NodeEditorShow()
                             case Attribute::Type::Buffer:
                                 pinShape = ImNodesPinShape_Quad;
                                 break;
+                            case Attribute::Type::Filter:
+                                pinShape = ImNodesPinShape_CircleFilled;
+                                break;
+                            case Attribute::Type::Packet:
+                                pinShape = ImNodesPinShape_QuadFilled;
+                                break;
+                            
                         }
 
                         if (attribute.getIOType() == Attribute::IOType::In) {

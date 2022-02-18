@@ -26,18 +26,17 @@ if(SDL2_FOUND)
     include_directories(${SDL2_INCLUDE_DIR}) # 添加SDL头文件搜索路径
     link_directories(${SDL2_LIBRARY}) # 增加SDL链接库目录
 else()
-	message("[-]sdl2 not found")
+	message(FATAL_ERROR "[-]sdl2 not found")
 endif()
 
 
 find_package(PcapPlusPlus)
 if(PcapPlusPlus_FOUND)
-
     include_directories( ${PcapPlusPlus_INCLUDE_DIR} )
     link_directories(${PcapPlusPlus_LIBS_DIR}) # 增加SDL链接库目录
     # message("${PcapPlusPlus_LIBS_DIR}")
 else()
-	message("[-]pcapplusplus not found")
+    message(FATAL_ERROR "[-]pcapplusplus not found")
 endif()
 
 set(DEPENDENCIES_DIR ${CMAKE_SOURCE_DIR}/dependencies)
