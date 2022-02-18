@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(imnodes)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules;${CMAKE_MODULE_PATH}")
 
 IF (APPLE)
    FIND_LIBRARY(COREFOUNDATION_LIBRARY CoreFoundation )
@@ -16,23 +17,20 @@ ENDIF (APPLE)
 set(CMAKE_CXX_STANDARD 20)
 
 
-if(SDL_PATH)
-    #do something
-    set(SDL_DIR ${SDL_PATH})
-else()
-    #do something
-    set(SDL_PATH /usr/local/Cellar/sdl2/2.0.20)
-    message("[-] SDL2 not found; set ${SDL_PATH} default!")
-    set(SDL_DIR ${SDL_PATH})
+find_package(SDL2)
+if(SDL2_FOUND)
+    message("[+] found sdl2 include ${SDL2_INCLUDE_DIR}")
+    message("[+] found sdl2 library ${SDL2_LIBRARY}")
+    include_directories(${SDL2_INCLUDE_DIR}) # 添加SDL头文件搜索路径
+    link_libraries(${SDL2_LIBRARY}) # 增加SDL链接库目录
 endif()
 
 
-include_directories(${SDL_DIR}/include/SDL2) # 添加SDL头文件搜索路径
-link_libraries(${SDL_DIR}/lib/) # 增加SDL链接库目录
 
-set(PcapPlusPlus_DIR /usr/local/Cellar/pcapplusplus/21.11)
-
-
+find_package(PcapPlusPlus)
+if(PcapPlusPlus_FOUND)
+    message("${PcapPlusPlus_DIR}")
+endif(PcapPlusPlus_FOUND)
 
 
 set(DEPENDENCIES_DIR ${CMAKE_SOURCE_DIR}/dependencies)

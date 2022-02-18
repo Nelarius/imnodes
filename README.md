@@ -25,8 +25,8 @@ Scroll down for a brief tour, known issues, and further information!
 This repository includes a few example files, under `example/`. You can copy-paste them into your own imgui project, or you can build them here, in this repository. To build here:
 * SDL2 needs to be installed
   * Macos, `brew install sdl2`
-* premake5 is used to generate the build files
-
+* PcapPlusPlus needs to be installed, for pcap device
+  * Macos, `brew install pcapplusplus`
 ```bash
 # Assuming you've installed SDL2 via vcpkg, for instance
 $ premake5 gmake \
