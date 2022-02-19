@@ -1,4 +1,5 @@
 #pragma once
+#include <sstream>
 #include <imgui_extensions.h>
 #include <node.hpp>
 #include <nlohmann/json.hpp>
@@ -8,7 +9,12 @@
 #include <pcapplusplus/PcapLiveDeviceList.h>
 
 #include <pcapplusplus/PcapLiveDevice.h>
-#include "pcapplusplus/SystemUtils.h"
+#include <pcapplusplus/Device.h>
+#include <pcapplusplus/SystemUtils.h>
+#include <pcapplusplus/IPv4Layer.h>
+#include <pcapplusplus/EthLayer.h>
+#include <pcapplusplus/PcapFilter.h>
+#include <PacketState.hpp>
 // #include "PcapFilter.h"
 // #include "PcapFileDevice.h"
 
@@ -271,6 +277,32 @@ namespace PcapEditor
 
     private:
         std::optional<std::vector<u8> > m_value;
+    };
+    class NodeDisplayString : public Node {
+    public:
+        NodeDisplayString() : Node("hex.builtin.nodes.display.string.header", { Attribute(Attribute::IOType::In, Attribute::Type::String, "hex.builtin.nodes.common.input") }) { }
+
+        void drawNode() override {
+            ImGui::PushItemWidth(150);
+            if (this->m_value.has_value())
+            {
+                    ImGui::TextFormatted("{0}", this->m_value.value());
+            }
+                
+            else
+                ImGui::TextUnformatted("???");
+            ImGui::PopItemWidth();
+        }
+
+        void process() override {
+            this->m_value.reset();
+            auto input = this->getStringOnInput(0);
+
+            this->m_value = input;
+        }
+
+    private:
+        std::optional<std::string > m_value;
     };
 
     class NodeDisplayFloat : public Node {
@@ -650,19 +682,20 @@ namespace PcapEditor
 
     class NodePortFilter : public Node {
     public:
-        NodePortFilter() : Node("hex.builtin.nodes.constants.Filter.header", { Attribute(Attribute::IOType::Out, Attribute::Type::Filter, "") }) {
-            m_portFilter = new pcpp::PortFilter(m_value, pcpp::SRC_OR_DST);
+        NodePortFilter() : Node("hex.builtin.nodes.net.Filter.header", { Attribute(Attribute::IOType::Out, Attribute::Type::Pointer, "") }) {
+            // m_portFilter = new pcpp::PortFilter(m_value, pcpp::SRC_OR_DST);
          }
 
         void drawNode() override {
             ImGui::PushItemWidth(100);
-            ImGui::InputHexadecimal("##port_value", &this->m_value);
+            // ImGui::InputHexadecimal("##port_value", &this->m_value);
+            ImGui::InputInt("##port_value", &this->m_value);
             ImGui::PopItemWidth();
         }
 
         void process() override {
-            m_portFilter->setPort(m_value);
-            this->setFilterOnOutput(0, m_portFilter);
+            m_portFilter.setPort(m_value);
+            this->setTOnOutput<pcpp::GeneralFilter>(0, &m_portFilter);
         }
 
         void store(nlohmann::json &j) override {
@@ -675,45 +708,116 @@ namespace PcapEditor
             this->m_value = j["data"];
         }
         ~NodePortFilter(){
-            delete m_portFilter;
+            // delete m_portFilter;
         }
 
     private:
-        u64 m_value = 0;
-        pcpp::PortFilter* m_portFilter;
+        int m_value = 80;
+        pcpp::PortFilter m_portFilter = {0, pcpp::SRC_OR_DST};
+    };
+    
+    class NodeDisPlayStats : public Node {
+    public:
+        NodeDisPlayStats() : Node("hex.builtin.nodes.pcap.packet.header",
+                           { Attribute(Attribute::IOType::In, Attribute::Type::Pointer, "hex.builtin.nodes.common.input.a") }) {
+                                    
+                                }
+
+        void drawNode() override {
+
+            ImGui::Text(output.c_str());
+            
+            
+        }
+
+        void process() override {
+            
+            // p_stats= this->getStatsOnInput(0);
+            p_stats= this->getTOnInput<pcpp::Stats, Attribute::Type::Pointer>(0);
+            output = p_stats->printToConsole();
+            
+            
+        }
+    private:
+        pcpp::Stats* p_stats;
+        std::string output;
+        
     };
     class NodeFilterOR : public Node {
     public:
         NodeFilterOR() : Node("hex.builtin.nodes.filter.or.header",
-                           { Attribute(Attribute::IOType::In, Attribute::Type::Filter, "hex.builtin.nodes.common.input.a"),
-                               Attribute(Attribute::IOType::In, Attribute::Type::Filter, "hex.builtin.nodes.common.input.b"),
-                               Attribute(Attribute::IOType::Out, Attribute::Type::Filter, "hex.builtin.nodes.common.output") }) {
+                           { Attribute(Attribute::IOType::In, Attribute::Type::Pointer, "hex.builtin.nodes.common.input.a"),
+                               Attribute(Attribute::IOType::In, Attribute::Type::Pointer, "hex.builtin.nodes.common.input.b"),
+                               Attribute(Attribute::IOType::Out, Attribute::Type::Pointer, "hex.builtin.nodes.common.output") }) {
                                     
                                 }
 
         void process() override {
             std::vector<pcpp::GeneralFilter*> FilterVec;
-            auto inputA = this->getFilterOnInput(0);
-            auto inputB = this->getFilterOnInput(1);
+            auto inputA = this->getTOnInput<pcpp::GeneralFilter, Attribute::Type::Pointer>(0);
+            auto inputB = this->getTOnInput<pcpp::GeneralFilter, Attribute::Type::Pointer>(1);
             FilterVec.push_back(inputA);
             FilterVec.push_back(inputB);
-            pcpp::OrFilter orFilter(FilterVec);     
+            orFilter = FilterVec;     
 
-            std::string filterAsString;
-		    orFilter.parseToString(filterAsString);
-            this->setFilterOnOutput(2,  dynamic_cast<pcpp::GeneralFilter*>(&orFilter));
+            // std::string filterAsString;
+		    // orFilter.parseToString(filterAsString);
+            this->setTOnOutput<pcpp::GeneralFilter>(2, &orFilter);
         }
     private:
         std::vector<pcpp::GeneralFilter*> m_FilterList;
+        pcpp::OrFilter orFilter;
         
     };
 
     class NodePcap : public Node{
     public:
-        NodePcap() : Node("hex.builtin.nodes.device.pcap.header", { Attribute(Attribute::IOType::Out, Attribute::Type::Buffer, "") , Attribute(Attribute::IOType::In, Attribute::Type::Filter, "") }) { 
+        NodePcap() : Node("hex.builtin.nodes.device.pcap.header", 
+            {
+                Attribute(Attribute::IOType::Out, Attribute::Type::String, "Interface Info"),
+                Attribute(Attribute::IOType::Out, Attribute::Type::Pointer, "Packet Statistic struct") ,
+                Attribute(Attribute::IOType::In, Attribute::Type::Pointer, "filter") }) { 
             this->m_deviceList = pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDevicesList();
+            open(item_current_idx, item_current_idx);
+        }
+        void closeall(){
+            for(int i = 0; i < m_deviceList.size(); i++){
+                close(item_current_idx);
+            }
+        }
+        ~NodePcap(){
+            closeall();
             
         }
+        struct if_info{
+            std::string name;
+            std::string desc;
+            std::string mac_address;
+            std::string default_gw;
+            std::string mtu;
+            void clear(){name.clear();desc.clear();mac_address.clear();default_gw.clear();mtu.clear();}
+            std::string get_if_info(auto&& select_dev){
+                try{
+                    std::stringstream ss;
+                    ss
+                    << "Interface info:" << std::endl
+                    << "   Interface name:        " << select_dev->getName() << std::endl // get interface name
+                    << "   Interface description: " << select_dev->getDesc() << std::endl // get interface description
+                    << "   MAC address:           " << select_dev->getMacAddress() << std::endl // get interface MAC address
+                    << "   Default gateway:       " << select_dev->getDefaultGateway() << std::endl // get default gateway
+                    << "   Interface MTU:         " << select_dev->getMtu() << std::endl; // get interface MTU
+                    return ss.str();
+                }
+                catch(const std::exception& e)
+                {
+                    std::cerr << e.what() << '\n';
+                    return "error occur!";
+                }
+                
+
+            }
+        };
+        
         
         void drawNode() override {
             ImGui::PushItemWidth(100);
@@ -724,41 +828,93 @@ namespace PcapEditor
                             bool is_selected = (this->item_current_idx == i);
                             auto cur_str = m_deviceList[i]->getName()  +  m_deviceList[i]->getIPv4Address().toString();
                             if (ImGui::Selectable(cur_str.c_str(), is_selected))
-                                this->item_current_idx = i;
-                            if (is_selected)
+                                open(item_current_idx, i);
+                            if (is_selected){
                                 ImGui::SetItemDefaultFocus(); 
+                            }
                         }
                     ImGui::EndCombo();
                 }
-                std::string output = utility::format("cur if:{0}", (m_deviceList[item_current_idx]->getName()  +  m_deviceList[item_current_idx]->getIPv4Address().toString()).c_str());
+                std::string output = utility::format("cur if:{0}", (m_deviceList[item_current_idx]->getName()));
                 ImGui::Text(output.c_str());
+                
             }
 
             ImGui::PopItemWidth();
         }
 
-        void process() override {
-            if (item_current_idx < m_deviceList.size())
+        void close(int i ){
+            
+            try{
+                select_dev = m_deviceList[i];
+                select_dev->stopCapture();
+                select_dev->close();
+            }
+            catch(const std::exception& e)
             {
-                
-
-
-                m_buffer.clear();
+                std::cerr << e.what() << '\n';
+            }
+        }
+        void open(int old, int i ){
+            
+            try
+            {
+                close(old);
+                item_current_idx = i;
                 select_dev = m_deviceList[item_current_idx];
-                std::string desc = select_dev->getName();
-                std::copy(desc.begin(), desc.end(), std::back_inserter(m_buffer)) ;
-
-                auto inputA = this->getFilterOnInput(0);
-                select_dev->setFilter(*inputA);
-
-                // dev->open();
+                select_dev->open();
+                select_dev->startCapture(onPacketArrives, &stats);
+                stats.clear();
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
             }
 
-            this->setBufferOnOutput(0, this->m_buffer);
+            
+        }
+        static void onPacketArrives(pcpp::RawPacket* packet, pcpp::PcapLiveDevice* dev, void* cookie)
+        {
+            // extract the stats object form the cookie
+            pcpp::PacketStats* stats = (pcpp::PacketStats*)cookie;
+
+            // parsed the raw packet
+            pcpp::Packet parsedPacket(packet);
+
+            // collect stats from packet
+            stats->consumePacket(parsedPacket);
+        }
+
+        void process() override {
+            try{
+
+                filter = this->getTOnInput<pcpp::GeneralFilter, Attribute::Type::Pointer>(2);
+                // std::cout<<filter;
+                std::string filterAsString;
+                filter->parseToString(filterAsString);
+                if (!select_dev->setFilter(*filter))
+                {
+                    
+                    std::cerr << "Couldn't set the filter '" << filterAsString << "' for the device";
+                }
+            }
+            catch(const std::exception& e){
+                throwNodeError(utility::format("NIC error'{0}'", e.what()));;
+            }
+                // this->setStringOnOutput(0, if_information.get_if_info(select_dev)); 
+                // this->setStatsOnOutput(1, &stats);
+                result = if_information.get_if_info(select_dev);
+                this->setStringOnOutput(0, result); 
+                this->setTOnOutput<pcpp::Stats>(1, &stats);
+
+
+
+
+
         }
 
         void store(nlohmann::json &j) override {
-            // j = nlohmann::json::object();
+            j = nlohmann::json::object();
 
             // j["size"] = this->m_size;
             // j["data"] = this->m_buffer;
@@ -770,10 +926,17 @@ namespace PcapEditor
         }
 
     private:
+        bool m_open = false;
+        bool is_dev_open = false;
         u32 item_current_idx = 0;
-        std::vector<u8> m_buffer;
+        // std::vector<u8> m_buffer;
+        u64 m_recivedPacketSize = 0;
         std::vector<pcpp::PcapLiveDevice*> m_deviceList;
         pcpp::PcapLiveDevice* select_dev;
+        pcpp::PacketStats stats;
+        pcpp::GeneralFilter *filter;
+        if_info if_information;
+        std::string result;
     };
     
 void registerNodes() {
@@ -784,11 +947,14 @@ void registerNodes() {
         utility::add<NodeString>("hex.builtin.nodes.constants", "hex.builtin.nodes.constants.string");
         utility::add<NodeRGBA8>("hex.builtin.nodes.constants", "hex.builtin.nodes.constants.rgba8");
         utility::add<NodeComment>("hex.builtin.nodes.constants", "hex.builtin.nodes.constants.comment");
-        utility::add<NodePortFilter>("hex.builtin.nodes.constants", "hex.builtin.nodes.constants.portfilter");
+        
+
+        utility::add<NodeDisPlayStats>("hex.builtin.nodes.display", "hex.builtin.nodes.display.stats");
 
         utility::add<NodeDisplayInteger>("hex.builtin.nodes.display", "hex.builtin.nodes.display.int");
         utility::add<NodeDisplayFloat>("hex.builtin.nodes.display", "hex.builtin.nodes.display.float");
         utility::add<NodeDisplayBuffer>("hex.builtin.nodes.display", "hex.builtin.nodes.display.buffer");
+        utility::add<NodeDisplayString>("hex.builtin.nodes.display", "hex.builtin.nodes.display.string");
 
 
         utility::add<NodeCastIntegerToBuffer>("hex.builtin.nodes.casting", "hex.builtin.nodes.casting.int_to_buffer");
@@ -819,7 +985,7 @@ void registerNodes() {
 
         utility::add<NodeFilterOR>("hex.builtin.nodes.filter", "hex.builtin.nodes.filter.or");
         
-
+        utility::add<NodePortFilter>("hex.builtin.nodes.filter", "hex.builtin.nodes.filter.portfilter");
         utility::add<NodePcap>("hex.builtin.nodes.device", "hex.builtin.nodes.device.pcap");
 
 

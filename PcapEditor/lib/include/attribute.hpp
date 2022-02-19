@@ -17,8 +17,10 @@ namespace PcapEditor {
             Integer,
             Float,
             Buffer,
-            Filter,
-            Packet
+            // Filter,
+            // Stat,
+            String,
+            Pointer
         };
 
         enum class IOType {

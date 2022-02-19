@@ -4,6 +4,11 @@ project(imnodes)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules;${CMAKE_MODULE_PATH}")
 
+include("${CMAKE_SOURCE_DIR}/cmake/modules/detect.cmake")
+
+detectOS()
+detectCompiler()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
 IF (APPLE)
@@ -66,8 +71,6 @@ include_directories(
 add_subdirectory(dependencies)
 
 add_subdirectory(imnodes)
-
-# add_subdirectory(example)
 
 add_subdirectory(PcapEditor)
 

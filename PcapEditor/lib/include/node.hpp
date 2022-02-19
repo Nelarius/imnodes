@@ -2,6 +2,8 @@
 #include <iostream>
 #include <defination.hpp>
 #include <attribute.hpp>
+#include <utility.hpp>
+
 
 #include <imgui.h>
 #include <set>
@@ -9,9 +11,13 @@
 #include <vector>
 #include <cstdio>
 #include <nlohmann/json_fwd.hpp>
-#include <utility.hpp>
+
 
 #include <pcapplusplus/PcapFilter.h>
+#include <pcapplusplus/Packet.h>
+#include <pcapplusplus/RawPacket.h>
+#include <pcapplusplus/Device.h>
+#include <PacketState.hpp>
 
 namespace PcapEditor {
     class Overlay {
@@ -103,15 +109,66 @@ namespace PcapEditor {
         }
 
         std::vector<u8> getBufferOnInput(u32 index);
+        std::string getStringOnInput(u32 index);
         u64 getIntegerOnInput(u32 index);
         float getFloatOnInput(u32 index);
         pcpp::GeneralFilter* getFilterOnInput(u32 index);
+        // pcpp::Stats * getStatsOnInput(u32);
+    
+        // template<class T, Attribute::Type type_n>
+        // T* getTOnInput(u32 index);
 
 
         void setBufferOnOutput(u32 index, std::vector<u8> data);
+        void setStringOnOutput(u32 index, std::string data);
         void setIntegerOnOutput(u32 index, u64 integer);
         void setFloatOnOutput(u32 index, float floatingPoint);
-        void setFilterOnOutput(u32 index, pcpp::GeneralFilter* filter);
+        // void setFilterOnOutput(u32 index, pcpp::GeneralFilter* filter);
+        // void setStatsOnOutput(u32 index, pcpp::Stats * packet);
+        
+        // template<class T>
+        // void setTOnOutput(u32 index, T* t);
+
+        template<class T, Attribute::Type type_n>
+        T* getTOnInput(u32 index){
+            auto attribute = this->getConnectedInputAttribute(index);
+
+            if (attribute == nullptr){
+                std::stringstream ss;
+                ss << "Nothing connected to input " ;
+                ss << this->m_attributes[index].getUnlocalizedName().c_str();
+                throwNodeError(ss.str());
+                // throwNodeError(utility::format("Nothing connected to input '{0}'", (this->m_attributes[index].getUnlocalizedName().c_str())));; //error in clang++, can not find utility
+            }
+                
+
+            if (attribute->getType() != type_n)
+                throw std::runtime_error("Tried to read buffer from non-buffer attribute");
+
+            markInputProcessed(index);
+            attribute->getParentNode()->process();
+
+            auto &outputData = attribute->getOutputData();
+
+            if (!outputData.has_value())
+                throw std::runtime_error("No data available at connected attribute");
+            return reinterpret_cast<T *>(*reinterpret_cast<u64 *>(outputData->data()));
+        }
+        template<class T>
+        void setTOnOutput(u32 index, T * packet) {
+            if (index >= this->getAttributes().size())
+                throw std::runtime_error("Attribute index out of bounds!");
+
+            auto &attribute = this->getAttributes()[index];
+
+            if (attribute.getIOType() != Attribute::IOType::Out)
+                throw std::runtime_error("Tried to set output data of an input attribute!");
+
+            std::vector<u8> buffer(sizeof(T* ), 0);
+            std::memcpy(buffer.data(), &packet, sizeof(T* ));
+
+            attribute.getOutputData() = buffer;
+        }
 
         void setOverlayData(u64 address, const std::vector<u8> &data);
     };
