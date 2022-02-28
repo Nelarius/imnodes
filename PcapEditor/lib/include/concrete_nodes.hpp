@@ -680,6 +680,7 @@ namespace PcapEditor
         }
     };
 
+
     class NodePortFilter : public Node {
     public:
         NodePortFilter() : Node("hex.builtin.nodes.net.Filter.header", { Attribute(Attribute::IOType::Out, Attribute::Type::Pointer, "") }) {
@@ -718,7 +719,7 @@ namespace PcapEditor
     
     class NodeDisPlayStats : public Node {
     public:
-        NodeDisPlayStats() : Node("hex.builtin.nodes.pcap.packet.header",
+        NodeDisPlayStats() : Node("hex.builtin.nodes.pcap.stats.header",
                            { Attribute(Attribute::IOType::In, Attribute::Type::Pointer, "hex.builtin.nodes.common.input.a") }) {
                                     
                                 }
@@ -743,6 +744,27 @@ namespace PcapEditor
         std::string output;
         
     };
+
+    // class NodeDisplayPacket: public Node{
+    // public:
+    //     NodeDisplayPacket():Node("hex.builtin.nodes.pcap.pointer.header",
+    //                        { Attribute(Attribute::IOType::In, Attribute::Type::Pointer, "hex.builtin.nodes.common.input.a") }) {
+    //     }
+
+    //     void drawNode() override {
+    //         ImGui::Text(output.c_str());            
+    //     }
+
+    //     void process() override {            
+    //         // p_stats= this->getStatsOnInput(0);
+    //         p_packet= this->getTOnInput<pcpp::Packet, Attribute::Type::Pointer>(0);
+    //         output = p_packet->toString();
+    //     }
+    // private:
+    //     std::string output;
+    //     pcpp::Packet *p_packet;
+    // };
+    
     class NodeFilterOR : public Node {
     public:
         NodeFilterOR() : Node("hex.builtin.nodes.filter.or.header",
@@ -880,12 +902,17 @@ namespace PcapEditor
 
             // parsed the raw packet
             pcpp::Packet parsedPacket(packet);
-
             // collect stats from packet
             stats->consumePacket(parsedPacket);
         }
 
         void process() override {
+
+            // this->setStringOnOutput(0, if_information.get_if_info(select_dev)); 
+            // this->setStatsOnOutput(1, &stats);
+            result = if_information.get_if_info(select_dev);
+            this->setStringOnOutput(0, result); 
+            this->setTOnOutput<pcpp::Stats>(1, &stats);
             try{
 
                 filter = this->getTOnInput<pcpp::GeneralFilter, Attribute::Type::Pointer>(2);
@@ -901,15 +928,6 @@ namespace PcapEditor
             catch(const std::exception& e){
                 throwNodeError(utility::format("NIC error'{0}'", e.what()));;
             }
-                // this->setStringOnOutput(0, if_information.get_if_info(select_dev)); 
-                // this->setStatsOnOutput(1, &stats);
-                result = if_information.get_if_info(select_dev);
-                this->setStringOnOutput(0, result); 
-                this->setTOnOutput<pcpp::Stats>(1, &stats);
-
-
-
-
 
         }
 

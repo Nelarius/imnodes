@@ -1,3 +1,23 @@
+# imnodes_network_visual_capturer
+
+Features:
+
+* cmake supported
+
+above.
+
+* network visual capturer demo
+
+Using the imnode and PcapPlusPlus https://github.com/seladb/PcapPlusPlus, I developed a demo to show the network traffic.
+
+the Node feature comes from Imhex[GitHub - WerWolv/ImHex: 🔍 A Hex Editor for Reverse Engineers, Programmers and people who value their retinas when working at 3 AM.](https://github.com/WerWolv/ImHex)
+
+![](https://pic2.zhimg.com/80/v2-8647055b0e2dde696632968d2357c708_720w.png)
+
+Video can be found here
+
+https://zhuanlan.zhihu.com/p/466444521?
+
 <h1 align="center">imnodes</h1>
 
 <p align="center">A small, dependency-free node editor extension for <a href="https://github.com/ocornut/imgui">dear imgui</a>.</p>
@@ -24,22 +44,29 @@ Scroll down for a brief tour, known issues, and further information!
 ## Build the examples
 
 This repository includes a few example files, under `example/`. You can copy-paste them into your own imgui project, or you can build them here, in this repository. To build here:
+
 * SDL2 needs to be installed
+  
   * Macos, `brew install sdl2`
+
 * PcapPlusPlus needs to be installed, for pcap device
+  
   * Macos, `brew install pcapplusplus`
-```bash
-# Assuming you've installed SDL2 via vcpkg, for instance
-$ premake5 gmake \
+    
+    ```bash
+    # Assuming you've installed SDL2 via vcpkg, for instance
+    $ premake5 gmake \
     --sdl-include-path=/Users/nelarius/vcpkg/installed/x64-osx/include/SDL2 \
     --sdl-link-path=/Users/nelarius/vcpkg/installed/x64-osx/lib
+    ```
 
 # Or alternatively, if you are on MacOS and have the SDL2 framework installed
+
 $ premake5 gmake --use-sdl-framework
 
 $ make all -j
-```
 
+```
 - cmake also can be used to generate the build files
 
   ```bash
@@ -47,10 +74,9 @@ $ make all -j
   cd build
   cmake -D{your-sdl-path} ..
   make -j
-  ```
+```
 
 please **note** that: you should set the sdl2 path manually.
-
 
 ## A brief tour
 
@@ -226,6 +252,7 @@ ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
 ```
 
 The mini-map also supports limited node hovering customization through a user-defined callback.
+
 ```cpp
 // User callback
 void mini_map_node_hovering_callback(int node_id, void* user_data)
@@ -246,6 +273,7 @@ ImNodes can be customized by providing an `imnodes_config.h` header and specifyi
 It is currently possible to override the type of the minimap hovering callback function. This is useful when generating bindings for another language.
 
 Here's an example imnodes_config.h, which generates a pybind wrapper for the callback.
+
 ```cpp
 #pragma once
 
