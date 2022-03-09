@@ -124,7 +124,7 @@ class ColorNodeEditor
 {
 public:
     ColorNodeEditor() : graph_(), nodes_(), root_node_id_(-1),
-        minimap_location_(ImNodesMiniMapLocation_BottomRight) {}
+        minimap_location_(ImNodesMiniMapLocation_BottomRight), show_debug_info_(false) {}
 
     void show()
     {
@@ -138,6 +138,17 @@ public:
 
         if (ImGui::BeginMenuBar())
         {
+            if (ImGui::BeginMenu("View"))
+            {
+                if (ImGui::MenuItem("Reset Panning"))
+                    ImNodes::EditorContextResetPanning(ImVec2());
+
+                if (ImGui::MenuItem("Reset Zoom"))
+                    ImNodes::EditorContextSetZoom(1.0f);
+
+                ImGui::EndMenu();
+            }
+
             if (ImGui::BeginMenu("Mini-map"))
             {
                 const char* names[] = {
@@ -182,7 +193,22 @@ public:
                 ImGui::EndMenu();
             }
 
+            if (ImGui::BeginMenu("Debug"))
+            {
+                ImGui::MenuItem("Show Debug Info", NULL, &show_debug_info_);
+                ImGui::EndMenu();
+            }
+
             ImGui::EndMenuBar();
+        }
+
+        if (show_debug_info_)
+        {
+            if (ImGui::Begin("Debug Info", &show_debug_info_))
+            {
+                ImNodes::EditorContextDrawDebugInfo();
+            }
+            ImGui::End();
         }
 
         ImGui::TextUnformatted("Edit the color of the output color window using nodes.");
@@ -197,13 +223,10 @@ public:
         }
         ImGui::Columns(1);
 
-        ImNodes::BeginNodeEditor();
-
         // Handle new nodes
         // These are driven by the user, so we place this code before rendering the nodes
         {
             const bool open_popup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-                                    ImNodes::IsEditorHovered() &&
                                     ImGui::IsKeyReleased(SDL_SCANCODE_A);
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
@@ -303,6 +326,8 @@ public:
             }
             ImGui::PopStyleVar();
         }
+
+        ImNodes::BeginNodeEditor();
 
         for (const UiNode& node : nodes_)
         {
@@ -545,6 +570,12 @@ public:
         ImNodes::MiniMap(0.2f, minimap_location_);
         ImNodes::EndNodeEditor();
 
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows))
+        {
+            auto zoom = ImNodes::EditorContextGetZoom() + ImGui::GetIO().MouseWheel * 0.1f;
+            ImNodes::EditorContextSetZoom(zoom, ImGui::GetMousePos());
+        }
+
         // Handle new links
         // These are driven by Imnodes, so we place the code after EndNodeEditor().
 
@@ -693,6 +724,7 @@ private:
     std::vector<UiNode>    nodes_;
     int                    root_node_id_;
     ImNodesMiniMapLocation minimap_location_;
+    bool                   show_debug_info_;
 };
 
 static ColorNodeEditor color_editor;
