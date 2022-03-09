@@ -116,7 +116,7 @@ workspace "imnodes"
         location(projectlocation)
         kind "StaticLib"
         language "C++"
-        cppdialect "C++98"
+        cppdialect "C++11"
         targetdir "lib/%{cfg.buildcfg}"
         files { path.join(imguilocation, "**.cpp") }
         includedirs {
