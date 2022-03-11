@@ -2129,7 +2129,7 @@ void BeginNodeEditor()
 
     ImNodesEditorContext& editor = EditorContextGet();
     editor.AutoPanningDelta = ImVec2(0, 0);
-    editor.GridContentBounds = ImRect(FLT_MAX, FLT_MAX, FLT_MIN, FLT_MIN);
+    editor.GridContentBounds = ImRect(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
     editor.MiniMapEnabled = false;
     ObjectPoolReset(editor.Nodes);
     ObjectPoolReset(editor.Pins);
