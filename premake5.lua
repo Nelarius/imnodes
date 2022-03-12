@@ -15,6 +15,7 @@ newoption {
     description = "Use the installed SDL2 framework (on MacOS)"
 }
 
+local buildlocation = path.join(os.getcwd(), "build")
 local projectlocation = os.getcwd()
 local gl3wlocation = path.join(os.getcwd(), "dependencies/gl3w")
 local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.87")
@@ -22,6 +23,8 @@ local imguilocation = path.join(os.getcwd(), "dependencies/imgui-1.87")
 if _ACTION then
     projectlocation = path.join(projectlocation, "build", _ACTION)
 end
+
+location(buildlocation)
 
 function imnodes_example_project(name, example_file)
     project(name)
