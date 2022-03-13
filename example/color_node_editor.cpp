@@ -4,8 +4,8 @@
 #include <imnodes.h>
 #include <imgui.h>
 
-#include <SDL_keycode.h>
-#include <SDL_timer.h>
+#include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_timer.h>
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -123,8 +123,11 @@ ImU32 evaluate(const Graph<Node>& graph, const int root_node)
 class ColorNodeEditor
 {
 public:
-    ColorNodeEditor() : graph_(), nodes_(), root_node_id_(-1),
-        minimap_location_(ImNodesMiniMapLocation_BottomRight) {}
+    ColorNodeEditor()
+        : graph_(), nodes_(), root_node_id_(-1),
+          minimap_location_(ImNodesMiniMapLocation_BottomRight)
+    {
+    }
 
     void show()
     {

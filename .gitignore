@@ -1,15 +1,10 @@
-### Project ### 
-
-TODO.md
+### Local build ###
+bin/
+build*/
+lib/
 
 ### ImGui ###
 **.ini
-
-### Local build ###
-bin/
-build/
-lib/
-imnodes.sln
 
 # Created by https://www.toptal.com/developers/gitignore/api/sublimetext
 # Edit at https://www.toptal.com/developers/gitignore?templates=sublimetext
@@ -500,3 +495,37 @@ healthchecksdb
 MigrationBackup/
 
 # End of https://www.gitignore.io/api/visualstudio
+
+# Created by https://www.toptal.com/developers/gitignore/api/vcpkg
+# Edit at https://www.toptal.com/developers/gitignore?templates=vcpkg
+
+### vcpkg ###
+# Vcpkg
+
+## Manifest Mode
+vcpkg_installed/
+
+# End of https://www.toptal.com/developers/gitignore/api/vcpkg
+
+
+# Created by https://www.toptal.com/developers/gitignore/api/cmake
+# Edit at https://www.toptal.com/developers/gitignore?templates=cmake
+
+### CMake ###
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+### CMake Patch ###
+# External projects
+*-prefix/
+
+# End of https://www.toptal.com/developers/gitignore/api/cmake
