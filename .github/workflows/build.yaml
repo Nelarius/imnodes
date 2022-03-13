@@ -3,17 +3,21 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    container:
-      image: docker://nelarius/imnodes-docker-builder:latest
+    strategy:
+      matrix:
+        platform: [macos-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
-      # This step uses checkout action: https://github.com/actions/checkout
       - name: Checkout
-        uses: actions/checkout@v2
-        id: checkout
-      - name: premake5
-        run: premake5 gmake --sdl-include-path=/usr/include/SDL2
-      - name: make-debug
-        run: make all config=debug -j
-      - name: make-release
-        run: make all config=release -j
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v10.1
+        with:
+          vcpkgDirectory: ${{ github.workspace}}/vcpkg
+          runVcpkgInstall: true
+      - name: CMake generate
+        run: cmake -B build-release/ -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+      - name: CMake build
+        run: cmake --build build-release/ -j
