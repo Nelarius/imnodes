@@ -8,6 +8,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 find_package(imgui CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 
+if(MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+endif()
 
 # Imnodes
 
