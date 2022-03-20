@@ -5,7 +5,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [macos-latest]
+        platform: [macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout
