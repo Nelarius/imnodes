@@ -9,6 +9,7 @@ find_package(imgui CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 
 if(MSVC)
+    add_compile_definitions(SDL_MAIN_HANDLED)
     add_compile_options(/W4 /WX)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic -Werror)
@@ -24,7 +25,6 @@ target_sources(imnodes PRIVATE
 target_include_directories(imnodes PUBLIC ${CMAKE_SOURCE_DIR})
 target_link_libraries(imnodes PUBLIC imgui::imgui)
 
-
 # Example projects
 
 add_executable(colornode
@@ -34,6 +34,8 @@ add_executable(colornode
 target_link_libraries(colornode imnodes SDL2::SDL2)
 if (APPLE)
     target_link_libraries(colornode "-framework OpenGL")
+elseif(MSVC)
+    target_link_libraries(colornode "opengl32")
 endif()
 
 add_executable(multieditor
@@ -43,6 +45,8 @@ add_executable(multieditor
 target_link_libraries(multieditor imnodes SDL2::SDL2)
 if (APPLE)
     target_link_libraries(multieditor "-framework OpenGL")
+elseif(MSVC)
+    target_link_libraries(multieditor "opengl32")
 endif()
 
 add_executable(saveload
@@ -52,6 +56,8 @@ add_executable(saveload
 target_link_libraries(saveload imnodes SDL2::SDL2)
 if (APPLE)
     target_link_libraries(saveload "-framework OpenGL")
+elseif(MSVC)
+    target_link_libraries(saveload "opengl32")
 endif()
 
 add_executable(hello
@@ -61,4 +67,6 @@ add_executable(hello
 target_link_libraries(hello imnodes SDL2::SDL2)
 if (APPLE)
     target_link_libraries(hello "-framework OpenGL")
+elseif(MSVC)
+    target_link_libraries(hello "opengl32")
 endif()
