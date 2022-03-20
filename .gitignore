@@ -1,7 +1,5 @@
 ### Local build ###
-bin/
 build*/
-lib/
 
 ### ImGui ###
 **.ini
