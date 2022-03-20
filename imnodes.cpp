@@ -1678,7 +1678,7 @@ static inline void CalcMiniMapLayout()
         const ImVec2 grid_content_size = editor.GridContentBounds.IsInverted()
                                              ? max_size
                                              : ImFloor(editor.GridContentBounds.GetSize());
-        const float  grid_content_aspect_ratio = grid_content_size.x / grid_content_size.y;
+        const float grid_content_aspect_ratio = grid_content_size.x / grid_content_size.y;
         mini_map_size = ImFloor(
             grid_content_aspect_ratio > max_size_aspect_ratio
                 ? ImVec2(max_size.x, max_size.x / grid_content_aspect_ratio)
