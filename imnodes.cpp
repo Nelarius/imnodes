@@ -27,6 +27,11 @@
 #include <stdlib.h>
 #include <string.h> // strlen, strncmp
 
+// Use secure CRT function variants to avoid MSVC compiler errors
+#ifdef _MSC_VER
+#define sscanf sscanf_s
+#endif
+
 ImNodesContext* GImNodes = NULL;
 
 namespace IMNODES_NAMESPACE
