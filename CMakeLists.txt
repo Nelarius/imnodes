@@ -36,6 +36,8 @@ if (APPLE)
     target_link_libraries(colornode "-framework OpenGL")
 elseif(MSVC)
     target_link_libraries(colornode "opengl32")
+else()
+    target_link_libraries(colornode X11 Xext GL)
 endif()
 
 add_executable(multieditor
@@ -47,6 +49,8 @@ if (APPLE)
     target_link_libraries(multieditor "-framework OpenGL")
 elseif(MSVC)
     target_link_libraries(multieditor "opengl32")
+else()
+    target_link_libraries(multieditor X11 Xext GL)
 endif()
 
 add_executable(saveload
@@ -58,6 +62,8 @@ if (APPLE)
     target_link_libraries(saveload "-framework OpenGL")
 elseif(MSVC)
     target_link_libraries(saveload "opengl32")
+else()
+    target_link_libraries(saveload X11 Xext GL)
 endif()
 
 add_executable(hello
@@ -69,4 +75,6 @@ if (APPLE)
     target_link_libraries(hello "-framework OpenGL")
 elseif(MSVC)
     target_link_libraries(hello "opengl32")
+else()
+    target_link_libraries(hello X11 Xext GL)
 endif()
