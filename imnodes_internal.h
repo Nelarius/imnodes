@@ -6,7 +6,6 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
 
-#include <assert.h>
 #include <limits.h>
 
 // the structure of this file:
@@ -101,7 +100,7 @@ struct ImOptionalIndex
 
     inline int Value() const
     {
-        assert(HasValue());
+        IM_ASSERT(HasValue());
         return _Index;
     }
 
@@ -353,7 +352,7 @@ namespace IMNODES_NAMESPACE
 static inline ImNodesEditorContext& EditorContextGet()
 {
     // No editor context was set! Did you forget to call ImNodes::CreateContext()?
-    assert(GImNodes->EditorCtx != NULL);
+    IM_ASSERT(GImNodes->EditorCtx != NULL);
     return *GImNodes->EditorCtx;
 }
 
@@ -401,7 +400,7 @@ inline void ObjectPoolUpdate(ImObjectPool<ImNodeData>& nodes)
                 // unused
                 ImVector<int>&   depth_stack = EditorContextGet().NodeDepthOrder;
                 const int* const elem = depth_stack.find(i);
-                assert(elem != depth_stack.end());
+                IM_ASSERT(elem != depth_stack.end());
                 depth_stack.erase(elem);
 
                 nodes.IdMap.SetInt(id, -1);
