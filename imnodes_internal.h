@@ -152,7 +152,7 @@ struct ImNodeData
     bool          Draggable;
 
     ImNodeData(const int node_id)
-        : Id(node_id), Origin(100.0f, 100.0f), TitleBarContentRect(),
+        : Id(node_id), Origin(0.0f, 0.0f), TitleBarContentRect(),
           Rect(ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f)), ColorStyle(), LayoutStyle(), PinIndices(),
           Draggable(true)
     {
@@ -261,6 +261,11 @@ struct ImNodesEditorContext
     ImVector<int> SelectedNodeIndices;
     ImVector<int> SelectedLinkIndices;
 
+    // Relative origins of selected nodes for snapping of dragged nodes
+    ImVector<ImVec2> SelectedNodeOffsets;
+    // Offset of the primary node origin relative to the mouse cursor.
+    ImVec2           PrimaryNodeOffset;
+
     ImClickInteractionState ClickInteraction;
 
     // Mini-map state set by MiniMap()
@@ -279,7 +284,8 @@ struct ImNodesEditorContext
 
     ImNodesEditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          ClickInteraction(), MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
+          SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(),
+          MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
           MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
           MiniMapScaling(0.0f)
     {
@@ -345,6 +351,7 @@ struct ImNodesContext
     bool  LeftMouseDragging;
     bool  AltMouseDragging;
     float AltMouseScrollDelta;
+    bool  MultipleSelectModifier;
 };
 
 namespace IMNODES_NAMESPACE
