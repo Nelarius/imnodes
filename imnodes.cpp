@@ -291,20 +291,20 @@ inline ImVec2 MiniMapSpaceToGridSpace(const ImNodesEditorContext& editor, const 
 {
     return (v - editor.MiniMapContentScreenSpace.Min) / editor.MiniMapScaling +
            editor.GridContentBounds.Min;
-};
+}
 
 inline ImVec2 ScreenSpaceToMiniMapSpace(const ImNodesEditorContext& editor, const ImVec2& v)
 {
     return (ScreenSpaceToGridSpace(editor, v) - editor.GridContentBounds.Min) *
                editor.MiniMapScaling +
            editor.MiniMapContentScreenSpace.Min;
-};
+}
 
 inline ImRect ScreenSpaceToMiniMapSpace(const ImNodesEditorContext& editor, const ImRect& r)
 {
     return ImRect(
         ScreenSpaceToMiniMapSpace(editor, r.Min), ScreenSpaceToMiniMapSpace(editor, r.Max));
-};
+}
 
 // [SECTION] draw list helper
 
