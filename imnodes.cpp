@@ -596,7 +596,9 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
     {
         editor.SelectedLinkIndices.clear();
         if (!GImNodes->MultipleSelectModifier)
+        {
             editor.SelectedNodeIndices.clear();
+        }
         editor.SelectedNodeIndices.push_back(node_idx);
 
         // Ensure that individually selected nodes get rendered on top
@@ -619,7 +621,8 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
     // To support snapping of multiple nodes, we need to store the offset of
     // each node in the selection to the origin of the dragged node.
     const ImVec2 ref_origin = editor.Nodes.Pool[node_idx].Origin;
-    editor.PrimaryNodeOffset = ref_origin + GImNodes->CanvasOriginScreenSpace + editor.Panning - GImNodes->MousePos;
+    editor.PrimaryNodeOffset =
+        ref_origin + GImNodes->CanvasOriginScreenSpace + editor.Panning - GImNodes->MousePos;
 
     editor.SelectedNodeOffsets.clear();
     for (int idx = 0; idx < editor.SelectedNodeIndices.Size; idx++)
@@ -824,11 +827,15 @@ void TranslateSelectedNodes(ImNodesEditorContext& editor)
 {
     if (GImNodes->LeftMouseDragging)
     {
-        // If we have grid snap enabled, don't start moving nodes until we've moved the mouse slightly
+        // If we have grid snap enabled, don't start moving nodes until we've moved the mouse
+        // slightly
         const bool shouldTranslate = (GImNodes->Style.Flags & ImNodesStyleFlags_GridSnapping)
-            ? ImGui::GetIO().MouseDragMaxDistanceSqr[0] > 5.0 : true;
+                                         ? ImGui::GetIO().MouseDragMaxDistanceSqr[0] > 5.0
+                                         : true;
 
-        const ImVec2 origin = SnapOriginToGrid(GImNodes->MousePos - GImNodes->CanvasOriginScreenSpace - editor.Panning + editor.PrimaryNodeOffset);
+        const ImVec2 origin = SnapOriginToGrid(
+            GImNodes->MousePos - GImNodes->CanvasOriginScreenSpace - editor.Panning +
+            editor.PrimaryNodeOffset);
         for (int i = 0; i < editor.SelectedNodeIndices.size(); ++i)
         {
             const ImVec2 node_rel = editor.SelectedNodeOffsets[i];
@@ -1322,9 +1329,9 @@ inline ImRect GetNodeTitleRect(const ImNodeData& node)
 void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
 {
     const ImVec2 offset = editor.Panning;
-    ImU32 line_color = GImNodes->Style.Colors[ImNodesCol_GridLine];
-    ImU32 line_color_prim = GImNodes->Style.Colors[ImNodesCol_GridLinePrimary];
-    bool draw_primary = GImNodes->Style.Flags & ImNodesStyleFlags_GridLinesPrimary;
+    ImU32        line_color = GImNodes->Style.Colors[ImNodesCol_GridLine];
+    ImU32        line_color_prim = GImNodes->Style.Colors[ImNodesCol_GridLinePrimary];
+    bool         draw_primary = GImNodes->Style.Flags & ImNodesStyleFlags_GridLinesPrimary;
 
     for (float x = fmodf(offset.x, GImNodes->Style.GridSpacing); x < canvas_size.x;
          x += GImNodes->Style.GridSpacing)
@@ -1985,7 +1992,7 @@ ImNodesIO::ImNodesIO()
 }
 
 ImNodesStyle::ImNodesStyle()
-    : GridSpacing(24.f), NodeCornerRounding(4.f), NodePadding(8.f, 8.f), NodeBorderThickness(1.f),
+    : GridSpacing(32.f), NodeCornerRounding(4.f), NodePadding(8.f, 8.f), NodeBorderThickness(1.f),
       LinkThickness(3.f), LinkLineSegmentsPerLength(0.1f), LinkHoverDistance(10.f),
       PinCircleRadius(4.f), PinQuadSideLength(7.f), PinTriangleSideLength(9.5),
       PinLineThickness(1.f), PinHoverRadius(10.f), PinOffset(0.f), MiniMapPadding(8.0f, 8.0f),
@@ -2219,8 +2226,9 @@ void BeginNodeEditor()
         ImGui::IsMouseDragging(GImNodes->Io.AltMouseButton, 0.0f);
     GImNodes->AltMouseScrollDelta = ImGui::GetIO().MouseWheel;
     GImNodes->MultipleSelectModifier =
-        (GImNodes->Io.MultipleSelectModifier.Modifier != NULL ?
-         *GImNodes->Io.MultipleSelectModifier.Modifier : ImGui::GetIO().KeyCtrl);
+        (GImNodes->Io.MultipleSelectModifier.Modifier != NULL
+             ? *GImNodes->Io.MultipleSelectModifier.Modifier
+             : ImGui::GetIO().KeyCtrl);
 
     GImNodes->ActiveAttribute = false;
 

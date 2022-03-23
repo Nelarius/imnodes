@@ -147,8 +147,8 @@ struct ImNodesIO
         //
         // ImNodes::GetIO().MultipleSelectModifier.Modifier = &ImGui::GetIO().KeyCtrl;
         //
-        // Left-clicking a node with this modifier pressed will add the node to the list of currently
-        // selected nodes. If this value is NULL, the Ctrl key will be used.
+        // Left-clicking a node with this modifier pressed will add the node to the list of
+        // currently selected nodes. If this value is NULL, the Ctrl key will be used.
         const bool* Modifier;
     } MultipleSelectModifier;
 
