@@ -8,35 +8,29 @@
 
 [![Build Status](https://github.com/nelarius/imnodes/workflows/Build/badge.svg)](https://github.com/nelarius/imnodes/actions?workflow=Build)
 
+Imnodes aims to provide a simple, immediate-mode interface for creating a node editor within an ImGui window. Imnodes provides simple, customizable building blocks that a user needs to build their node editor.
+
 Features:
 
-* Create nodes, links, and pins in an immediate-mode style
-* Single header and source file, just copy-paste `imnodes.h`, `imnodes_internal.h`, and `imnodes.cpp` into your project. The only dependency is `dear imgui` itself!
-* Written in the same style of C++ as `dear imgui` itself -- no modern C++ used
-* Use regular `dear imgui` widgets inside the nodes
-* Multiple node and link selection with a box selector
-* Nodes, links, and pins are fully customizable, from color style to layout
-* Default themes match `dear imgui`'s default themes
+* Create nodes, links, and pins in an immediate-mode style. The user controls all the state.
+* Nest ImGui widgets inside nodes
+* Simple distribution, just copy-paste `imnodes.h`, `imnodes_internal.h`, and `imnodes.cpp` into your project along side ImGui.
 
-Scroll down for a brief tour, known issues, and further information!
+## Examples
 
-## Build the examples
+This repository includes a few example files, under `example/`. They are intended as simple examples giving you an idea of what you can build with imnodes.
 
-This repository includes a few example files, under `example/`. You can copy-paste them into your own imgui project, or you can build them here, in this repository. To build here:
-* SDL2 needs to be installed
-* premake5 is used to generate the build files
+If you need to build the examples, you can use the provided CMake script to do so.
 
 ```bash
-# Assuming you've installed SDL2 via vcpkg, for instance
-$ premake5 gmake \
-    --sdl-include-path=/Users/nelarius/vcpkg/installed/x64-osx/include/SDL2 \
-    --sdl-link-path=/Users/nelarius/vcpkg/installed/x64-osx/lib
-
-# Or alternatively, if you are on MacOS and have the SDL2 framework installed
-$ premake5 gmake --use-sdl-framework
-
-$ make all -j
+# Initialize the vcpkg submodule
+$ git submodule update --init
+# Run the generation step and build
+$ cmake -B build-release/ -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+$ cmake --build build-release -- -j
 ```
+
+Note that this has not been tested on Linux and is likely to fail on the platform.
 
 ## A brief tour
 
