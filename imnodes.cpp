@@ -2759,6 +2759,13 @@ ImVec2 GetNodeScreenSpacePos(const int node_id)
     return GridSpaceToScreenSpace(editor, node.Origin);
 }
 
+ImVec2 GetOrCreateNodeEditorSpacePos(const int node_id)
+{
+    ImNodesEditorContext& editor = EditorContextGet();
+    ImNodeData& node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
+    return GridSpaceToEditorSpace(editor, node.Origin);
+}
+
 ImVec2 GetNodeEditorSpacePos(const int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
