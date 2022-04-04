@@ -184,17 +184,28 @@ struct ImPinData
     }
 };
 
-struct ImLinkData
+struct ImLink
 {
-    int Id;
-    int StartPinIdx, EndPinIdx;
+    int   Id;
+    int   StartPinId, EndPinId;
+    ImU32 BaseColor, HoveredColor, SelectedColor;
 
-    struct
+    ImLink(
+        const int id,
+        const int start_pin_id,
+        const int end_pin_id,
+        const unsigned int (&colors)[ImNodesCol_COUNT])
+        : Id(id), StartPinId(start_pin_id), EndPinId(end_pin_id),
+          BaseColor(colors[ImNodesCol_Link]), HoveredColor(colors[ImNodesCol_LinkHovered]),
+          SelectedColor(colors[ImNodesCol_LinkSelected])
     {
-        ImU32 Base, Hovered, Selected;
-    } ColorStyle;
+    }
+};
 
-    ImLinkData(const int link_id) : Id(link_id), StartPinIdx(), EndPinIdx(), ColorStyle() {}
+struct ImCubicBezier
+{
+    ImVec2 P0, P1, P2, P3;
+    int    NumSegments;
 };
 
 struct ImClickInteractionState
@@ -247,7 +258,6 @@ struct ImNodesEditorContext
 {
     ImObjectPool<ImNodeData> Nodes;
     ImObjectPool<ImPinData>  Pins;
-    ImObjectPool<ImLinkData> Links;
 
     ImVector<int> NodeDepthOrder;
 
@@ -264,7 +274,7 @@ struct ImNodesEditorContext
     // Relative origins of selected nodes for snapping of dragged nodes
     ImVector<ImVec2> SelectedNodeOffsets;
     // Offset of the primary node origin relative to the mouse cursor.
-    ImVec2           PrimaryNodeOffset;
+    ImVec2 PrimaryNodeOffset;
 
     ImClickInteractionState ClickInteraction;
 
@@ -283,11 +293,10 @@ struct ImNodesEditorContext
     float  MiniMapScaling;
 
     ImNodesEditorContext()
-        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
+        : Nodes(), Pins(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
           SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(),
-          MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
-          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
-          MiniMapScaling(0.0f)
+          MiniMapEnabled(false), MiniMapSizeFraction(0.0f), MiniMapNodeHoveringCallback(NULL),
+          MiniMapNodeHoveringCallbackUserData(NULL), MiniMapScaling(0.0f)
     {
     }
 };
@@ -307,6 +316,13 @@ struct ImNodesContext
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
     ImRect CanvasRectScreenSpace;
+
+    // Frame state
+
+    // Links
+
+    ImVector<ImLink>        Links;
+    ImVector<ImCubicBezier> Curves;
 
     // Debug helpers
     ImNodesScope CurrentScope;
