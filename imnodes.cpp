@@ -573,7 +573,7 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
     // moved at once.
     if (!editor.SelectedNodeIndices.contains(node_idx))
     {
-        editor.SelectedLinkIndices.clear();
+        editor.SelectedLinkIds.clear();
         if (!GImNodes->MultipleSelectModifier)
         {
             editor.SelectedNodeIndices.clear();
@@ -612,14 +612,14 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
     }
 }
 
-void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
+void BeginLinkSelection(ImNodesEditorContext& editor, const int link_id)
 {
     editor.ClickInteraction.Type = ImNodesClickInteractionType_Link;
     // When a link is selected, clear all other selections, and insert the link
     // as the sole selection.
     editor.SelectedNodeIndices.clear();
-    editor.SelectedLinkIndices.clear();
-    editor.SelectedLinkIndices.push_back(link_idx);
+    editor.SelectedLinkIds.clear();
+    editor.SelectedLinkIds.push_back(link_id);
 }
 
 void BeginLinkDetach(
@@ -661,12 +661,12 @@ void BeginLinkInteraction(
 
     if (modifier_pressed)
     {
-        const ImLinkData& link = GImNodes->Links[link_idx];
-        const ImPinData&  start_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.StartPinId);
-        const ImPinData&  end_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.EndPindId);
-        const ImVec2&     mouse_pos = GImNodes->MousePos;
-        const float       dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
-        const float       dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
+        const ImLink&    link = GImNodes->Links[link_idx];
+        const ImPinData& start_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.StartPinId);
+        const ImPinData& end_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.EndPindId);
+        const ImVec2&    mouse_pos = GImNodes->MousePos;
+        const float      dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
+        const float      dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
         const int closest_pin_idx = dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
 
         editor.ClickInteraction.Type = ImNodesClickInteractionType_LinkCreation;
@@ -692,7 +692,7 @@ void BeginLinkInteraction(
         }
         else
         {
-            BeginLinkSelection(editor, link_idx);
+            BeginLinkSelection(editor, link.Id);
         }
     }
 }
@@ -729,6 +729,7 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
 
 void BoxSelectorUpdateSelection(
     ImNodesEditorContext&          editor,
+    const ImVector<ImLink>&        links,
     const ImVector<ImCubicBezier>& curves,
     ImRect                         box_rect)
 {
@@ -764,17 +765,18 @@ void BoxSelectorUpdateSelection(
 
     // Update link selection
 
-    editor.SelectedLinkIndices.clear();
+    editor.SelectedLinkIds.clear();
 
     // Test for overlap against links
 
     for (int idx = 0; idx < links.size(); ++idx)
     {
+        const ImLink&        link = links[idx];
         const ImCubicBezier& cb = curves[idx];
 
         if (RectangleOverlapsLink(box_rect, cb))
         {
-            editor.SelectedlinkIndices.push_back(idx);
+            editor.SelectedLinkIds.push_back(link.Id);
         }
     }
 }
@@ -885,7 +887,10 @@ bool ShouldLinkSnapToPin(
     return true;
 }
 
-void ClickInteractionUpdate(ImNodesEditorContext& editor)
+void ClickInteractionUpdate(
+    ImNodesEditorContext&          editor,
+    const ImVector<ImLink>&        links,
+    const ImVector<ImCubicBezier>& curves)
 {
     switch (editor.ClickInteraction.Type)
     {
@@ -898,7 +903,7 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
         box_rect.Min = GridSpaceToScreenSpace(editor, box_rect.Min);
         box_rect.Max = GridSpaceToScreenSpace(editor, box_rect.Max);
 
-        BoxSelectorUpdateSelection(editor, box_rect);
+        BoxSelectorUpdateSelection(editor, links, curves, box_rect);
 
         const ImU32 box_selector_color = GImNodes->Style.Colors[ImNodesCol_BoxSelector];
         const ImU32 box_selector_outline = GImNodes->Style.Colors[ImNodesCol_BoxSelectorOutline];
@@ -2210,6 +2215,8 @@ void EndNodeEditor()
 
     CalcLinkGeometries(editor.Pins, GImNodes->Links, GImNodes->Curves);
 
+    IM_ASSERT(GImNodes->Links.size() == GImNodes.Curves.size());
+
     bool no_grid_content = editor.GridContentBounds.IsInverted();
     if (no_grid_content)
     {
@@ -2324,7 +2331,7 @@ void EndNodeEditor()
             editor.Panning += editor.AutoPanningDelta;
         }
     }
-    ClickInteractionUpdate(editor);
+    ClickInteractionUpdate(editor, GImNodes->Links, GImNodes->Curves);
 
     // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
     // to detect unused node slots and remove those indices from the depth stack before sorting the
@@ -2767,7 +2774,7 @@ int NumSelectedLinks()
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
     const ImNodesEditorContext& editor = EditorContextGet();
-    return editor.SelectedLinkIndices.size();
+    return editor.SelectedLinkIds.size();
 }
 
 void GetSelectedNodes(int* node_ids)
@@ -2787,10 +2794,9 @@ void GetSelectedLinks(int* link_ids)
     IM_ASSERT(link_ids != NULL);
 
     const ImNodesEditorContext& editor = EditorContextGet();
-    for (int i = 0; i < editor.SelectedLinkIndices.size(); ++i)
+    for (int i = 0; i < editor.SelectedLinkIds.size(); ++i)
     {
-        const int link_idx = editor.SelectedLinkIndices[i];
-        link_ids[i] = GImNodes->Links[link_idx].Id;
+        link_idx[i] = editor.SelectedLinkIds[i];
     }
 }
 
@@ -2809,13 +2815,13 @@ void ClearNodeSelection(int node_id)
 void ClearLinkSelection()
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.SelectedLinkIndices.clear();
+    editor.SelectedLinkIds.clear();
 }
 
 void ClearLinkSelection(int link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    ClearObjectSelection(editor.Links, editor.SelectedLinkIndices, link_id);
+    editor.SelectedLinkIds.find_erase_unsorted(link_id);
 }
 
 void SelectNode(int node_id)
@@ -2827,7 +2833,7 @@ void SelectNode(int node_id)
 void SelectLink(int link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    SelectObject(editor.Links, editor.SelectedLinkIndices, link_id);
+    editor.SelectedLinkIds.push_back(link_id);
 }
 
 bool IsNodeSelected(int node_id)
@@ -2839,7 +2845,7 @@ bool IsNodeSelected(int node_id)
 bool IsLinkSelected(int link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    return IsObjectSelected(editor.Links, editor.SelectedLinkIndices, link_id);
+    return editor.SelectedLinkIds.contains(link_id);
 }
 
 bool IsAttributeActive()

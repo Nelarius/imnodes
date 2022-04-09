@@ -269,7 +269,7 @@ struct ImNodesEditorContext
     ImRect GridContentBounds;
 
     ImVector<int> SelectedNodeIndices;
-    ImVector<int> SelectedLinkIndices;
+    ImVector<int> SelectedLinkIds;
 
     // Relative origins of selected nodes for snapping of dragged nodes
     ImVector<ImVec2> SelectedNodeOffsets;
@@ -293,7 +293,7 @@ struct ImNodesEditorContext
     float  MiniMapScaling;
 
     ImNodesEditorContext()
-        : Nodes(), Pins(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
+        : Nodes(), Pins(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIds(),
           SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(),
           MiniMapEnabled(false), MiniMapSizeFraction(0.0f), MiniMapNodeHoveringCallback(NULL),
           MiniMapNodeHoveringCallbackUserData(NULL), MiniMapScaling(0.0f)
