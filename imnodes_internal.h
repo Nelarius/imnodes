@@ -26,6 +26,7 @@ typedef int ImNodesAttributeType;
 typedef int ImNodesUIState;
 typedef int ImNodesClickInteractionType;
 typedef int ImNodesLinkCreationType;
+typedef int ImNodesInteractionType;
 
 enum ImNodesScope_
 {
@@ -48,17 +49,6 @@ enum ImNodesUIState_
     ImNodesUIState_LinkStarted = 1 << 0,
     ImNodesUIState_LinkDropped = 1 << 1,
     ImNodesUIState_LinkCreated = 1 << 2
-};
-
-enum ImNodesClickInteractionType_
-{
-    ImNodesClickInteractionType_Node,
-    ImNodesClickInteractionType_Link,
-    ImNodesClickInteractionType_LinkCreation,
-    ImNodesClickInteractionType_Panning,
-    ImNodesClickInteractionType_BoxSelection,
-    ImNodesClickInteractionType_ImGuiItem,
-    ImNodesClickInteractionType_None
 };
 
 enum ImNodesLinkCreationType_
@@ -208,23 +198,48 @@ struct ImCubicBezier
     int    NumSegments;
 };
 
-struct ImClickInteractionState
+struct ImBoxSelector
 {
-    ImNodesClickInteractionType Type;
+    ImRect GridSpaceRect;
+};
 
-    struct
+// A link which is connected to the mouse cursor at the other end
+struct ImPartialLink
+{
+    int  StartPinId;
+    bool CreatedFromSnap;
+};
+
+struct ImSnappedLink
+{
+    int StartPinId;
+    int SnappedPinId;
+};
+
+enum ImNodesInteractionType_
+{
+    ImNodesInteractionType_BoxSelector,
+    ImNodesInteractionType_Panning,
+    ImNodesInteractionType_Link,
+    ImNodesInteractionType_PartialLink,
+    ImNodesInteractionType_SnappedLink,
+    ImNodesInteractionType_Node,
+    ImNodesInteractionType_ImGuiItem,
+    ImNodesInteractionType_None
+};
+
+struct ImInteractionState
+{
+    ImNodesInteractionType Type;
+
+    union
     {
-        int                     StartPinIdx;
-        ImOptionalIndex         EndPinIdx;
-        ImNodesLinkCreationType Type;
-    } LinkCreation;
+        ImBoxSelector BoxSelector;
+        ImPartialLink PartialLink;
+        ImSnappedLink SnappedLink;
+    };
 
-    struct
-    {
-        ImRect Rect; // Coordinates in grid space
-    } BoxSelector;
-
-    ImClickInteractionState() : Type(ImNodesClickInteractionType_None) {}
+    ImInteractionState(const ImNodesInteractionType type) : Type(type) {}
 };
 
 struct ImNodesColElement
@@ -276,7 +291,7 @@ struct ImNodesEditorContext
     // Offset of the primary node origin relative to the mouse cursor.
     ImVec2 PrimaryNodeOffset;
 
-    ImClickInteractionState ClickInteraction;
+    ImVector<ImInteractionState> InteractionStack;
 
     // Mini-map state set by MiniMap()
 
@@ -294,7 +309,7 @@ struct ImNodesEditorContext
 
     ImNodesEditorContext()
         : Nodes(), Pins(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIds(),
-          SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(),
+          SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), InteractionStack(),
           MiniMapEnabled(false), MiniMapSizeFraction(0.0f), MiniMapNodeHoveringCallback(NULL),
           MiniMapNodeHoveringCallbackUserData(NULL), MiniMapScaling(0.0f)
     {
