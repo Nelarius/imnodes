@@ -213,6 +213,8 @@ struct ImClickInteractionState
         ImRect Rect; // Coordinates in grid space
     } BoxSelector;
 
+    int HoveredNodeIdx;
+
     ImClickInteractionState() : Type(ImNodesClickInteractionType_None) {}
 };
 

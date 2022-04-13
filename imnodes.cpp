@@ -583,6 +583,8 @@ void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
         return;
     }
 
+    editor.ClickInteraction.HoveredNodeIdx = GImNodes->HoveredNodeIdx.Value();
+
     editor.ClickInteraction.Type = ImNodesClickInteractionType_Node;
     // If the node is not already contained in the selection, then we want only
     // the interaction node to be selected, effective immediately.
@@ -985,6 +987,8 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     case ImNodesClickInteractionType_Node:
     {
         TranslateSelectedNodes(editor);
+
+        GImNodes->HoveredNodeIdx = editor.ClickInteraction.HoveredNodeIdx;
 
         if (GImNodes->LeftMouseReleased)
         {
