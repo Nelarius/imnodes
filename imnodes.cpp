@@ -1172,7 +1172,7 @@ void PendingStateUpdate(ImNodesContext& context, ImNodesEditorContext& editor)
             }
             else
             {
-                EnterLinkState(context, editor, context.HoveredLinkIdx.Value());
+                EnterLinkState(context, editor, context.Links[context.HoveredLinkIdx.Value()].Id);
             }
             return;
         }
