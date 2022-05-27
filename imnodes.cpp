@@ -993,8 +993,6 @@ void PartialLinkStateUpdate(ImNodesContext& context, ImNodesEditorContext& edito
     // Render the bezier curve
 
     {
-        const ImPinData& start_pin =
-            ObjectPoolFindOrCreateObject(editor.Pins, state.PartialLink.StartPinId);
         const ImVec2               start_pos = start_pin.Pos;
         const ImNodesAttributeType start_pin_type = start_pin.Type;
 
