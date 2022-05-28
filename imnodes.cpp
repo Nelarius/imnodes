@@ -18,7 +18,6 @@
 #error "Minimum ImGui version requirement not met -- please use a newer version!"
 #endif
 
-#include <algorithm>
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -2087,9 +2086,9 @@ void SetCurrentContext(ImNodesContext* ctx) { GImNodes = ctx; }
 
 ImNodesEditorContext* EditorContextCreate()
 {
-    void*                 mem = ImGui::MemAlloc(sizeof(ImNodesEditorContext));
-    ImNodesEditorContext* editor_ctx = new (mem) ImNodesEditorContext();
-    return editor_ctx;
+    void* mem = ImGui::MemAlloc(sizeof(ImNodesEditorContext));
+    new (mem) ImNodesEditorContext();
+    return (ImNodesEditorContext*)mem;
 }
 
 void EditorContextFree(ImNodesEditorContext* ctx)
@@ -2568,7 +2567,6 @@ void Link(const int id, const int start_attr_id, const int end_attr_id)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_Editor);
 
-    // const int    link_idx = GImNodes->Links.size();
     const ImLink link(id, start_attr_id, end_attr_id, GImNodes->Style.Colors);
     GImNodes->Links.push_back(link);
 }
