@@ -1889,20 +1889,23 @@ static void MiniMapDrawNode(ImNodesEditorContext& editor, const int node_idx)
         node_rect.Min, node_rect.Max, mini_map_node_outline, mini_map_node_rounding);
 }
 
-void MiniMapDrawLinks(
-    const ImNodesEditorContext&    editor,
-    const ImVector<ImLink>&        links,
-    const ImVector<ImCubicBezier>& curves)
+void MiniMapDrawLinks(ImNodesEditorContext& editor, const ImVector<ImLink>& links)
 {
-    const int num_links = links.size();
-    IM_ASSERT(num_links == curves.size());
-
     const float link_thickness = GImNodes->Style.LinkThickness * editor.MiniMapScaling;
 
-    for (int idx = 0; idx < num_links; ++idx)
+    for (const ImLink& link : links)
     {
-        const ImLink&        link = links[idx];
-        const ImCubicBezier& curve = curves[idx];
+        const ImPinData& start_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.StartPinId);
+        const ImPinData& end_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.EndPinId);
+
+        // TODO: this should use the pre-calculated curves, but pins are updated in the draw code
+        // after we generate the links. Using pre-calculated curves causes a strong link wiggling
+        // effect, as the link's position drags the nodes' position by one frame.
+        const ImCubicBezier cubic_bezier = CalcCubicBezier(
+            ScreenSpaceToMiniMapSpace(editor, start_pin.Pos),
+            ScreenSpaceToMiniMapSpace(editor, end_pin.Pos),
+            start_pin.Type,
+            GImNodes->Style.LinkLineSegmentsPerLength / editor.MiniMapScaling);
 
         const int   color_idx = editor.SelectedLinkIds.contains(link.Id)
                                     ? ImNodesCol_MiniMapLinkSelected
@@ -1914,13 +1917,13 @@ void MiniMapDrawLinks(
 #else
         GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-            ScreenSpaceToMiniMapSpace(editor, curve.P0),
-            ScreenSpaceToMiniMapSpace(editor, curve.P1),
-            ScreenSpaceToMiniMapSpace(editor, curve.P2),
-            ScreenSpaceToMiniMapSpace(editor, curve.P3),
+            cubic_bezier.P0,
+            cubic_bezier.P1,
+            cubic_bezier.P2,
+            cubic_bezier.P3,
             link_color,
             link_thickness,
-            curve.NumSegments);
+            cubic_bezier.NumSegments);
     }
 }
 
@@ -1958,7 +1961,7 @@ static void MiniMapUpdate()
         mini_map_rect.Min, mini_map_rect.Max, true /* intersect with editor clip-rect */);
 
     // Draw links first so they appear under nodes, and we can use the same draw channel
-    MiniMapDrawLinks(editor, GImNodes->Links, GImNodes->Curves);
+    MiniMapDrawLinks(editor, GImNodes->Links);
 
     for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
     {
@@ -1985,8 +1988,8 @@ static void MiniMapUpdate()
 
     ImGui::EndChild();
 
-    // TODO: it should not be possible to interact with the minimap if an interaction is already in
-    // progress
+    // TODO: it should not be possible to interact with the minimap if an interaction is already
+    // in progress
     bool center_on_click = mini_map_is_hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
                            editor.InteractionState.Type == ImNodesInteractionType_Pending &&
                            !GImNodes->NodeIdxSubmissionOrder.empty();
@@ -2364,12 +2367,6 @@ void EndNodeEditor()
 
     DrawLinks(editor, GImNodes->Links, GImNodes->Curves);
 
-    if (IsMiniMapActive())
-    {
-        CalcMiniMapLayout();
-        MiniMapUpdate();
-    }
-
     // At this point, draw commands have been issued for all nodes (and pins). Update the node
     // pool to detect unused node slots and remove those indices from the depth stack before
     // sorting the node draw commands by depth.
@@ -2380,6 +2377,12 @@ void EndNodeEditor()
 
     // Finally, merge the draw channels
     GImNodes->CanvasDrawList->ChannelsMerge();
+
+    if (IsMiniMapActive())
+    {
+        CalcMiniMapLayout();
+        MiniMapUpdate();
+    }
 
     // pop style
     ImGui::EndChild();      // end scrolling region
