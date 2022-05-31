@@ -1692,7 +1692,7 @@ void Initialize(ImNodesContext* context)
     context->CurrentNodeIdx = INT_MAX;
 
     context->DefaultEditorCtx = EditorContextCreate();
-    EditorContextSet(GImNodes->DefaultEditorCtx);
+    context->EditorCtx = context->DefaultEditorCtx;
 
     context->CurrentAttributeFlags = ImNodesAttributeFlags_None;
     context->AttributeFlagStack.push_back(GImNodes->CurrentAttributeFlags);
