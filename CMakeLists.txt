@@ -79,15 +79,15 @@ else()
     target_link_libraries(hello X11 Xext GL)
 endif()
 
-add_executable(ex1_scrollbar
+add_executable(GraphicalLayout
     ${CMAKE_SOURCE_DIR}/imnodes.cpp
-    ${CMAKE_SOURCE_DIR}/example/main.cpp
-    ${CMAKE_SOURCE_DIR}/example/Dynamite/ex1_scrollbar.cpp)
-target_link_libraries(ex1_scrollbar imnodes SDL2::SDL2)
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/main.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/GraphicalLayout.cpp)
+target_link_libraries(GraphicalLayout imnodes SDL2::SDL2)
 if (APPLE)
-    target_link_libraries(ex1_scrollbar "-framework OpenGL")
+    target_link_libraries(GraphicalLayout "-framework OpenGL")
 elseif(MSVC)
-    target_link_libraries(ex1_scrollbar "opengl32")
+    target_link_libraries(GraphicalLayout "opengl32")
 else()
-    target_link_libraries(ex1_scrollbar X11 Xext GL)
+    target_link_libraries(GraphicalLayout X11 Xext GL)
 endif()
