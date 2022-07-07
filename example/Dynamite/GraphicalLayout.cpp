@@ -4,6 +4,9 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "dynamite_editor.h"
+#include <vector>
+
+using namespace std;
 
 namespace Dynamite 
 {
@@ -17,7 +20,6 @@ const char* App_GetName()
 
 void App_Initialize()
 {
-    //context = ImNodes::EditorContextCreate(); 
     ImNodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
 
     ImNodesIO& io = ImNodes::GetIO();
@@ -27,11 +29,12 @@ void App_Initialize()
     ImNodesStyle& style = ImNodes::GetStyle();
     style.Flags |= ImNodesStyleFlags_GridLinesPrimary | ImNodesStyleFlags_GridSnapping;
 
+    //ImFontAtlas::Build
+
 }
 
 void App_Frame()
 {
-    ImGui::ShowDemoWindow(NULL);
     auto flags = ImGuiWindowFlags_MenuBar;
 
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
@@ -42,89 +45,57 @@ void App_Frame()
     ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
     ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
 
-    //ImNodes::EditorContextSet(context);
     bool* p_open = NULL;
-    //*p_open = true;
     ImGui::Begin("Dynamite Editor", p_open, flags);
 
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            const char* names[] = {
-                "New",
-                "Open",
-                "Save",
-                "Save as",
-                "Import",
-                "Export",
-                "Close",
-            };
-
-            for (int i = 0; i < 7; i++)
-            {
-                if (ImGui::MenuItem(names[i], NULL))
-                    printf("Menu item clicked!");
+    if (ImGui::BeginMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            std::vector<char*> names { "New", "Open", "Save", "Save as", "Import", "Export", "Close"  };
+            for (char* i : names) {
+                if (ImGui::MenuItem(i, NULL)) {
+                    printf("File menu opened!\n");
+                }
             }
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("View"))
-        {
-            const char* names[] = {
-                "Zoom in",
-                "Zoom out",
-                "Zoom to content",
-            };
-
-            for (int i = 0; i < 3; i++)
-            {
-                if (ImGui::MenuItem(names[i], NULL))
-                    printf("Zoom!");
+        if (ImGui::BeginMenu("View")) {
+            std::vector<char*> names { "Zoom In", "Zoom Out", "Zoom to Content" };
+            for (char* i : names) {
+                if (ImGui::MenuItem(i, NULL)) {
+                    printf("Zoom!\n");
+                }
             }
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Commands"))
-        {
-            const char* names[] = {
-                "Validate",
-                "Generate",
-                "Fetch",
-                "Deploy",
-                "Clean",
-            };
-
-            for (int i = 0; i < 5; i++)
-            {
-                if (ImGui::MenuItem(names[i], NULL))
-                    printf("I command you!");
+        if (ImGui::BeginMenu("Commands")) {
+            std::vector<char*> names { "Validate", "Generate", "Fetch", "Deploy", "Clean" };
+            for (char* i : names) {
+                if (ImGui::MenuItem(i, NULL)) {
+                    printf("I command you!\n");
+                }
             }
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Help"))
-        {
-            const char* names[] = {
-                "Help Center",
-                "About Dynamite",
-            };
-
-            for (int i = 0; i < 2; i++)
-            {
-                if (ImGui::MenuItem(names[i], NULL))
-                    printf("Help me!");
+        if (ImGui::BeginMenu("Help")) {
+            std::vector<char*> names { "Help Center", "About Dynamite" };
+            for (char* i : names) {
+                if (ImGui::MenuItem(i, NULL)) {
+                    printf("Help me!\n");
+                }
             }
             ImGui::EndMenu();
         }
 
-        ImGui::SameLine(ImGui::GetWindowWidth() - 140); // ImGui::GetWindowWidth() - sizeof(ImGui::Button("Close this window"))
-        if (ImGui::Button("Close window"))
-        {
+        const float spacing = ImGui::GetWindowWidth() - ImGui::CalcTextSize("Close Window").x - ImGui::CalcTextSize("File").x;
+        ImGui::SameLine(spacing);
+        if (ImGui::Button("Close window\n")) {
             printf("Closing window.\n"); 
             *p_open = false;
         }
-        
+
         ImGui::EndMenuBar();
     }
 
@@ -137,7 +108,6 @@ void App_Frame()
 void App_Finalize()
 {
     ImNodes::PopAttributeFlag();
-    //ImNodes::EditorContextFree(context);
 }
 
 }
