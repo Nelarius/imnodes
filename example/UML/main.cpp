@@ -1,7 +1,5 @@
 #include <imgui.h>
 #include "dynamite.h"
-#include "ui.h"
-#include "menubar.h"
 
 DSPDynamite dynamite;
 

@@ -1,4 +1,5 @@
 #include "menubar.h"
+#include <string>
 
 using namespace std;
 
@@ -18,9 +19,9 @@ void MenuBar::show() {
 
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            std::vector<char*> names { "New", "Open", "Save", "Save as", "Import", "Export", "Close"  };
-            for (char* i : names) {
-                if (ImGui::MenuItem(i, NULL)) {
+            std::vector<std::string> MenuItems { "New", "Open", "Save", "Save as", "Import", "Export", "Close"  };
+            for (auto Item : MenuItems) {
+                if (ImGui::MenuItem(Item.c_str(), NULL)) {
                     printf("File menu opened!\n");
                 }
             }
@@ -28,9 +29,9 @@ void MenuBar::show() {
         }
 
         if (ImGui::BeginMenu("View")) {
-            std::vector<char*> names { "Zoom In", "Zoom Out", "Zoom to Content" };
-            for (char* i : names) {
-                if (ImGui::MenuItem(i, NULL)) {
+            std::vector<std::string> menuItems { "Zoom In", "Zoom Out", "Zoom to Content" };
+            for (auto item : menuItems) {
+                if (ImGui::MenuItem(item.c_str(), NULL)) {
                     printf("Zoom!\n");
                 }
             }
@@ -38,9 +39,9 @@ void MenuBar::show() {
         }
 
         if (ImGui::BeginMenu("Commands")) {
-            std::vector<char*> names { "Validate", "Generate", "Fetch", "Deploy", "Clean" };
-            for (char* i : names) {
-                if (ImGui::MenuItem(i, NULL)) {
+            std::vector<std::string> menuItems { "Validate", "Generate", "Fetch", "Deploy", "Clean" };
+            for (auto item : menuItems) {
+                if (ImGui::MenuItem(item.c_str(), NULL)) {
                     printf("I command you!\n");
                 }
             }
@@ -48,9 +49,9 @@ void MenuBar::show() {
         }
 
         if (ImGui::BeginMenu("Help")) {
-            std::vector<char*> names { "Help Center", "About Dynamite" };
-            for (char* i : names) {
-                if (ImGui::MenuItem(i, NULL)) {
+            std::vector<std::string> menuItems { "Help Center", "About Dynamite" };
+            for (auto item : menuItems) {
+                if (ImGui::MenuItem(item.c_str(), NULL)) {
                     printf("Help me!\n");
                 }
             }

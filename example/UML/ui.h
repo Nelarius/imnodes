@@ -1,8 +1,10 @@
+#pragma once
+
 #include <imgui.h>
 #include <imnodes.h>
 
-#include "menubar.cpp" // include header files not cpp files 
-#include "canvaseditor.cpp" // .h 
+#include "menubar.h" // include header files not cpp files 
+#include "canvaseditor.h" // .h 
 
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_opengl3.h>

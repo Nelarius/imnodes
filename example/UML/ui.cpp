@@ -83,6 +83,9 @@ void UI::init() {
 }
 
 void UI::show(ImNodesEditorContext* context, bool done) {
+    // TODO jehan.diaz what do we need this parameter for?
+    (void) done;
+    
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {

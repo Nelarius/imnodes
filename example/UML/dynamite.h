@@ -1,3 +1,5 @@
+#pragma once
+
 #include <imgui.h>
 #include <imnodes.h>
 
