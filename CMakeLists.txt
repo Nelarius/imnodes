@@ -81,10 +81,10 @@ endif()
 
 add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/imnodes.cpp
-    ${CMAKE_SOURCE_DIR}/example/UML/main.cpp
-    ${CMAKE_SOURCE_DIR}/example/UML/dynamite.cpp
-    ${CMAKE_SOURCE_DIR}/example/UML/ui.cpp
-    ${CMAKE_SOURCE_DIR}/example/UML/menubar.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/main.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/dynamite.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/ui.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/menubar.cpp
     )
 target_link_libraries(Dynamite imnodes SDL2::SDL2)
 if (APPLE)
