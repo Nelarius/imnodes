@@ -70,6 +70,7 @@ UI::UI() {
 
 void UI::init() {
     canvas.init();
+    palette.init();
 }
 
 bool UI::show(ImNodesEditorContext* context, bool done) {
@@ -109,7 +110,8 @@ bool UI::show(ImNodesEditorContext* context, bool done) {
 
     menu.show();
     canvas.show(context);
-    // palette.show(); multipurposepanel.show(context);
+    palette.show(); 
+    // multipurposepanel.show(context);
 
     ImGui::End();
 

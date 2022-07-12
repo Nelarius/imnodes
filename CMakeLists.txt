@@ -85,10 +85,11 @@ add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/example/Dynamite/dynamite.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/ui.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/menubar.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/palette.cpp
     )
 target_link_libraries(Dynamite imnodes SDL2::SDL2)
 if (APPLE)
-    target_link_libraries((Dynamite) "-framework OpenGL")
+    target_link_libraries(Dynamite "-framework OpenGL")
 elseif(MSVC)
     target_link_libraries(Dynamite "opengl32")
 else()
