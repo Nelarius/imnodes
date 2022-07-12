@@ -1,16 +1,15 @@
 #include <imgui.h>
 #include "dynamite.h"
 
-DSPDynamite dynamite;
-
 int main (int, char**) 
 {
+    DSPDynamite dynamite;
     dynamite.init();
 
     bool done = false;
     while (!done) {
-        dynamite.show(done);
+        done = dynamite.show(done);
     }
-
+    
     dynamite.exit();
 }

@@ -19,6 +19,6 @@ public:
 
     DSPDynamite();
     void init();
-    void show(bool done);
+    bool show(bool done);
     void exit();
 };

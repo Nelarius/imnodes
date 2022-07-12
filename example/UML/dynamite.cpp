@@ -9,8 +9,8 @@ void DSPDynamite::init() {
     ui.init();
 }
 
-void DSPDynamite::show(bool done) {
-    ui.show(context, done); 
+bool DSPDynamite::show(bool done) {
+    return done = ui.show(context, done); 
 }
 
 void DSPDynamite::exit() {

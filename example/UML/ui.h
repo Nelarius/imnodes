@@ -4,7 +4,7 @@
 #include <imnodes.h>
 
 #include "menubar.h" // include header files not cpp files 
-#include "canvaseditor.h" // .h 
+#include "editor.h" // .h 
 
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_opengl3.h>
@@ -33,7 +33,7 @@ public:
 
     UI();
     void init();
-    void show(ImNodesEditorContext* context, bool done);
+    bool show(ImNodesEditorContext* context, bool done);
     void exit(ImNodesEditorContext* context);
 
 };

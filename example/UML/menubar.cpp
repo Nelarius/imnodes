@@ -12,11 +12,6 @@ void MenuBar::init() {
 }
 
 void MenuBar::show() {
-    auto flags = ImGuiWindowFlags_MenuBar;
-    
-    bool* p_open = NULL;
-    ImGui::Begin("Dynamite Editor", p_open, flags);
-
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             std::vector<std::string> MenuItems { "New", "Open", "Save", "Save as", "Import", "Export", "Close"  };
@@ -58,17 +53,16 @@ void MenuBar::show() {
             ImGui::EndMenu();
         }
 
+/*
         const float spacing = ImGui::GetWindowWidth() - ImGui::CalcTextSize("Close Window").x - ImGui::CalcTextSize("File").x;
         ImGui::SameLine(spacing);
         if (ImGui::Button("Close window\n")) {
             printf("Closing window.\n"); 
             *p_open = false;
-        }
+        } */
 
         ImGui::EndMenuBar();
     }
-
-    ImGui::End();
 }
 
 void MenuBar::exit() {

@@ -37,7 +37,7 @@ UI::UI() {
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags =
-        (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+        (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_MAXIMIZED);
     window = SDL_CreateWindow(
         "Dear ImGui SDL2+OpenGL3 example",
         SDL_WINDOWPOS_CENTERED,
@@ -66,23 +66,13 @@ UI::UI() {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-    // set up window //////////////////////////////////////////////////
-    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-
-    static bool use_work_area = true;
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
-    ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
-
 }
 
 void UI::init() {
     canvas.init();
 }
 
-void UI::show(ImNodesEditorContext* context, bool done) {
+bool UI::show(ImNodesEditorContext* context, bool done) {
     // TODO jehan.diaz what do we need this parameter for?
     (void) done;
     
@@ -90,11 +80,12 @@ void UI::show(ImNodesEditorContext* context, bool done) {
     while (SDL_PollEvent(&event))
     {
         ImGui_ImplSDL2_ProcessEvent(&event);
-        if (event.type == SDL_QUIT)
-            done = true;
+        if (event.type == SDL_QUIT) 
+            return done = true;
+
         if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(window))
-            done = true;
+            return done = true;
     }
 
     // Start the Dear ImGui frame
@@ -103,8 +94,24 @@ void UI::show(ImNodesEditorContext* context, bool done) {
     ImGui::NewFrame();
 
     // set up UI
+
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+
+    static bool use_work_area = true;
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
+    ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size); 
+
+    auto flags = ImGuiWindowFlags_MenuBar;
+    //bool* p_open = NULL;
+    ImGui::Begin("Dynamite Editor", NULL, flags);
+
     menu.show();
     canvas.show(context);
+    // palette.show(); multipurposepanel.show(context);
+
+    ImGui::End();
 
     // Rendering
     ImGui::Render();
@@ -117,6 +124,8 @@ void UI::show(ImNodesEditorContext* context, bool done) {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
+
+    return done;
 }
 
 void UI::exit(ImNodesEditorContext* context) {
