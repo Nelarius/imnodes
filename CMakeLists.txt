@@ -79,15 +79,19 @@ else()
     target_link_libraries(hello X11 Xext GL)
 endif()
 
-add_executable(GraphicalLayout
+
+add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/imnodes.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/main.cpp
-    ${CMAKE_SOURCE_DIR}/example/Dynamite/GraphicalLayout.cpp)
-target_link_libraries(GraphicalLayout imnodes SDL2::SDL2)
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/dynamite.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/ui.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/menubar.cpp
+    )
+target_link_libraries(Dynamite imnodes SDL2::SDL2)
 if (APPLE)
-    target_link_libraries(GraphicalLayout "-framework OpenGL")
+    target_link_libraries(Dynamite "-framework OpenGL")
 elseif(MSVC)
-    target_link_libraries(GraphicalLayout "opengl32")
+    target_link_libraries(Dynamite "opengl32")
 else()
-    target_link_libraries(GraphicalLayout X11 Xext GL)
+    target_link_libraries(Dynamite X11 Xext GL)
 endif()
