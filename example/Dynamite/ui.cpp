@@ -45,6 +45,7 @@ UI::UI() {
         1280,
         720,
         window_flags);
+
     gl_context = SDL_GL_CreateContext(m_window);
     SDL_GL_MakeCurrent(m_window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -110,8 +111,7 @@ bool UI::show(bool done) {
     m_menu.show();
     //ImGui::TextUnformatted("A -- add node");
     m_editor.show();
-    m_palette.show(); 
-    //multipurposepanel.show(context);
+    // palette.show(); multipurposepanel.show(context);
     //context.addLink();
     //int link_id = 0;
     //context.deleteLink(link_id);
