@@ -1,3 +1,5 @@
+#pragma once
+
 #include <imgui.h>
 #include <imnodes.h>
 
@@ -42,7 +44,6 @@ enum ControlBlockType_ {
 
 class Block {
 
-public:
     int id;
     const char* name;
     char* input;
@@ -52,12 +53,14 @@ public:
 
     bool is_active = true;
 
-    // constructors to init
-    Block(const int i, const char* n) : id(i), name(n) {}
-    Block(const int i, const char* n, char* in, char* o) : id(i), name(n), input(in), output(o) {}
+    public:
 
-    void show(Block block);
-    void bypass(); // gets called by block -> pop up -> edit menu
-    void deleteBlock(Block block);
+        Block();
 
+        Block(const int i, const char* n) : id(i), name(n) {}
+        Block(const int i, const char* n, char* in, char* o) : id(i), name(n), input(in), output(o) {}
+
+        void show();
+        void bypass(); // gets called by block -> pop up -> edit menu
+        void deleteBlock(Block block);
 };

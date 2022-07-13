@@ -86,6 +86,9 @@ add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/example/Dynamite/dynamite.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/ui.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/menubar.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/block.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/context.h
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/editor.h
     )
 target_link_libraries(Dynamite imnodes SDL2::SDL2)
 if (APPLE)

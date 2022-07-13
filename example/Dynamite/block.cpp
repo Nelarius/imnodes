@@ -1,27 +1,34 @@
 #include "block.h"
 
-void show(Block block) {
-    ImNodes::BeginNode(block.id);
+Block::Block() {
+    id = 0; name = "Block"; input = "IN"; output = "OUT";
+    param1 = NULL; param2 = 0.0f; 
+}
+
+void Block::show() {
+    ImNodes::BeginNode(id);
     ImNodes::BeginNodeTitleBar();
-    ImGui::TextUnformatted(block.name);
+    ImGui::TextUnformatted(name);
     ImNodes::EndNodeTitleBar();
 
-    ImNodes::BeginInputAttribute(block.id << 8);
-    ImGui::TextUnformatted(block.input);
+    ImNodes::BeginInputAttribute(id << 8);
+    ImGui::TextUnformatted(input);
     ImNodes::EndInputAttribute();
 
-    ImNodes::BeginOutputAttribute(block.id << 24);
-    const float text_width = ImGui::CalcTextSize(block.output).x;
+    ImNodes::BeginOutputAttribute(id << 24);
+    const float text_width = ImGui::CalcTextSize(output).x;
     ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
-    ImGui::TextUnformatted(block.output);
+    ImGui::TextUnformatted(output);
     ImNodes::EndOutputAttribute();  
 
     ImNodes::EndNode();
 }
 
-void bypass(); // gets called by block -> pop up -> edit menu
+void Block::bypass() {
+    // gets called by block -> pop up -> edit menu
+}
 
 // need to delete it from the editor context
-void deleteBlock(Block block) {
+/* void deleteBlock(Block block) {
 
-}
+} */

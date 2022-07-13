@@ -22,18 +22,18 @@ class UI {
 
 public:
 
-    MenuBar menu;
-    CanvasEditor canvas;
-    // Palette palette;
+    MenuBar m_menu;
+    Editor m_editor;
+    // Palette m_palette;
 
-    SDL_Window* window;
+    SDL_Window* m_window;
     SDL_GLContext gl_context;
-    ImGuiIO io;
-    ImVec4 clear_color;
+    ImGuiIO m_io;
+    ImVec4 m_clear_color;
 
     UI();
     void init();
-    bool show(ImNodesEditorContext* context, bool done);
+    bool show(bool done);
     void exit(ImNodesEditorContext* context);
 
 };

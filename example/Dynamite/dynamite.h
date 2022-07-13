@@ -9,15 +9,15 @@
 
 using namespace std;
 
-class DSPDynamite {
+class Dynamite {
 
 public: 
 
-    UI ui;
-    //const string name;
-    ImNodesEditorContext* context; 
+    UI m_ui; 
+    ImNodesEditorContext* m_context; 
+    //Context m_context;
 
-    DSPDynamite();
+    Dynamite();
     void init();
     bool show(bool done);
     void exit();
