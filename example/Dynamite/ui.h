@@ -6,6 +6,7 @@
 #include "menubar.h" // include header files not cpp files 
 #include "editor.h" // .h 
 #include "palette.h" // .h
+#include "multipanel.h" // .h
 
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_opengl3.h>
@@ -26,6 +27,7 @@ public:
     MenuBar m_menu;
     Editor m_editor;
     Palette m_palette;
+    MultiPanel m_multipanel;
 
     SDL_Window* m_window;
     SDL_GLContext gl_context;
