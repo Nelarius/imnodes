@@ -3,7 +3,7 @@
 
 int main (int, char**) 
 {
-    DSPDynamite dynamite;
+    Dynamite dynamite; 
     dynamite.init();
 
     bool done = false;

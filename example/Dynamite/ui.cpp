@@ -38,22 +38,22 @@ UI::UI() {
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags =
         (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_MAXIMIZED);
-    window = SDL_CreateWindow(
-        "Dear ImGui SDL2+OpenGL3 example",
+    m_window = SDL_CreateWindow(
+        "Dynamite",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         1280,
         720,
         window_flags);
-    gl_context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, gl_context);
+    gl_context = SDL_GL_CreateContext(m_window);
+    SDL_GL_MakeCurrent(m_window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    io = ImGui::GetIO();
-    (void)io;
+    m_io = ImGui::GetIO();
+    (void)m_io;
 
     ImNodes::CreateContext();
      // Setup Dear ImGui style
@@ -62,17 +62,17 @@ UI::UI() {
     ImNodes::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplSDL2_InitForOpenGL(m_window, gl_context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    m_clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
 
 void UI::init() {
-    canvas.init();
+    m_editor.init();
 }
 
-bool UI::show(ImNodesEditorContext* context, bool done) {
+bool UI::show(bool done) {
     // TODO jehan.diaz what do we need this parameter for?
     (void) done;
     
@@ -84,7 +84,7 @@ bool UI::show(ImNodesEditorContext* context, bool done) {
             return done = true;
 
         if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
-            event.window.windowID == SDL_GetWindowID(window))
+            event.window.windowID == SDL_GetWindowID(m_window))
             return done = true;
     }
 
@@ -107,29 +107,32 @@ bool UI::show(ImNodesEditorContext* context, bool done) {
     //bool* p_open = NULL;
     ImGui::Begin("Dynamite Editor", NULL, flags);
 
-    menu.show();
-    canvas.show(context);
+    m_menu.show();
+    //ImGui::TextUnformatted("A -- add node");
+    m_editor.show();
     // palette.show(); multipurposepanel.show(context);
-
+    //context.addLink();
+    //int link_id = 0;
+    //context.deleteLink(link_id);
     ImGui::End();
 
     // Rendering
     ImGui::Render();
-    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+    glViewport(0, 0, (int)m_io.DisplaySize.x, (int)m_io.DisplaySize.y);
     glClearColor(
-        clear_color.x * clear_color.w,
-        clear_color.y * clear_color.w,
-        clear_color.z * clear_color.w,
-        clear_color.w);
+        m_clear_color.x * m_clear_color.w,
+        m_clear_color.y * m_clear_color.w,
+        m_clear_color.z * m_clear_color.w,
+        m_clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window);
+    SDL_GL_SwapWindow(m_window);
 
     return done;
 }
 
 void UI::exit(ImNodesEditorContext* context) {
-    canvas.exit(context);
+    m_editor.exit(context);
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
@@ -139,6 +142,6 @@ void UI::exit(ImNodesEditorContext* context) {
     ImGui::DestroyContext();
 
     SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
+    SDL_DestroyWindow(m_window);
     SDL_Quit();
 }
