@@ -72,6 +72,7 @@ UI::UI() {
 
 void UI::init() {
     m_editor.init();
+    m_palette.init();
 }
 
 bool UI::show(bool done) {
@@ -111,7 +112,8 @@ bool UI::show(bool done) {
     m_menu.show();
     //ImGui::TextUnformatted("A -- add node");
     m_editor.show();
-    // palette.show(); multipurposepanel.show(context);
+    m_palette.show(); 
+    //multipurposepanel.show(context);
     //context.addLink();
     //int link_id = 0;
     //context.deleteLink(link_id);
