@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <string>
 
 using namespace std;
 
@@ -45,11 +46,9 @@ enum ControlBlockType_ {
 class Block {
 
     int id;
-    const char* name;
-    char* input;
-    char* output;
-    bool param1;
-    float param2;
+    string name;
+    string input;
+    string output;
 
     bool is_active = true;
 
@@ -57,10 +56,10 @@ class Block {
 
         Block();
 
-        Block(const int i, const char* n) : id(i), name(n) {}
-        Block(const int i, const char* n, char* in, char* o) : id(i), name(n), input(in), output(o) {}
+        Block(const int i, string n) : id(i), name(n) {}
+        Block(const int i, string n, string in, string o) : id(i), name(n), input(in), output(o) {}
 
         void show();
-        void bypass(); // gets called by block -> pop up -> edit menu
+        void bypass();
         void deleteBlock(Block block);
 };

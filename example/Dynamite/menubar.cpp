@@ -52,15 +52,6 @@ void MenuBar::show() {
             }
             ImGui::EndMenu();
         }
-
-/*
-        const float spacing = ImGui::GetWindowWidth() - ImGui::CalcTextSize("Close Window").x - ImGui::CalcTextSize("File").x;
-        ImGui::SameLine(spacing);
-        if (ImGui::Button("Close window\n")) {
-            printf("Closing window.\n"); 
-            *p_open = false;
-        } */
-
         ImGui::EndMenuBar();
     }
 }
