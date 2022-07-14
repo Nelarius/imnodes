@@ -27,6 +27,6 @@ void Block::bypass() {
     // gets called by block -> pop up -> edit menu
 }
 
-void Block::deleteBlock(Block block) {
+// void Block::deleteBlock(Block block) {
 
-}
+// }

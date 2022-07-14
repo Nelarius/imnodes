@@ -8,7 +8,7 @@
 class Editor {
 
     //ImNodesEditorContext* context = nullptr;
-    int current_id = 0;
+    // int current_id = 0;
 
 public:
 
