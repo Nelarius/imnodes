@@ -113,7 +113,7 @@ bool UI::show(bool done) {
     //ImGui::TextUnformatted("A -- add node");
     m_editor.show();
     m_palette.show(); 
-    //multipurposepanel.show(context);
+    m_multipanel.show();
     //context.addLink();
     //int link_id = 0;
     //context.deleteLink(link_id);

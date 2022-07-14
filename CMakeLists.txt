@@ -90,6 +90,7 @@ add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/example/Dynamite/context.h
     ${CMAKE_SOURCE_DIR}/example/Dynamite/editor.h
     ${CMAKE_SOURCE_DIR}/example/Dynamite/palette.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/multipanel.cpp
     )
 target_link_libraries(Dynamite imnodes SDL2::SDL2)
 if (APPLE)
