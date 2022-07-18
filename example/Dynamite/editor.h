@@ -7,19 +7,9 @@
 
 class Editor {
 
-    //ImNodesEditorContext* context = nullptr;
-    // int current_id = 0;
-
 public:
 
-    Editor() {
-        //context = ImNodes::EditorContextCreate();
-        //ImNodes::EditorContextSet(context);
-    }
-
-    /*~Editor() {
-        ImNodes::EditorContextFree(context);
-    } */
+    Editor() { }
 
     static void init() {
 
@@ -34,26 +24,27 @@ public:
         //ImFontAtlas::Build
     }
 
-    void show() {
-
+    void show(Context &m_context) {
         ImNodes::BeginNodeEditor();
-
-    /* TO DO: integrate context with editor context
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
             ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A)) {
-            int block_id = ++current_id;
-            ImNodes::SetNodeScreenSpacePos(block_id, ImGui::GetMousePos());
-            ImNodes::SnapNodeToGrid(block_id);
-            printf("block added\n");
-            //context.addBlock();
-        }
-        //context.displayInEditor();
-    */
+            m_context.update();
+        } // here is where the m_context is resetting itself
+        displayInEditor(m_context);
         ImNodes::EndNodeEditor();
     }
 
-    static void exit(ImNodesEditorContext* context) {
-        ImNodes::EditorContextFree(context);
+    void displayInEditor(Context m_context) {
+        for (Block& block : m_context._blocks) {
+            block.show();
+        } 
+
+        for (const Link& link : m_context._links) {
+            ImNodes::Link(link.id, link.start_attr, link.end_attr);
+        }
+    }
+
+    static void exit() {
         ImNodes::PopAttributeFlag();
     }
 };

@@ -3,14 +3,11 @@
 #include "pyhelper.h"
 #include <stdio.h>
 
-Dynamite::Dynamite() {
-    // saved context state loaded from metadata
-    m_context = ImNodes::EditorContextCreate();
-    ImNodes::EditorContextSet(m_context);
-} 
+Dynamite::Dynamite() { } 
 
 void Dynamite::init() {
     m_ui.init();
+    m_context.init();
 }
 
 int Dynamite::python_test() {
@@ -47,11 +44,13 @@ int Dynamite::python_test() {
 }
 
 bool Dynamite::show(bool done) {
-    return done = m_ui.show(done); 
+    // loadContext, return a context or smth 
+    // then go display context 
+    return done = m_ui.show(done, m_context); 
 }
 
 void Dynamite::exit() {
-    m_ui.exit(m_context);
+    m_ui.exit();
 }
 
 

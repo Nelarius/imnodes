@@ -1,43 +1,46 @@
-#include <imgui.h>
-#include <imnodes.h>
-#include "block.h"
+#include "context.h"
 
-#include <SDL_scancode.h>
+Context::Context() {}
 
-struct Link {
-    int id;
-    int start_attr, end_attr;
-};
+/*Context::~Context() {
+    ImNodes::EditorContextFree(m_context);
+}*/
 
-class Context {
-    public: 
+void Context::init() {
+    m_context = ImNodes::EditorContextCreate();
+    ImNodes::EditorContextSet(m_context);
+}
 
-    ImNodesEditorContext* context = nullptr;
-    std::vector<Block>    blocks;
-    std::vector<Link>     links;
-    int                   current_id = 0;
+void Context::loadContext() { }
 
-    /*for (const Link& link : editor.links) {
-        ImNodes::Link(link.id, link.start_attr, link.end_attr);
-    } */
+void Context::update() {
+        const int block_id = ++current_block_id;
+        ImNodes::SetNodeScreenSpacePos(block_id, ImGui::GetMousePos());
+        ImNodes::SnapNodeToGrid(block_id);  //add to canvas
+        _blocks.push_back(Block(block_id)); // load names from block library
+}
 
-    Context(ImNodesEditorContext* ctx) : context(ctx) { 
-        context = ImNodes::EditorContextCreate();
-        ImNodes::EditorContextSet(context); 
+int Context::addBlock() {
+    const int block_id = ++current_block_id;
+    _blocks.push_back(Block(block_id, "DSPBlock", "IN", "OUT")); // load names from block library
+    return block_id;
+}
+
+void Context::addLink() {
+    Link link;
+    if (ImNodes::IsLinkCreated(&link.start_attr, &link.end_attr)) {
+        link.id = ++current_link_id;
+        _links.push_back(link);
     }
+}
 
-    void update() {
-        // if block is added to the canvas, for now by pressing A
-        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-        ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A)) {
-            const int block_id = ++current_id;
-
-            /* ImNodes::SetNodeScreenSpacePos(block_id, ImGui::GetMousePos());
-            ImNodes::SnapNodeToGrid(block_id); */ //add to canvas
-
-            blocks.push_back(Block(block_id, "DSPBlock", "IN", "OUT")); // load names from block library
-        }
+void Context::deleteLink(int link_id) {
+    if (ImNodes::IsLinkDestroyed(&link_id)) {
+        auto iter = std::find_if(
+            _links.begin(), _links.end(), [link_id](const Link& link) -> bool {
+                return link.id == link_id;
+            });
+        assert(iter != _links.end());
+        _links.erase(iter);
     }
-
-
-};
+}
