@@ -68,7 +68,7 @@ public:
         for (const Link& link : m_context._links) {
             ImNodes::Link(link.id, link.start_attr, link.end_attr);
         }
-
+        
     }
 
     static void exit() {
