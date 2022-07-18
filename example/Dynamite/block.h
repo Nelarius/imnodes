@@ -46,6 +46,8 @@ enum ControlBlockType_ {
 class Block {
 
     int id;
+    int numInCh;
+    int numOutCh;
     string name;
     string input;
     string output;
@@ -55,7 +57,7 @@ class Block {
     public:
 
         Block();
-
+        Block(const int i);
         Block(const int i, string n) : id(i), name(n) {}
         Block(const int i, string n, string in, string o) : id(i), name(n), input(in), output(o) {}
 

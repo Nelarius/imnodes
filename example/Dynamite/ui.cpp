@@ -75,7 +75,7 @@ void UI::init() {
     m_palette.init();
 }
 
-bool UI::show(bool done) {
+bool UI::show(bool done, Context &m_context) {
     (void) done;
     
     SDL_Event event;
@@ -106,12 +106,12 @@ bool UI::show(bool done) {
     ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size); 
 
     auto flags = ImGuiWindowFlags_MenuBar;
-    //bool* p_open = NULL;
     ImGui::Begin("Dynamite Editor", NULL, flags);
 
     m_menu.show();
     //ImGui::TextUnformatted("A -- add node");
-    m_editor.show();
+    m_editor.show(m_context);
+    
     m_palette.show(); 
     m_multipanel.show();
     //context.addLink();
@@ -134,8 +134,8 @@ bool UI::show(bool done) {
     return done;
 }
 
-void UI::exit(ImNodesEditorContext* context) {
-    m_editor.exit(context);
+void UI::exit() {
+    m_editor.exit();
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();

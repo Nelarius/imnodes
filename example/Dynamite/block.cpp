@@ -1,7 +1,13 @@
 #include "block.h"
 
 Block::Block() {
-    id = 0; name = "Block"; input = "IN"; output = "OUT";
+    id = 0; numInCh = 2; numOutCh = 2;
+    name = "Block"; input = "IN"; output = "OUT";
+}
+
+Block::Block(const int i) {
+    id = i; numInCh = 2; numOutCh = 2;
+    name = "Block"; input = "IN"; output = "OUT";
 }
 
 void Block::show() {

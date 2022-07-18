@@ -7,11 +7,15 @@
 #include "editor.h" // .h 
 #include "palette.h" // .h
 #include "multipanel.h" // .h
+#include "context.h"
 
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_opengl3.h>
 #include <imnodes.h>
 #include <SDL2/SDL.h>
+
+#include <iostream>
+#include <SDL_scancode.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL2/SDL_opengles2.h>
 #else
@@ -36,7 +40,7 @@ public:
 
     UI();
     void init();
-    bool show(bool done);
-    void exit(ImNodesEditorContext* context);
+    bool show(bool done, Context &m_context);
+    void exit();
 
 };
