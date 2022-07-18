@@ -109,14 +109,12 @@ bool UI::show(bool done, Context &m_context) {
     ImGui::Begin("Dynamite Editor", NULL, flags);
 
     m_menu.show();
-    //ImGui::TextUnformatted("A -- add node");
     m_editor.show(m_context);
-    
     m_palette.show(); 
     m_multipanel.show();
-    //context.addLink();
-    //int link_id = 0;
-    //context.deleteLink(link_id);
+    m_context.addLink();
+    int link_id = 0;
+    m_context.deleteLink(link_id);
     ImGui::End();
 
     // Rendering
