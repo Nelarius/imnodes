@@ -19,6 +19,7 @@ public:
 
     Dynamite();
     void init();
+    int python_test();
     bool show(bool done);
     void exit();
 };

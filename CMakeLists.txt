@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+# set(CMAKE_OSX_DEPLOYMENT_TARGET "12.3" CACHE STRING "Minimum Mac OS X deployment version" FORCE)
 
 project(imnodes)
 
@@ -24,6 +25,29 @@ target_sources(imnodes PRIVATE
     imnodes.cpp)
 target_include_directories(imnodes PUBLIC ${CMAKE_SOURCE_DIR})
 target_link_libraries(imnodes PUBLIC imgui::imgui)
+
+# Python
+
+message("*****************************************")
+message("MAC OS " ${CMAKE_OSX_SYSROOT})
+message("Python_ROOT " ${Python_ROOT})
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
+
+message("Python_FOUND " ${Python_FOUND})
+message("Python_Interpreter_FOUND " ${Python_Interpreter_FOUND})
+message("Python_Development_FOUND " ${Python_Development_FOUND})
+   
+message("Python_LIBRARIES " ${Python_LIBRARIES})
+message("Python_LIBRARY_DIRS " ${Python_LIBRARY_DIRS})
+message("Python_INCLUDE_DIRS " ${Python_INCLUDE_DIRS})
+message("Python_LINK_OPTIONS " ${Python_LINK_OPTIONS})
+message("Python_EXECUTABLE " ${Python_EXECUTABLE})
+message("Python_INTERPRETER_ID " ${Python_INTERPRETER_ID})
+  
+message("Python_VERSION " ${Python_VERSION})
+message("Python_VERSION_MAJOR " ${Python_VERSION_MAJOR})
+message("Python_VERSION_MINOR " ${Python_VERSION_MINOR})
+message("*****************************************")
 
 # Example projects
 
@@ -93,6 +117,8 @@ add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/example/Dynamite/multipanel.cpp
     )
 target_link_libraries(Dynamite imnodes SDL2::SDL2)
+target_link_libraries(Dynamite ${Python_LIBRARIES})
+target_include_directories(Dynamite PRIVATE ${Python_INCLUDE_DIRS})
 if (APPLE)
     target_link_libraries(Dynamite "-framework OpenGL")
 elseif(MSVC)

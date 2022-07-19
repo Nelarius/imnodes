@@ -4,6 +4,7 @@
 int main (int, char**) 
 {
     Dynamite dynamite; 
+    dynamite.python_test();
     dynamite.init();
 
     bool done = false;
