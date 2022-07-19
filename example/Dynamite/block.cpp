@@ -27,17 +27,6 @@ void Block::show() {
     ImNodes::EndOutputAttribute();  
 
     ImNodes::EndNode();
-
-    // only shows popup for last added block
-    if (ImGui::BeginPopupContextItem("my popup")) {
-        if (ImGui::MenuItem("Bypass")) {
-            printf("Bypass\n");
-        }
-        if (ImGui::MenuItem("Other option")) {
-            printf("Other option\n");
-        }
-        ImGui::EndPopup();
-    }
 }
 
 void Block::bypass() {
