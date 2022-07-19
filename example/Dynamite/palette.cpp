@@ -1,7 +1,4 @@
 #include "palette.h"
-#include <imgui.h>
-#include <vector>
-#include <string>
 
 using namespace std;
 
@@ -131,15 +128,9 @@ void Palette::drawBlockBrowser(Blocks contents)
     }
 }
 
-void Palette::show() 
+void Palette::show(float s_LeftPaneSize) 
 {
-    // Setting the display location of Palette
-    const ImGuiViewport *viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, ImGui::GetFrameHeight() * 2), 1); // Need to justify the usage of GetFrameHeight for y coordinate
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 0.2f, ImGui::GetIO().DisplaySize.y), 2);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(58.0f, ImGui::GetIO().DisplaySize.y), ImVec2(ImGui::GetIO().DisplaySize.x * 0.9f, ImGui::GetIO().DisplaySize.y));
-
-    ImGui::Begin("Palette");
+    ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, -1), false, ImGuiWindowFlags_NoScrollWithMouse);
 
     // Left side
     ImGui::Columns(2);
@@ -195,7 +186,7 @@ void Palette::show()
     // Render list of blocks
     drawBlockBrowser(contents);
 
-    ImGui::End();
+    ImGui::EndChild();
 }
 
 void Palette::exit() 

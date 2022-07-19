@@ -57,13 +57,10 @@ UI::UI() {
     (void)m_io;
 
     ImNodes::CreateContext();
-     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsClassic();
     ImNodes::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-
     ImGui_ImplSDL2_InitForOpenGL(m_window, gl_context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
@@ -96,22 +93,21 @@ bool UI::show(bool done, Context &m_context) {
     ImGui::NewFrame();
 
     // set up UI
-
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
-    static bool use_work_area = true;
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
-    ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size); 
-
     auto flags = ImGuiWindowFlags_MenuBar;
     ImGui::Begin("Dynamite Editor", NULL, flags);
-
     m_menu.show();
-    m_editor.show(m_context);
-    m_palette.show(); 
-    m_multipanel.show();
+
+    UI::setSplitter();
+    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f);
+    m_palette.show(s_LeftPaneSize); 
+    ImGui::SameLine(0.0f, s_SplitterSize);
+    m_editor.show(m_context, s_RightPaneSize);
+
+    m_multipanel.show(); 
+
     m_context.addLink();
     int link_id = 0;
     m_context.deleteLink(link_id);
@@ -145,4 +141,25 @@ void UI::exit() {
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(m_window);
     SDL_Quit();
+}
+
+
+void UI::setSplitter() {
+    auto availableRegion = ImGui::GetContentRegionAvail();
+    if (s_SplitterArea != availableRegion.x)
+    {
+        if (s_SplitterArea == 0.0f)
+        {
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.25f);
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        }
+        else
+        {
+            auto ratio = availableRegion.x / s_SplitterArea;
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = s_LeftPaneSize * ratio;
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        }
+    }
 }
