@@ -156,7 +156,6 @@ bool UI::show(bool done, Context &m_context) {
     Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f); // 
     ImGui::BeginChild("##central canvas", ImVec2(s_RightPaneSize, -1), false, 0); */
     //ImGui::EndChild();
-    ImGui::ShowDemoWindow();
     m_menu.show();
     m_palette.show(); 
 
