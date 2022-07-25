@@ -4,7 +4,7 @@
 #include <imnodes.h>
 
 #include "ui.h"
-// #include "state.h"
+#include "state.h"
 #include <string>
 
 using namespace std;
@@ -17,9 +17,10 @@ public:
     ImNodesEditorContext* m_context; 
     //Context m_context;
 
+    State m_state;
+
     Dynamite();
     void init();
-    int python_test();
     bool show(bool done);
     void exit();
 };

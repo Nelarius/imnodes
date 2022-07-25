@@ -11,8 +11,6 @@ struct Blocks
 
 class Palette {
     private: 
-        std::vector<std::string> listDSPBlocks();
-        std::vector<std::string> listControlBlocks();
         void drawBlockBrowser(Blocks contents);
     public:
         Palette();

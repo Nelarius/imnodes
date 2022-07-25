@@ -2,8 +2,12 @@
 #include <imgui.h>
 #include <vector>
 #include <string>
+#include "state.h"
 
 using namespace std;
+
+// Retrieved from state.h
+extern struct BlockNames names;
 
 Palette::Palette() 
 {
@@ -30,104 +34,79 @@ void Palette::init()
     style->Colors[ImGuiCol_FrameBgHovered] = ImColor(37, 36, 37, 255);
 }
 
-std::vector<std::string> Palette::listDSPBlocks() 
-{
-    std::vector<std::string> list = 
-    {
-        "adaptive_limiter", 
-        "array_sub_system", 
-        "delay_line",
-        "dot_product",
-        "dynamic_hi_pass",
-        "energy_sum_bass_manager",
-        "excursion_control",
-        "excursion_control_sub",
-        "gain_fb",
-        "iir",
-        "limiter",
-        "meter",
-        "meter_exp",
-        "meter_peak",
-        "mixer",
-        "multi_gain",
-        "multi_therm_control",
-        "port_noise_control",
-        "power_source_control",
-        "ramp_iir",
-        "signal_generator",
-        "smooth_multi_gain",
-        "soft_clipper",
-        "sonar_spatial_processing",
-        "squancher",
-        "thermal_estimator",
-        "tone_control",
-        "weighted_sum",
-        "xfade_ramp_iir"
-    };
-    return list;
-}
-
-std::vector<std::string> Palette::listControlBlocks() 
-{
-    std::vector<std::string> list = 
-    {
-        "amp_clip",
-        "dummy_control",
-        "energy_feedback",
-        "gain_fb",
-        "soft_clip",
-        "speaker_size_crossover",
-        "speaker_size_gain",
-        "split_tone_handler",
-        "tone_handler"
-    };
-    return list;
-}
-
 void Palette::drawBlockBrowser(Blocks contents)
 {
     static ImGuiTextFilter filter;
     filter.Draw("Search", ImGui::GetContentRegionAvail().x); // Need to fix inputTextHint in imgui.cpp
-    if (ImGui::ListBoxHeader("##BlockBrowserList", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y)))
+
+    static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen;
+    static bool drag_and_drop = true;
+
+    int block_types_len = static_cast<int>(contents.block_types.size());
+    for (int i = 0; i < block_types_len; i++)
     {
-        for (const auto& block_type : contents.block_types)
+        ImGuiTreeNodeFlags node_flags = base_flags;
+        // Tree node for block types
+        bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, contents.block_types[i].c_str(), i);
+
+        if (node_open)
         {
-            if (filter.PassFilter(block_type.c_str()))
+            // Leaf node for io blocks
+            if (contents.block_types[i] == "IO Blocks") 
             {
-                if (ImGui::TreeNodeEx(block_type.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) 
+                for (const auto& io_block : contents.io_blocks)
                 {
-                    if (block_type == "IO Blocks") 
+                    if (filter.PassFilter(io_block.c_str())) // Search bar filter for io blocks
                     {
-                        for (const auto& io_block : contents.io_blocks) 
+                        node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+                        ImGui::TreeNodeEx(io_block.c_str(), node_flags);
+                        if (drag_and_drop && ImGui::BeginDragDropSource())
                         {
-                            ImGui::Text("%s", io_block.c_str()); 
-                            ImGui::Indent();
-                            ImGui::TreePop();
+                            ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                            ImGui::Text("This is a drag and drop source");
+                            ImGui::EndDragDropSource();
                         }
                     }
-                    else if (block_type == "DSP Blocks")
-                    {
-                        for (const auto& dsp_block : contents.dsp_blocks) 
-                        {
-                            ImGui::Text("%s", dsp_block.c_str()); 
-                            ImGui::Indent();
-                            ImGui::TreePop();
-                        }
-                    }
-                    else 
-                    {
-                        for (const auto& control_block : contents.control_blocks) 
-                        {
-                            ImGui::Text("%s", control_block.c_str()); 
-                            ImGui::Indent();
-                            ImGui::TreePop();
-                        }
-                    }
-                    ImGui::TreePop();
-                }               
+                }
             }
+            // Leaf node for dsp blocks
+            else if (contents.block_types[i] == "DSP Blocks")
+            {
+                for (const auto& dsp_block : contents.dsp_blocks) 
+                {
+                    if (filter.PassFilter(dsp_block.c_str())) // Search bar filter for dsp blocks
+                    {
+                        node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+                        ImGui::TreeNodeEx(dsp_block.c_str(), node_flags);
+                        if (drag_and_drop && ImGui::BeginDragDropSource())
+                        {
+                            ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                            ImGui::Text("This is a drag and drop source");
+                            ImGui::EndDragDropSource();
+                        }
+                    }
+                }
+            }
+            // Leaf node for control blocks
+            else 
+            {
+                for (const auto& control_block : contents.control_blocks)
+                {
+                    if (filter.PassFilter(control_block.c_str())) // Search bar filter for control blocks
+                    {
+                        node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+                        ImGui::TreeNodeEx(control_block.c_str(), node_flags);
+                        if (drag_and_drop && ImGui::BeginDragDropSource())
+                        {
+                            ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                            ImGui::Text("This is a drag and drop source");
+                            ImGui::EndDragDropSource();
+                        }
+                    }
+                }
+            }
+            ImGui::TreePop();
         }
-        ImGui::ListBoxFooter();
     }
 }
 
@@ -178,19 +157,23 @@ void Palette::show()
     
     // Block browser tab
     static std::vector<std::string> block_types;
-    if (tab == 1 && block_types.empty()) 
+    static std::vector<std::string> io_blocks;
+    static std::vector<std::string> dsp_blocks;
+    static std::vector<std::string> control_blocks;
+    if (tab == 1 && block_types.empty())
     {
         block_types = { "IO Blocks", "DSP Blocks", "Control Blocks" };
+        io_blocks = { "input", "output" };
+        dsp_blocks = names.dsp_names;
+        control_blocks = names.control_names;
     }
-
-    static std::vector<std::string> io_blocks = { "input", "output" };
 
     // Blocks list initialization
     struct Blocks contents;
     contents.block_types = block_types;
     contents.io_blocks = io_blocks;
-    contents.dsp_blocks = listDSPBlocks();
-    contents.control_blocks = listControlBlocks();
+    contents.dsp_blocks = dsp_blocks;
+    contents.control_blocks = control_blocks;
 
     // Render list of blocks
     drawBlockBrowser(contents);
