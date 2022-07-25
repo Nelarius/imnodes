@@ -44,8 +44,6 @@ int Dynamite::python_test() {
 }
 
 bool Dynamite::show(bool done) {
-    // loadContext, return a context or smth 
-    // then go display context 
     return done = m_ui.show(done, m_context); 
 }
 

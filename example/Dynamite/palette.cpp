@@ -128,10 +128,9 @@ void Palette::drawBlockBrowser(Blocks contents)
     }
 }
 
-void Palette::show(float s_LeftPaneSize) 
+void Palette::show() 
 {
-    ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, -1), false, ImGuiWindowFlags_NoScrollWithMouse);
-
+    ImGui::Begin("##palette");
     // Left side
     ImGui::Columns(2);
     ImGui::SetColumnOffset(1, 50);
@@ -186,7 +185,7 @@ void Palette::show(float s_LeftPaneSize)
     // Render list of blocks
     drawBlockBrowser(contents);
 
-    ImGui::EndChild();
+    ImGui::End();
 }
 
 void Palette::exit() 

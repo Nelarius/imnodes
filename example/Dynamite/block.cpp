@@ -10,22 +10,38 @@ Block::Block(const int i) {
     name = "Block"; input = "IN"; output = "OUT";
 }
 
+int Block::getID() {
+    return this->id;
+}
+string Block::getName() {
+    return this->name;
+}
+string Block::getInput() {
+    return this->input;
+}
+string Block::getOutput() {
+    return this->output;
+}
+
 void Block::show() {
     ImNodes::BeginNode(id);
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted(name.c_str());
     ImNodes::EndNodeTitleBar();
 
-    ImNodes::BeginInputAttribute(id << 8);
-    ImGui::TextUnformatted(input.c_str());
-    ImNodes::EndInputAttribute();
+    for (int i = 0; i < numInCh; i++) {
+        ImNodes::BeginInputAttribute(i << 8);
+        ImGui::TextUnformatted(input.c_str());
+        ImNodes::EndInputAttribute();
+    }
 
-    ImNodes::BeginOutputAttribute(id << 24);
-    const float text_width = ImGui::CalcTextSize(output.c_str()).x;
-    ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
-    ImGui::TextUnformatted(output.c_str());
-    ImNodes::EndOutputAttribute();  
-
+    for (int i = 0; i < numOutCh; i++) {
+        ImNodes::BeginOutputAttribute(i << 24);
+        const float text_width = ImGui::CalcTextSize(output.c_str()).x;
+        ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
+        ImGui::TextUnformatted(output.c_str());
+        ImNodes::EndOutputAttribute();  
+    }
     ImNodes::EndNode();
 }
 

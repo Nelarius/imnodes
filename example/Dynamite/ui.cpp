@@ -95,23 +95,87 @@ bool UI::show(bool done, Context &m_context) {
     // set up UI
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-
-    auto flags = ImGuiWindowFlags_MenuBar;
+    auto flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar;
     ImGui::Begin("Dynamite Editor", NULL, flags);
+
+    // can we even do two vertically divided regions? 
+    /*
+    auto availableRegion = ImGui::GetContentRegionAvail();
+    static float s_SplitterSize     = 6.0f;
+    static float s_SplitterArea     = 0.0f;
+    static float s_TopPaneSize     = 0.0f;
+    static float s_BottomPaneSize    = 0.0f;
+
+    if (s_SplitterArea != availableRegion.y)
+    {
+        if (s_SplitterArea == 0.0f)
+        {
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = ImFloor(availableRegion.y * 0.75f);
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
+        }
+        else
+        {
+            auto ratio = availableRegion.y / s_SplitterArea;
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = s_TopPaneSize * ratio;
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
+        }
+    } 
+    Splitter(false, s_SplitterSize, &s_TopPaneSize, &s_BottomPaneSize, 100.0f, 100.0f); 
+    ImGui::BeginChild("##palette", ImVec2(-1, s_TopPaneSize), false, ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::EndChild();
+    ImGui::SameLine(0.0f, s_SplitterSize);
+    ImGui::BeginChild("##canvas", ImVec2(-1, s_BottomPaneSize), false, ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::EndChild(); */
+
+/*
+    auto availableRegion = ImGui::GetContentRegionAvail();
+    static float s_SplitterSize     = 6.0f;
+    static float s_SplitterArea     = 0.0f;
+    static float s_LeftPaneSize     = 0.0f;
+    static float s_RightPaneSize    = 0.0f;
+
+    if (s_SplitterArea != availableRegion.x)
+    {
+        if (s_SplitterArea == 0.0f)
+        {
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.25f);
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        }
+        else
+        {
+            auto ratio = availableRegion.x / s_SplitterArea;
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = s_LeftPaneSize * ratio;
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        }
+    }
+
+    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f); // 
+    ImGui::BeginChild("##central canvas", ImVec2(s_RightPaneSize, -1), false, 0); */
+    //ImGui::EndChild();
+    ImGui::ShowDemoWindow();
     m_menu.show();
+    m_palette.show(); 
 
     UI::setSplitter();
-    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f);
-    m_palette.show(s_LeftPaneSize); 
-    ImGui::SameLine(0.0f, s_SplitterSize);
-    m_editor.show(m_context, s_RightPaneSize);
+    Splitter(false, s_SplitterSize, &s_TopPaneSize, &s_BottomPaneSize, 100.0f, 100.0f);
+    ImGui::BeginChild("##central canvas", ImVec2(-1, s_TopPaneSize), false, 0);
+    m_editor.show(m_context);
+    ImGui::EndChild();
 
-    m_multipanel.show(); 
+    ImGui::BeginChild("##multipanel", ImVec2(-1, s_BottomPaneSize), false, 0);
+    m_multipanel.show(m_editor, m_context); 
+    ImGui::EndChild();
 
     m_context.addLink();
     int link_id = 0;
     m_context.deleteLink(link_id);
-    ImGui::End();
+
+    ImGui::End(); 
+
 
     // Rendering
     ImGui::Render();
@@ -143,23 +207,22 @@ void UI::exit() {
     SDL_Quit();
 }
 
-
 void UI::setSplitter() {
     auto availableRegion = ImGui::GetContentRegionAvail();
-    if (s_SplitterArea != availableRegion.x)
+    if (s_SplitterArea != availableRegion.y)
     {
         if (s_SplitterArea == 0.0f)
         {
-            s_SplitterArea     = availableRegion.x;
-            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.25f);
-            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = ImFloor(availableRegion.y * 0.75f);
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
         }
         else
         {
-            auto ratio = availableRegion.x / s_SplitterArea;
-            s_SplitterArea     = availableRegion.x;
-            s_LeftPaneSize     = s_LeftPaneSize * ratio;
-            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+            auto ratio = availableRegion.y / s_SplitterArea;
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = s_TopPaneSize * ratio;
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
         }
     }
-}
+} 

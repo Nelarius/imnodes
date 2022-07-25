@@ -32,7 +32,9 @@ public:
     float s_SplitterSize    = 6.0f;
     float s_SplitterArea    = 0.0f;
     float s_LeftPaneSize    = 0.0f;
-    float s_RightPaneSize   = 0.0f;
+    float s_RightPaneSize   = 0.0f; 
+    float s_TopPaneSize    = 0.0f;
+    float s_BottomPaneSize   = 0.0f; 
 
     MenuBar m_menu;
     Editor m_editor;

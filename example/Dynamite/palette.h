@@ -17,6 +17,6 @@ class Palette {
     public:
         Palette();
         void init();
-        void show(float s_LeftPaneSize);
+        void show();
         void exit();
 }; 
