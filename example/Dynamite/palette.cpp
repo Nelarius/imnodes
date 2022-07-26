@@ -37,7 +37,7 @@ void Palette::init()
 void Palette::drawBlockBrowser(Blocks contents)
 {
     static ImGuiTextFilter filter;
-    filter.Draw("Search", ImGui::GetContentRegionAvail().x); // Need to fix inputTextHint in imgui.cpp
+    filter.Draw("##Search", ImGui::GetContentRegionAvail().x); // Need to fix inputTextHint in imgui.cpp
 
     static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen;
     static bool drag_and_drop = true;
@@ -63,7 +63,7 @@ void Palette::drawBlockBrowser(Blocks contents)
                         if (drag_and_drop && ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
-                            ImGui::Text("This is a drag and drop source");
+                            ImGui::Text(io_block.c_str());
                             ImGui::EndDragDropSource();
                         }
                     }
@@ -81,7 +81,7 @@ void Palette::drawBlockBrowser(Blocks contents)
                         if (drag_and_drop && ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
-                            ImGui::Text("This is a drag and drop source");
+                            ImGui::Text(dsp_block.c_str());
                             ImGui::EndDragDropSource();
                         }
                     }

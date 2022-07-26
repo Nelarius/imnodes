@@ -10,11 +10,17 @@ void MultiPanel::init() {
 }
 
 void MultiPanel::show(Editor m_editor, Context m_context) {
+    ImGui::NewLine();
+    /* DISPLAY BLOCK INFO HERE */
+    MultiPanel::showBlockInfo(m_editor, m_context);
+
+    /*
     // Flag allowing the tabs to be reorderable
     static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable;
 
     // Tab Bar
     // what are we using each of these tabs for? and where will block info go
+
     const char* names[3] = { "Inspector", "Output", "Terminal" };
     static bool opened[3] = { true, true, true }; // Persistent user state
     for (int n = 0; n < IM_ARRAYSIZE(opened); n++) // Checkbox for checking if tab closed or not (remove in the future)
@@ -34,15 +40,16 @@ void MultiPanel::show(Editor m_editor, Context m_context) {
 
             if (opened[n] && ImGui::BeginTabItem(names[n], &opened[n], ImGuiTabItemFlags_None))
             {
-                ImGui::Text("This is the %s tab!", names[n]);
+                //ImGui::Text("This is the %s tab!", names[n]);
                 ImGui::NewLine();
-                /* DISPLAY BLOCK INFO HERE */
+                /* DISPLAY BLOCK INFO HERE
                 MultiPanel::showBlockInfo(m_editor, m_context);
                 ImGui::EndTabItem();
             }
         }
         ImGui::EndTabBar();
     }
+    */
 }
 
 void MultiPanel::exit() {
