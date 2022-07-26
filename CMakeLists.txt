@@ -111,8 +111,8 @@ add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/example/Dynamite/ui.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/menubar.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/block.cpp
-    ${CMAKE_SOURCE_DIR}/example/Dynamite/context.h
-    ${CMAKE_SOURCE_DIR}/example/Dynamite/editor.h
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/context.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/editor.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/palette.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/multipanel.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/state.cpp

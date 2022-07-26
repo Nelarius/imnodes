@@ -57,13 +57,10 @@ UI::UI() {
     (void)m_io;
 
     ImNodes::CreateContext();
-     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsClassic();
     ImNodes::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-
     ImGui_ImplSDL2_InitForOpenGL(m_window, gl_context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
@@ -75,7 +72,7 @@ void UI::init() {
     m_palette.init();
 }
 
-bool UI::show(bool done) {
+bool UI::show(bool done, Context &m_context) {
     (void) done;
     
     SDL_Event event;
@@ -96,28 +93,115 @@ bool UI::show(bool done) {
     ImGui::NewFrame();
 
     // set up UI
+    ImGui::SetNextWindowPos(ImVec2(0.1f, 0.0f), 0, ImVec2(-0.25f, 0.0f));
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 0.8f, ImGui::GetIO().DisplaySize.y));
+    auto flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
+    ImGui::Begin("Dynamite Editor", NULL, flags); // begin menu bar + canvas + multipanel window
+    m_menu.show(); 
+
+    UI::setSplitter();
+    Splitter(false, s_SplitterSize, &s_TopPaneSize, &s_BottomPaneSize, 100.0f, 100.0f);
+    ImGui::BeginChild("##central canvas", ImVec2(-1, s_TopPaneSize), false, 0);
+    m_editor.show(m_context);
+    ImGui::EndChild();
+    
+    ImGui::BeginChild("##multipanel", ImVec2(-1, s_BottomPaneSize), false, 0);
+    m_multipanel.show(m_editor, m_context); 
+    ImGui::EndChild(); 
+
+    m_context.addLink();
+    int link_id = 0;
+    m_context.deleteLink(link_id);
 
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-
-    static bool use_work_area = true;
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
-    ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size); 
-
-    auto flags = ImGuiWindowFlags_MenuBar;
-    //bool* p_open = NULL;
-    ImGui::Begin("Dynamite Editor", NULL, flags);
-
-    m_menu.show();
-    //ImGui::TextUnformatted("A -- add node");
-    m_editor.show();
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 0.2f, ImGui::GetIO().DisplaySize.y));
+    flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
+    ImGui::Begin("##palette", NULL, flags);
     m_palette.show(); 
-    m_multipanel.show();
-    //context.addLink();
-    //int link_id = 0;
-    //context.deleteLink(link_id);
     ImGui::End();
+
+    ImGui::End(); // end menu bar + canvas + multipanel window
+
+    /*
+    auto availableRegion = ImGui::GetContentRegionAvail();
+    static float s_SplitterSize     = 6.0f;
+    static float s_SplitterArea     = 0.0f;
+    static float s_TopPaneSize     = 0.0f;
+    static float s_BottomPaneSize    = 0.0f;
+
+    if (s_SplitterArea != availableRegion.y) {
+        if (s_SplitterArea == 0.0f) {
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = ImFloor(availableRegion.y * 0.75f);
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
+        } else {
+            auto ratio = availableRegion.y / s_SplitterArea;
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = s_TopPaneSize * ratio;
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
+        }
+    } 
+    Splitter(false, s_SplitterSize, &s_TopPaneSize, &s_BottomPaneSize, 100.0f, 100.0f); 
+    ImGui::BeginChild("##palette", ImVec2(-1, s_TopPaneSize), false, ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::EndChild();
+    ImGui::SameLine(0.0f, s_SplitterSize);
+    ImGui::BeginChild("##canvas", ImVec2(-1, s_BottomPaneSize), false, ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::EndChild(); */
+    /*
+    auto availableRegion = ImGui::GetContentRegionAvail();
+    printf("available region.x = %f \n", availableRegion.x);
+    static float s_SplitterSize     = 6.0f;
+    static float s_SplitterArea     = 0.0f;
+    static float s_LeftPaneSize     = 0.0f;
+    static float s_RightPaneSize    = 0.0f;
+
+    if (s_SplitterArea != availableRegion.x) {
+        if (s_SplitterArea == 0.0f) {
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.33f);
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        } else {
+            auto ratio = availableRegion.x / s_SplitterArea;
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = s_LeftPaneSize * ratio;
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        }
+    }
+
+    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 50.0f, 50.0f);
+    ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, 0.0), false, 0); 
+    ImGui::EndChild();
+    ImGui::SameLine(0.0f, s_SplitterSize);
+
+    ImGui::BeginChild("##right hand side", ImVec2(s_RightPaneSize, 0.0), false, 0); 
+    availableRegion = ImGui::GetContentRegionAvail();
+    s_SplitterArea     = 0.0f;
+    s_LeftPaneSize     = 0.0f;
+    s_RightPaneSize    = 0.0f;
+
+    if (s_SplitterArea != availableRegion.x) {
+        if (s_SplitterArea == 0.0f) {
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.33f);
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        } else {
+            auto ratio = availableRegion.x / s_SplitterArea;
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = s_LeftPaneSize * ratio;
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        }
+    }
+
+    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 50.0f, 50.0f);
+    ImGui::BeginChild("##editor", ImVec2(s_LeftPaneSize, 0.0), false, 0); 
+    m_editor.show(m_context);
+    ImGui::EndChild();
+    ImGui::SameLine(0.0f, s_SplitterSize);
+
+    ImGui::BeginChild("##multipurpose panel", ImVec2(0.0, 0.0), false, 0); 
+    ImGui::EndChild();
+
+    ImGui::EndChild(); */
 
     // Rendering
     ImGui::Render();
@@ -134,8 +218,8 @@ bool UI::show(bool done) {
     return done;
 }
 
-void UI::exit(ImNodesEditorContext* context) {
-    m_editor.exit(context);
+void UI::exit() {
+    m_editor.exit();
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
@@ -148,3 +232,23 @@ void UI::exit(ImNodesEditorContext* context) {
     SDL_DestroyWindow(m_window);
     SDL_Quit();
 }
+
+void UI::setSplitter() {
+    auto availableRegion = ImGui::GetContentRegionAvail();
+    if (s_SplitterArea != availableRegion.y)
+    {
+        if (s_SplitterArea == 0.0f)
+        {
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = ImFloor(availableRegion.y * 0.75f);
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
+        }
+        else
+        {
+            auto ratio = availableRegion.y / s_SplitterArea;
+            s_SplitterArea     = availableRegion.y;
+            s_TopPaneSize     = s_TopPaneSize * ratio;
+            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
+        }
+    }
+} 

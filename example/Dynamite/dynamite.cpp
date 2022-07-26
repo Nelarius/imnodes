@@ -1,23 +1,20 @@
 #include "dynamite.h"
 // #include <stdio.h>
 
-Dynamite::Dynamite() {
-    // saved context state loaded from metadata
-    m_context = ImNodes::EditorContextCreate();
-    ImNodes::EditorContextSet(m_context);
-} 
+Dynamite::Dynamite() { } 
 
 void Dynamite::init() {
     m_state.init();
     m_ui.init();
+    m_context.init();
 }
 
 bool Dynamite::show(bool done) {
-    return done = m_ui.show(done); 
+    return done = m_ui.show(done, m_context); 
 }
 
 void Dynamite::exit() {
-    m_ui.exit(m_context);
+    m_ui.exit();
 }
 
 
