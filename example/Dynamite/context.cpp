@@ -1,5 +1,7 @@
 #include "context.h"
 
+struct BlockNames names;
+
 Context::Context() {}
 
 /*Context::~Context() {
@@ -7,6 +9,11 @@ Context::Context() {}
 }*/
 
 void Context::init() {
+    // Calling dyndsp_wrapper
+    names.dsp_names = m_wrapper.get_dsp_list();
+    names.control_names = m_wrapper.get_control_list();
+
+    // Rendering editor context
     m_context = ImNodes::EditorContextCreate();
     ImNodes::EditorContextSet(m_context);
 }

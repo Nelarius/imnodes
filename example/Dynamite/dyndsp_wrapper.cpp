@@ -1,4 +1,4 @@
-#include "state.h" 
+#include "dyndsp_wrapper.h" 
 #include <Python.h>
 #include "pyhelper.h"
 #include <vector>
@@ -16,7 +16,7 @@ std::vector<std::string> DyndspWrapper::get_dsp_list()
     // Provide path for Python to find file
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.path.append(\"./example/Dynamite\")");
-    // PyRun_SimpleString("print(sys.path)");
+    PyRun_SimpleString("print(sys.path)");
 
     // Find a Python file named run_test.py
     CPyObject pName = PyUnicode_FromString("run_test");
@@ -62,7 +62,7 @@ std::vector<std::string> DyndspWrapper::get_control_list()
     // Provide path for Python to find file
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.path.append(\"./example/Dynamite\")");
-    // PyRun_SimpleString("print(sys.path)");
+    PyRun_SimpleString("print(sys.path)");
 
     // Find a Python file named run_test.py
     CPyObject pName = PyUnicode_FromString("run_test");

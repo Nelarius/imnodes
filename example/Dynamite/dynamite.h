@@ -5,7 +5,6 @@
 
 #include "ui.h"
 #include "context.h"
-#include "state.h"
 #include <string>
 
 using namespace std;
@@ -17,8 +16,6 @@ public:
     UI m_ui; 
     //ImNodesEditorContext* context; 
     Context m_context;
-
-    State m_state;
 
     Dynamite();
     void init();

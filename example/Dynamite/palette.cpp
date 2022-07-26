@@ -2,11 +2,11 @@
 #include <imgui.h>
 #include <vector>
 #include <string>
-#include "state.h"
+#include "context.h"
 
 using namespace std;
 
-// Retrieved from state.h
+// Retrieved from context.h
 extern struct BlockNames names;
 
 Palette::Palette() 

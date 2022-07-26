@@ -3,12 +3,18 @@
 #include <imgui.h>
 #include <imnodes.h>
 #include "block.h"
+#include "dyndsp_wrapper.h"
 
 #include <SDL_scancode.h>
 #include <vector>
 #include <iostream>
 
 using namespace std;
+
+struct BlockNames 
+{
+    std::vector<std::string> dsp_names, control_names;
+};
 
 struct Link 
 {
@@ -21,6 +27,7 @@ class Context {
     
 public:
 
+    DyndspWrapper m_wrapper;
     ImNodesEditorContext* m_context = nullptr;
     std::vector<Block>    _blocks;
     std::vector<Link>     _links;

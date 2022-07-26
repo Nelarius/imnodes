@@ -4,7 +4,6 @@
 Dynamite::Dynamite() { } 
 
 void Dynamite::init() {
-    m_state.init();
     m_ui.init();
     m_context.init();
 }
