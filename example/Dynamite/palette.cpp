@@ -63,7 +63,7 @@ void Palette::drawBlockBrowser(Blocks contents)
                         if (drag_and_drop && ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
-                            ImGui::Text(io_block.c_str());
+                            ImGui::Text("%s", io_block.c_str());
                             ImGui::EndDragDropSource();
                         }
                     }
@@ -81,7 +81,7 @@ void Palette::drawBlockBrowser(Blocks contents)
                         if (drag_and_drop && ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
-                            ImGui::Text(dsp_block.c_str());
+                            ImGui::Text("%s", dsp_block.c_str());
                             ImGui::EndDragDropSource();
                         }
                     }
@@ -99,7 +99,7 @@ void Palette::drawBlockBrowser(Blocks contents)
                         if (drag_and_drop && ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
-                            ImGui::Text("This is a drag and drop source");
+                            ImGui::Text("%s", control_block.c_str());
                             ImGui::EndDragDropSource();
                         }
                     }
