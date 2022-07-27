@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 # set(CMAKE_OSX_DEPLOYMENT_TARGET "12.3" CACHE STRING "Minimum Mac OS X deployment version" FORCE)
 
 project(imnodes)
@@ -29,10 +29,14 @@ target_link_libraries(imnodes PUBLIC imgui::imgui)
 # Python
 
 message("*****************************************")
+set(CMAKE_FIND_FRAMEWORK LAST)
+set(Python_FIND_VIRTUALENV FIRST)
+set(Python_FIND_UNVERSIONED_NAMES FIRST)
 message("MAC OS " ${CMAKE_OSX_SYSROOT})
 message("Python_ROOT " ${Python_ROOT})
 find_package(Python REQUIRED COMPONENTS Interpreter Development)
 
+message("Python_EXECUTABLE " ${Python_EXECUTABLE})
 message("Python_FOUND " ${Python_FOUND})
 message("Python_Interpreter_FOUND " ${Python_Interpreter_FOUND})
 message("Python_Development_FOUND " ${Python_Development_FOUND})
