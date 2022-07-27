@@ -11,7 +11,7 @@ void MultiPanel::init() {
 
 void MultiPanel::show(Editor m_editor, Context m_context) {
     ImGui::NewLine();
-    /* DISPLAY BLOCK INFO HERE */
+    // DISPLAY BLOCK INFO HERE
     MultiPanel::showBlockInfo(m_editor, m_context);
 
     /*
@@ -42,7 +42,7 @@ void MultiPanel::show(Editor m_editor, Context m_context) {
             {
                 //ImGui::Text("This is the %s tab!", names[n]);
                 ImGui::NewLine();
-                /* DISPLAY BLOCK INFO HERE
+                // DISPLAY BLOCK INFO HERE
                 MultiPanel::showBlockInfo(m_editor, m_context);
                 ImGui::EndTabItem();
             }
