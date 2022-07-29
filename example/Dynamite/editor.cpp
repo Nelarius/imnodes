@@ -53,9 +53,10 @@ void Editor::showPopup() {
     
 }
 
-int Editor::isBlockHovered() {
+int Editor::isBlockClicked() {
     int nodeid;
-    if (ImNodes::IsNodeHovered(&nodeid)) {
+    ImNodes::GetSelectedNodes(&nodeid);
+    if (ImNodes::IsNodeSelected(nodeid)) {
         return nodeid;
     }
     return 0;

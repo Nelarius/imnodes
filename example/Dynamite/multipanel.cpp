@@ -59,7 +59,7 @@ void MultiPanel::exit() {
 }
 
 void MultiPanel::showBlockInfo(Editor m_editor, Context m_context) {
-    int nodeid = m_editor.isBlockHovered();
+    int nodeid = m_editor.isBlockClicked();
     if (nodeid != 0) {
         for (Block& block : m_context._blocks) {
             if (nodeid == block.getID()) {

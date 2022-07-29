@@ -33,5 +33,5 @@ public:
     void displayInEditor(Context m_context);
     void clickHandler();
     void showPopup();
-    int isBlockHovered();
+    int isBlockClicked();
 };
