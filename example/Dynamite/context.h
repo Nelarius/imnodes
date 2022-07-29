@@ -7,13 +7,18 @@
 
 #include <SDL_scancode.h>
 #include <vector>
-#include <iostream>
+#include <map>
 
 using namespace std;
 
 struct BlockNames 
 {
     std::vector<std::string> dsp_names, control_names;
+};
+
+struct BlockParameters
+{
+    std::map<std::string, std::vector<std::string>> parameter_list;
 };
 
 struct Link 
@@ -38,7 +43,7 @@ public:
         //~Context();
         void init();
         void loadContext(); 
-        void update();
+        void update(string blockname);
         int addBlock();
         void addLink();
         void deleteLink(int link_id);

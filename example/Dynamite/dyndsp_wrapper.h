@@ -7,4 +7,5 @@ class DyndspWrapper {
     public:
         std::vector<std::string> get_dsp_list();
         std::vector<std::string> get_control_list();
+        std::vector<std::string> get_parameters(std::string block_name);
 };

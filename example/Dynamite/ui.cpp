@@ -93,31 +93,31 @@ bool UI::show(bool done, Context &m_context) {
     ImGui::NewFrame();
 
     // set up UI
-    ImGui::SetNextWindowPos(ImVec2(0.1f, 0.0f), 0, ImVec2(-0.25f, 0.0f));
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 0.8f, ImGui::GetIO().DisplaySize.y));
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), 0, ImVec2(0.0f, 0.0f));
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y * 0.75f));
     auto flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
     ImGui::Begin("Dynamite Editor", NULL, flags); // begin menu bar + canvas + multipanel window
     m_menu.show(); 
 
     UI::setSplitter();
-    Splitter(false, s_SplitterSize, &s_TopPaneSize, &s_BottomPaneSize, 100.0f, 100.0f);
-    ImGui::BeginChild("##central canvas", ImVec2(-1, s_TopPaneSize), false, 0);
-    m_editor.show(m_context);
+    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f);
+    ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, -1), false, 0);
+    m_palette.show();
     ImGui::EndChild();
-    
-    ImGui::BeginChild("##multipanel", ImVec2(-1, s_BottomPaneSize), false, 0);
-    m_multipanel.show(m_editor, m_context); 
+    ImGui::SameLine(0.0f, s_SplitterSize);
+    ImGui::BeginChild("##central canvas", ImVec2(s_RightPaneSize, -1), false, 0);
+    m_editor.show(m_context); 
     ImGui::EndChild(); 
 
     m_context.addLink();
     int link_id = 0;
     m_context.deleteLink(link_id);
 
-    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 0.2f, ImGui::GetIO().DisplaySize.y));
+    ImGui::SetNextWindowPos(ImVec2(0.0f, ImGui::GetIO().DisplaySize.y * 0.755f));
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y * 0.246f));
     flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
-    ImGui::Begin("##palette", NULL, flags);
-    m_palette.show(); 
+    ImGui::Begin("##multipanel", NULL, flags);
+    m_multipanel.show(m_editor, m_context); 
     ImGui::End();
 
     ImGui::End(); // end menu bar + canvas + multipanel window
@@ -235,20 +235,17 @@ void UI::exit() {
 
 void UI::setSplitter() {
     auto availableRegion = ImGui::GetContentRegionAvail();
-    if (s_SplitterArea != availableRegion.y)
+    if (s_SplitterArea != availableRegion.x) 
     {
-        if (s_SplitterArea == 0.0f)
-        {
-            s_SplitterArea     = availableRegion.y;
-            s_TopPaneSize     = ImFloor(availableRegion.y * 0.75f);
-            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
-        }
-        else
-        {
-            auto ratio = availableRegion.y / s_SplitterArea;
-            s_SplitterArea     = availableRegion.y;
-            s_TopPaneSize     = s_TopPaneSize * ratio;
-            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
+        if (s_SplitterArea == 0.0f) {
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.2f);
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
+        } else {
+            auto ratio = availableRegion.x / s_SplitterArea;
+            s_SplitterArea     = availableRegion.x;
+            s_LeftPaneSize     = s_LeftPaneSize * ratio;
+            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
         }
     }
 } 

@@ -9,6 +9,8 @@ using namespace std;
 // Retrieved from context.h
 extern struct BlockNames names;
 
+struct FromPalette block_info;
+
 Palette::Palette() 
 {
     // do nothing
@@ -40,7 +42,6 @@ void Palette::drawBlockBrowser(Blocks contents)
     filter.Draw("##Search", ImGui::GetContentRegionAvail().x); // Need to fix inputTextHint in imgui.cpp
 
     static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen;
-    static bool drag_and_drop = true;
 
     int block_types_len = static_cast<int>(contents.block_types.size());
     for (int i = 0; i < block_types_len; i++)
@@ -60,9 +61,14 @@ void Palette::drawBlockBrowser(Blocks contents)
                     {
                         node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                         ImGui::TreeNodeEx(io_block.c_str(), node_flags);
-                        if (drag_and_drop && ImGui::BeginDragDropSource())
+                        if (ImGui::IsItemClicked()) 
                         {
-                            ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                            block_info.clicked = true;
+                            block_info.block_name = io_block;
+                        }
+                        if (ImGui::BeginDragDropSource())
+                        {
+                            ImGui::SetDragDropPayload(io_block.c_str(), NULL, 0);
                             ImGui::Text("%s", io_block.c_str());
                             ImGui::EndDragDropSource();
                         }
@@ -78,9 +84,14 @@ void Palette::drawBlockBrowser(Blocks contents)
                     {
                         node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                         ImGui::TreeNodeEx(dsp_block.c_str(), node_flags);
-                        if (drag_and_drop && ImGui::BeginDragDropSource())
+                        if (ImGui::IsItemClicked()) 
                         {
-                            ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                            block_info.clicked = true;
+                            block_info.block_name = dsp_block;
+                        }
+                        if (ImGui::BeginDragDropSource())
+                        {
+                            ImGui::SetDragDropPayload(dsp_block.c_str(), NULL, 0);
                             ImGui::Text("%s", dsp_block.c_str());
                             ImGui::EndDragDropSource();
                         }
@@ -96,9 +107,14 @@ void Palette::drawBlockBrowser(Blocks contents)
                     {
                         node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                         ImGui::TreeNodeEx(control_block.c_str(), node_flags);
-                        if (drag_and_drop && ImGui::BeginDragDropSource())
+                        if (ImGui::IsItemClicked()) 
                         {
-                            ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                            block_info.clicked = true;
+                            block_info.block_name = control_block;
+                        }
+                        if (ImGui::BeginDragDropSource())
+                        {
+                            ImGui::SetDragDropPayload(control_block.c_str(), NULL, 0);
                             ImGui::Text("%s", control_block.c_str());
                             ImGui::EndDragDropSource();
                         }
@@ -117,12 +133,13 @@ void Palette::show()
     ImGui::SetColumnOffset(1, 50);
 
     // Rendering a gray vertical rectangle
-    const float palette_width = 47;
+    const float palette_width = 60;
     ImDrawList* drawListR = ImGui::GetWindowDrawList();
     drawListR->AddRectFilled(ImVec2(0, 0), ImVec2(palette_width, ImGui::GetIO().DisplaySize.y), IM_COL32(51, 51, 51, 255));
 
     static int tab = 0;
 
+    ImGui::NewLine();
     // Rendering all the buttons in a column
     ImGui::PushStyleColor(ImGuiCol_Button, tab == 1 ? IM_COL32(41, 40, 41, 255) : IM_COL32(31, 30, 31, 255));
     if (ImGui::Button("DSP", ImVec2(50 - 15, 40)))

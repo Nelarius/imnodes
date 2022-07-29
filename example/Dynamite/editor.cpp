@@ -1,13 +1,25 @@
 #include "editor.h"
 
+#include "palette.h"
+// Retrieved from palette.h
+extern struct FromPalette block_info;
+
 Editor::Editor() { }
 
 void Editor::show(Context &m_context) {
     ImNodes::BeginNodeEditor();
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-        ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A)) {
-        m_context.update();
+        ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A)) 
+    {
+        m_context.update("");
     }
+
+    if (block_info.clicked) 
+    {
+        m_context.update(block_info.block_name);
+        block_info.clicked = false;
+    }
+
     displayInEditor(m_context);
 
     ImNodes::MiniMap(0.1f, ImNodesMiniMapLocation_BottomRight);

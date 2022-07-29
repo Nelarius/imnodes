@@ -4,9 +4,17 @@
 #include <vector>
 #include <string>
 
+#include "context.h"
+
 struct Blocks
 {
     std::vector<std::string> block_types, io_blocks, dsp_blocks, control_blocks;
+};
+
+struct FromPalette
+{
+    bool clicked;
+    std::string block_name;
 };
 
 class Palette {

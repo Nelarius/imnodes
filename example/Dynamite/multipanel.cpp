@@ -1,5 +1,11 @@
 #include "multipanel.h"
+#include "context.h"
+#include <iostream>
+
 using namespace std;
+
+// Retrieved from context.h
+extern struct BlockParameters parameters;
 
 MultiPanel::MultiPanel() {
     // do nothing
@@ -10,11 +16,9 @@ void MultiPanel::init() {
 }
 
 void MultiPanel::show(Editor m_editor, Context m_context) {
-    ImGui::NewLine();
     // DISPLAY BLOCK INFO HERE
-    MultiPanel::showBlockInfo(m_editor, m_context);
+    // MultiPanel::showBlockInfo(m_editor, m_context);
 
-    /*
     // Flag allowing the tabs to be reorderable
     static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable;
 
@@ -23,14 +27,14 @@ void MultiPanel::show(Editor m_editor, Context m_context) {
 
     const char* names[3] = { "Inspector", "Output", "Terminal" };
     static bool opened[3] = { true, true, true }; // Persistent user state
-    for (int n = 0; n < IM_ARRAYSIZE(opened); n++) // Checkbox for checking if tab closed or not (remove in the future)
-    {
-        if (n > 0) 
-        { 
-            ImGui::SameLine(); 
-        }
-        ImGui::Checkbox(names[n], &opened[n]);
-    }
+    // for (int n = 0; n < IM_ARRAYSIZE(opened); n++) // Checkbox for checking if tab closed or not (remove in the future)
+    // {
+    //     if (n > 0) 
+    //     { 
+    //         ImGui::SameLine(); 
+    //     }
+    //     ImGui::Checkbox(names[n], &opened[n]);
+    // }
 
     // Underlying bool* will be set to false when the tab is closed
     if (ImGui::BeginTabBar("MultiTabBar", tab_bar_flags))
@@ -40,7 +44,6 @@ void MultiPanel::show(Editor m_editor, Context m_context) {
 
             if (opened[n] && ImGui::BeginTabItem(names[n], &opened[n], ImGuiTabItemFlags_None))
             {
-                //ImGui::Text("This is the %s tab!", names[n]);
                 ImGui::NewLine();
                 // DISPLAY BLOCK INFO HERE
                 MultiPanel::showBlockInfo(m_editor, m_context);
@@ -49,7 +52,6 @@ void MultiPanel::show(Editor m_editor, Context m_context) {
         }
         ImGui::EndTabBar();
     }
-    */
 }
 
 void MultiPanel::exit() {
@@ -81,6 +83,15 @@ void MultiPanel::formatInfo(Block block) {
         ImGui::TextUnformatted(block.getOutput().c_str());
         ImGui::TableNextColumn();
         ImGui::TextUnformatted("Parameters:");
+        ImGui::Indent();
+
+        // Call to retrieve block parameters
+        std::vector<std::string> parameter_names = parameters.parameter_list[block.getName()];
+        for (auto name : parameter_names)
+        {
+            ImGui::TextUnformatted(name.c_str());
+        }
+
         ImGui::EndTable();
     }
 }
