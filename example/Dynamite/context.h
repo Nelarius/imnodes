@@ -43,8 +43,9 @@ public:
         //~Context();
         void init();
         void loadContext(); 
-        void update(string blockname);
+        void update(bool add, string blockname);
         int addBlock();
+        void deleteBlock(int node_id);
         void addLink();
         void deleteLink(int link_id);
 

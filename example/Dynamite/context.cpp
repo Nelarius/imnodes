@@ -36,15 +36,24 @@ void Context::init() {
 
 void Context::loadContext() { }
 
-void Context::update(string blockname) {
-    const int block_id = ++current_block_id;
-    ImNodes::SetNodeScreenSpacePos(block_id, ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y / 2));
-    ImNodes::SnapNodeToGrid(block_id);  //add to canvas
-    if (blockname == "") {
-        _blocks.push_back(Block(block_id));
-    } else {
-        // hard coded for the demo to have a single input and output channels
-        _blocks.push_back(Block(block_id, blockname, "IN", "OUT")); // load names from block library
+void Context::update(bool add, string blockname) {
+    if (add) // add a block
+    {
+        const int block_id = ++current_block_id;
+        ImNodes::SetNodeScreenSpacePos(block_id, ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y / 2));
+        ImNodes::SnapNodeToGrid(block_id);  //add to canvas
+        if (blockname == "") {
+            _blocks.push_back(Block(block_id));
+        } else {
+            // hard coded for the demo to have a single input and output channels
+            _blocks.push_back(Block(block_id, blockname, "IN", "OUT")); // load names from block library
+        }
+    }
+    else // delete a block
+    {
+        int nodeid = std::stoi(blockname);
+        ImNodes::ClearNodeSelection(nodeid);
+        deleteBlock(nodeid);
     }
 }
 
@@ -52,6 +61,15 @@ int Context::addBlock() {
     const int block_id = ++current_block_id;
     _blocks.push_back(Block(block_id, "DSPBlock", "IN", "OUT")); // load names from block library
     return block_id;
+}
+
+void Context::deleteBlock(int node_id) {
+    auto iter = std::find_if(
+        _blocks.begin(), _blocks.end(), [node_id](Block& block) -> bool {
+            return block.getID() == node_id;
+        });
+        assert(iter != _blocks.end());
+        _blocks.erase(iter);
 }
 
 void Context::addLink() {

@@ -1,4 +1,5 @@
 #include "editor.h"
+#include <string>
 
 #include "palette.h"
 // Retrieved from palette.h
@@ -8,16 +9,27 @@ Editor::Editor() { }
 
 void Editor::show(Context &m_context) {
     ImNodes::BeginNodeEditor();
+
+    // Adding a node by pressing "A" keyboard
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
         ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A)) 
     {
-        m_context.update("");
+        m_context.update(true, "");
     }
 
+    // Adding a node by clicking on palette
     if (block_info.clicked) 
     {
-        m_context.update(block_info.block_name);
+        m_context.update(true, block_info.block_name);
         block_info.clicked = false;
+    }
+
+    // Delete a node by pressing "D" or "delete" keyboard
+    int nodeid = isBlockClicked();
+    auto string_nodeid = std::to_string(nodeid);
+    if (nodeid != 0 && (ImGui::IsKeyReleased(SDL_SCANCODE_D) || ImGui::IsKeyReleased(SDL_SCANCODE_DELETE))) 
+    {
+        m_context.update(false, string_nodeid);
     }
 
     displayInEditor(m_context);
