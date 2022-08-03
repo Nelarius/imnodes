@@ -40,14 +40,18 @@ void Context::update(bool add, string blockname) {
     if (add) // add a block
     {
         const int block_id = ++current_block_id;
-        ImNodes::SetNodeScreenSpacePos(block_id, ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y / 2));
-        ImNodes::SnapNodeToGrid(block_id);  //add to canvas
-        if (blockname == "") {
-            _blocks.push_back(Block(block_id));
-        } else {
-            // hard coded for the demo to have a single input and output channels
-            _blocks.push_back(Block(block_id, blockname, "IN", "OUT")); // load names from block library
+        Block block(block_id, blockname);
+        for (int i = 0; i < 2; i++) {
+            block.addInPort(current_port_id, "INPUT");
+            ++current_port_id;
         }
+        for (int i = 0; i < 2; i++) {
+            block.addOutPort(current_port_id, "OUTPUT");
+            ++current_port_id;
+        }
+        ImNodes::SetNodeScreenSpacePos(block_id, ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y / 2));
+        ImNodes::SnapNodeToGrid(block_id);  // add to canvas
+        _blocks.push_back(block); // load names from block library
     }
     else // delete a block
     {
@@ -59,7 +63,7 @@ void Context::update(bool add, string blockname) {
 
 int Context::addBlock() {
     const int block_id = ++current_block_id;
-    _blocks.push_back(Block(block_id, "DSPBlock", "IN", "OUT")); // load names from block library
+    _blocks.push_back(Block(block_id, "DSPBlock")); // load names from block library
     return block_id;
 }
 

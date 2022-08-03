@@ -1,6 +1,7 @@
 #include "multipanel.h"
 #include "context.h"
-#include <iostream>
+#include <map>
+#include <iterator>
 
 using namespace std;
 
@@ -76,11 +77,19 @@ void MultiPanel::formatInfo(Block block) {
         ImGui::TableNextColumn();
         ImGui::TextUnformatted("Input:");
         ImGui::Indent();
-        ImGui::TextUnformatted(block.getInput().c_str());
+
+        map<int,string>::iterator itr;
+        for (itr = block._inPorts.begin(); itr != block._inPorts.end(); itr++) {
+            ImGui::TextUnformatted(itr->second.c_str());
+        }
+        
         ImGui::TableNextColumn();
         ImGui::TextUnformatted("Output:");
         ImGui::Indent();
-        ImGui::TextUnformatted(block.getOutput().c_str());
+        for (itr = block._outPorts.begin(); itr != block._outPorts.end(); itr++) {
+            ImGui::TextUnformatted(itr->second.c_str());
+        }
+
         ImGui::TableNextColumn();
         ImGui::TextUnformatted("Parameters:");
         ImGui::Indent();

@@ -6,32 +6,38 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <map>
+#include <iterator>
 
 using namespace std;
 
 class Block {
 
     int id;
-    int numInCh;
-    int numOutCh;
     string name;
-    string input;
-    string output;
-    bool is_active = true;
+    bool is_active = true;   
 
     public:
+
+        map<int, string> _inPorts;
+        map<int, string> _outPorts;
         
         Block();
         Block(const int i);
-        Block(const int i, string n) : id(i), name(n) {}
-        Block(const int i, string n, string in, string o) : id(i), name(n), input(in), output(o) {}
+        Block(const int i, string n);
 
         int getID();
         string getName();
         string getInput();
         string getOutput();
+        int getNumInputs();
+        int getNumOutputs();
+
         void show();
+        void addInPort(int current_port_id, string chan_name);
+        void addOutPort(int current_port_id, string chan_name);
+        void deleteInPort(int portid);
+        void deleteOutPort(int portid);
         void bypass();
         void deleteBlock(Block block);
-        
 };

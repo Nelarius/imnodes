@@ -32,6 +32,7 @@ public:
     void show(Context &m_context);
     void displayInEditor(Context m_context);
     void clickHandler();
-    void showPopup();
+    void showPopup(Context &m_context);
+    void deletePort(Context &m_context);
     int isBlockClicked();
 };

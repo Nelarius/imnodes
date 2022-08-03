@@ -38,6 +38,7 @@ public:
     std::vector<Link>     _links;
     int                   current_link_id = 0;
     int                   current_block_id = 0;
+    int                   current_port_id = 0;
 
         Context();
         //~Context();
