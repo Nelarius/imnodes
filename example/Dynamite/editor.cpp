@@ -77,7 +77,8 @@ void Editor::showPopup(Context &m_context) {
 static void addBlockInPort(Context &m_context, int nodeid) {
     for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
         if (m_context._blocks[i].getID() == nodeid) {
-            m_context._blocks[i].addInPort(m_context.current_port_id, "INPUT");
+            Port port(m_context.current_port_id, "INPUT");
+            m_context._blocks[i].addInPort(m_context.current_port_id, port);
             ++m_context.current_port_id;
         }
     }
@@ -87,7 +88,8 @@ static void addBlockInPort(Context &m_context, int nodeid) {
 static void addBlockOutPort(Context &m_context, int nodeid) {
     for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
         if (m_context._blocks[i].getID() == nodeid) {
-            m_context._blocks[i].addOutPort(m_context.current_port_id, "OUTPUT");
+            Port port(m_context.current_port_id, "OUTPUT");
+            m_context._blocks[i].addOutPort(m_context.current_port_id, port);
             ++m_context.current_port_id;
         }
     }
