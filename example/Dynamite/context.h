@@ -8,7 +8,6 @@
 #include <SDL_scancode.h>
 #include <vector>
 #include <map>
-#include <string>
 
 using namespace std;
 
@@ -35,7 +34,6 @@ public:
 
     DyndspWrapper m_wrapper;
     ImNodesEditorContext* m_context = nullptr;
-    std::string           system_name;
     std::vector<Block>    _blocks;
     std::vector<Link>     _links;
     int                   current_link_id = 0;

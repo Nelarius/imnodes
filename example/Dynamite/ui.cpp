@@ -102,7 +102,7 @@ bool UI::show(bool done, Context &m_context) {
     UI::setSplitter();
     Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f);
     ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, -1), false, 0);
-    m_palette.show(m_context);
+    m_palette.show();
     ImGui::EndChild();
     ImGui::SameLine(0.0f, s_SplitterSize);
     ImGui::BeginChild("##central canvas", ImVec2(s_RightPaneSize, -1), false, 0);

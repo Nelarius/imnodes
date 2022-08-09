@@ -4,8 +4,6 @@
 #include <string>
 #include "context.h"
 
-#include <iostream>
-
 using namespace std;
 
 // Retrieved from context.h
@@ -18,7 +16,7 @@ Palette::Palette()
     // do nothing
 }
 
-void Palette::init()
+void Palette::init() 
 {
     // Setting the style of palette components
     ImGuiStyle* style = &ImGui::GetStyle();
@@ -40,8 +38,6 @@ void Palette::init()
 
 void Palette::drawBlockBrowser(Blocks contents)
 {
-    ImGui::TextUnformatted("Block Browser");
-    // ImGui::NewLine();
     static ImGuiTextFilter filter;
     filter.Draw("##Search", ImGui::GetContentRegionAvail().x); // Need to fix inputTextHint in imgui.cpp
 
@@ -130,27 +126,7 @@ void Palette::drawBlockBrowser(Blocks contents)
     }
 }
 
-void Palette::drawSystemInfo(Context &m_context)
-{   
-    ImGui::TextUnformatted("System Information");
-    ImGui::NewLine();
-    ImGui::TextUnformatted("System name: ");
-    ImGui::SameLine();
-    static char systemname_field[40] = "";
-    // Check if system name already exists
-    if (m_context.system_name != "") {
-        std::strcpy(systemname_field, (m_context.system_name).c_str());
-    }
-    else {
-        std::strcpy(systemname_field, "");
-    }
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-    auto flag = ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_AutoSelectAll;
-    ImGui::InputText("##SystemName", systemname_field, 40, flag, PaletteFuncs::systemNameCallBack, (void *)&m_context);
-    ImGui::PopItemWidth();
-}
-
-void Palette::show(Context &m_context) 
+void Palette::show() 
 {
     // Left side
     ImGui::Columns(2);
@@ -172,61 +148,44 @@ void Palette::show(Context &m_context)
     }
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Button, tab == 2 ? IM_COL32(41, 40, 41, 255) : IM_COL32(31, 30, 31, 255));
-    if (ImGui::Button("SYS", ImVec2(50 - 15, 40)))
+    if (ImGui::Button("Out", ImVec2(50 - 15, 40)))
     {
         tab = 2;
     }
-    ImGui::Spacing();
+    ImGui::SetCursorPosY(ImGui::GetIO().DisplaySize.y * 0.9f);
     ImGui::PushStyleColor(ImGuiCol_Button, tab == 3 ? IM_COL32(41, 40, 41, 255) : IM_COL32(31, 30, 31, 255));
-    if (ImGui::Button("OUT", ImVec2(50 - 15, 40)))
+    if (ImGui::Button("Set", ImVec2(50 - 15, 40)))
     {
         tab = 3;
     }
-    ImGui::SetCursorPosY(ImGui::GetIO().DisplaySize.y * 0.9f);
-    ImGui::PushStyleColor(ImGuiCol_Button, tab == 4 ? IM_COL32(41, 40, 41, 255) : IM_COL32(31, 30, 31, 255));
-    if (ImGui::Button("SET", ImVec2(50 - 15, 40)))
-    {
-        tab = 4;
-    }
 
-    ImGui::PopStyleColor(4);
+    ImGui::PopStyleColor(3);
     
     // Right side
     ImGui::NextColumn();
     
     // Block browser tab
-    switch (tab)
+    static std::vector<std::string> block_types;
+    static std::vector<std::string> io_blocks;
+    static std::vector<std::string> dsp_blocks;
+    static std::vector<std::string> control_blocks;
+    if (tab == 1 && block_types.empty())
     {
-        case 1: {
-            static std::vector<std::string> block_types;
-            static std::vector<std::string> io_blocks;
-            static std::vector<std::string> dsp_blocks;
-            static std::vector<std::string> control_blocks;
-            if (tab == 1 && block_types.empty())
-            {
-                block_types = { "IO Blocks", "DSP Blocks", "Control Blocks" };
-                io_blocks = { "input", "output" };
-                dsp_blocks = names.dsp_names;
-                control_blocks = names.control_names;
-            }
-
-            // Blocks list initialization
-            struct Blocks contents;
-            contents.block_types = block_types;
-            contents.io_blocks = io_blocks;
-            contents.dsp_blocks = dsp_blocks;
-            contents.control_blocks = control_blocks;
-
-            // Render list of blocks
-            drawBlockBrowser(contents);
-            break;
-        }
-
-        case 2: {
-            drawSystemInfo(m_context);
-            break;
-        }
+        block_types = { "IO Blocks", "DSP Blocks", "Control Blocks" };
+        io_blocks = { "input", "output" };
+        dsp_blocks = names.dsp_names;
+        control_blocks = names.control_names;
     }
+
+    // Blocks list initialization
+    struct Blocks contents;
+    contents.block_types = block_types;
+    contents.io_blocks = io_blocks;
+    contents.dsp_blocks = dsp_blocks;
+    contents.control_blocks = control_blocks;
+
+    // Render list of blocks
+    drawBlockBrowser(contents);
 }
 
 void Palette::exit() 
