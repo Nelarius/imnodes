@@ -43,12 +43,12 @@ void Context::update(bool add, string blockname) {
         Block block(block_id, blockname);
         for (int i = 0; i < 2; i++) {
             Port port(current_port_id, "INPUT");
-            (block._inPorts).insert({current_port_id, port});
+            block.addInPort(current_port_id, port);
             ++current_port_id;
         }
         for (int i = 0; i < 2; i++) {
             Port port(current_port_id, "OUTPUT");
-            (block._outPorts).insert({current_port_id, port});
+            block.addOutPort(current_port_id, port);
             ++current_port_id;
         }
         ImNodes::SetNodeScreenSpacePos(block_id, ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y / 2));

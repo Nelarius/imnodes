@@ -100,9 +100,14 @@ void MultiPanel::formatInfo(Block& block) {
         ImGui::TextUnformatted("Input:");
         ImGui::Indent();
 
+        int channel_index = 1;
+
         // Input channels name text field generation
         for (const auto &itr : block._inPorts) {
-            ImGui::TextUnformatted((itr.second.type).c_str());
+            std::string numberedInput = "INPUT ";
+            numberedInput.append(std::to_string(channel_index));
+            ImGui::TextUnformatted(numberedInput.c_str());
+            ++channel_index;
             ImGui::SameLine();
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
             std::string textFieldID = "##InputName";
@@ -116,9 +121,15 @@ void MultiPanel::formatInfo(Block& block) {
         ImGui::TextUnformatted("Output:");
         ImGui::Indent();
 
+        // Reset index for output ports
+        channel_index = 1;
+
         // Output channels name text field generation
         for (const auto &itr : block._outPorts) {
-            ImGui::TextUnformatted((itr.second.type).c_str());
+            std::string numberedOutput = "OUTPUT ";
+            numberedOutput.append(std::to_string(channel_index));
+            ImGui::TextUnformatted(numberedOutput.c_str());
+            ++channel_index;
             ImGui::SameLine();
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
             std::string textFieldID = "##OutputName";
