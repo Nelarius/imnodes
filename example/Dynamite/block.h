@@ -11,16 +11,28 @@
 
 using namespace std;
 
+struct Port {
+    int id;
+    string type;
+    char name[40] = "";
+    Port() {};
+    Port(int n, string s) {
+        this->id = n;
+        this->type = s;
+    };
+};
+
 class Block {
 
     int id;
-    string name;
+    string type;
     bool is_active = true;   
 
     public:
+        string name;
 
-        map<int, string> _inPorts;
-        map<int, string> _outPorts;
+        map<int, Port> _inPorts;
+        map<int, Port> _outPorts;
         
         Block();
         Block(const int i);
@@ -28,14 +40,16 @@ class Block {
 
         int getID();
         string getName();
+        string getType();
         string getInput();
         string getOutput();
         int getNumInputs();
         int getNumOutputs();
 
         void show();
-        void addInPort(int current_port_id, string chan_name);
-        void addOutPort(int current_port_id, string chan_name);
+        void setName(string n);
+        void addInPort(int current_port_id, Port p);
+        void addOutPort(int current_port_id, Port p);
         void deleteInPort(int portid);
         void deleteOutPort(int portid);
         void bypass();

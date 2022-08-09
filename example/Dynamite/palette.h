@@ -17,12 +17,22 @@ struct FromPalette
     std::string block_name;
 };
 
+struct PaletteFuncs {
+    static int systemNameCallBack(ImGuiInputTextCallbackData* data) {
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
+            ((Context*)data->UserData)->system_name = (std::string(data->Buf));
+        }
+        return 0;
+    }
+};
+
 class Palette {
     private: 
         void drawBlockBrowser(Blocks contents);
+        void drawSystemInfo(Context &m_context);
     public:
         Palette();
         void init();
-        void show();
+        void show(Context &m_context);
         void exit();
 }; 

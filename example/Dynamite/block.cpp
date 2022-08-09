@@ -1,18 +1,19 @@
 #include "block.h"
+#include <iostream>
 
 Block::Block() {
     id = 0;
-    name = "Block";
+    type = "Block";
 }
 
 Block::Block(const int i) {
     id = i;
-    name = "Block";
+    type = "Block";
 }
 
 Block::Block(const int i, string n) {
     id = i;
-    name = n;
+    type = n;
 }
 
 int Block::getID() {
@@ -21,6 +22,10 @@ int Block::getID() {
 
 string Block::getName() {
     return this->name;
+}
+
+string Block::getType() {
+    return this->type;
 }
 
 int Block::getNumInputs() {
@@ -35,20 +40,22 @@ void Block::show() {
     ImNodes::BeginNode(id);
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted(name.c_str());
+    ImGui::NewLine();
+    ImGui::TextUnformatted(type.c_str());
     ImNodes::EndNodeTitleBar();
 
-    map<int,string>::iterator itr;
+    map<int,Port>::iterator itr;
     for (itr = _inPorts.begin(); itr != _inPorts.end(); itr++) {
         ImNodes::BeginInputAttribute(itr->first);
-        ImGui::TextUnformatted(itr->second.c_str());
+        ImGui::TextUnformatted(itr->second.name);
         ImNodes::EndInputAttribute();
     }
 
     for (itr = _outPorts.begin(); itr != _outPorts.end(); itr++) {
         ImNodes::BeginOutputAttribute(itr->first);
-        const float text_width = ImGui::CalcTextSize(itr->second.c_str()).x;
+        const float text_width = ImGui::CalcTextSize(itr->second.name).x;
         ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
-        ImGui::TextUnformatted(itr->second.c_str());
+        ImGui::TextUnformatted(itr->second.name);
         ImNodes::EndOutputAttribute(); 
     }
 
@@ -59,12 +66,15 @@ void Block::bypass() {
     // gets called by block -> pop up -> edit menu
 }
 
-void Block::addInPort(int current_port_id, string chan_name) {
-    _inPorts[current_port_id] = chan_name;
+void Block::setName(string n) {
+    this->name = n;
 }
 
-void Block::addOutPort(int current_port_id, string chan_name) {
-    _outPorts[current_port_id] = chan_name;
+void Block::addInPort(int current_port_id, Port p) {
+    _inPorts.insert({current_port_id, p});
+}
+void Block::addOutPort(int current_port_id, Port p) {
+    _outPorts.insert({current_port_id, p});
 }
 
 void Block::deleteInPort(int portid) {
