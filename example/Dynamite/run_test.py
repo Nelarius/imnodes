@@ -1,7 +1,13 @@
+# Standard Library
+from typing import List, TextIO, cast
+
+# Third Party
+import betterproto
+
 # Sonos
 import sonos.audio.dynamicdsp
 import sonos.audio.dynamicdsp.commands
-import sonos.coreaudio.dsp.v1alpha1
+import sonos.coreaudio.dsp.v1alpha1 as api
 
 def list_dsp():
     api_version = sonos.audio.dynamicdsp.ApiVersion.v1alpha1
@@ -22,3 +28,23 @@ def list_params(block_name):
         return ["none"]
     print(sorted(list_output))
     return sorted(list_output)
+
+def list_param_types(block_name):
+    if api.DspBlockParams()._betterproto.cls_by_field.get(block_name):
+        block_class = api.DspBlockParams()._betterproto.cls_by_field.get(block_name)
+
+    elif api.ControlBlockParams()._betterproto.cls_by_field.get(block_name):
+        block_class = api.ControlBlockParams()._betterproto.cls_by_field.get(block_name)
+
+    block_param_types = []
+    block = block_class()
+    for param in block.__dataclass_fields__.values():
+        try:
+            block_param_types.append(param.type.__name__)
+        except:
+            block_param_types.append(param.type.__class__.__name__)
+
+    if (not block_param_types):
+        return ["none"]
+    print(block_param_types)
+    return block_param_types

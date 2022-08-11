@@ -19,7 +19,8 @@ struct BlockNames
 
 struct BlockParameters
 {
-    std::map<std::string, std::vector<std::string>> parameter_list;
+    std::map<std::string, std::vector<std::string>> parameter_names_for_block;
+    std::map<std::string, std::vector<std::string>> parameter_types_for_block;
 };
 
 struct Link 
@@ -41,6 +42,7 @@ public:
     int                   current_link_id = 0;
     int                   current_block_id = 0;
     int                   current_port_id = 0;
+    int                   current_param_id = 0;
 
         Context();
         //~Context();

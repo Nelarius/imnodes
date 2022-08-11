@@ -100,7 +100,7 @@ std::vector<std::string> DyndspWrapper::get_control_list()
     return control_blocknames;
 }
 
-std::vector<std::string> DyndspWrapper::get_parameters(std::string block_name) 
+std::vector<std::string> DyndspWrapper::get_parameter_names(std::string block_name) 
 {
     std::vector<std::string> parameters_names;
 
@@ -142,4 +142,48 @@ std::vector<std::string> DyndspWrapper::get_parameters(std::string block_name)
         printf("ERROR: Module not imported\n");
     }
     return parameters_names;
+}
+
+std::vector<std::string> DyndspWrapper::get_parameter_types(std::string block_name) 
+{
+    std::vector<std::string> parameters_types;
+
+    // Find a Python file named run_test.py
+    CPyObject pName = PyUnicode_FromString("run_test");
+    CPyObject pModule = PyImport_Import(pName);
+
+    if (pModule)
+    {
+        // Find the method defined in Python file
+        CPyObject pParams = PyObject_GetAttrString(pModule, "list_param_types");
+	if (pParams && PyCallable_Check(pParams))
+	{
+            // Create argument to send over
+            CPyObject pArg = PyTuple_New(1);
+            PyTuple_SetItem(pArg, 0, PyUnicode_FromString(block_name.c_str()));
+
+            // Retrieve returned PyObject
+            CPyObject pListParams = PyObject_CallObject(pParams, pArg);
+            
+            auto listParamsSize = PyList_Size(pListParams);
+
+            // Make a string vector of parameter names
+            for (Py_ssize_t j = 0 ; j < listParamsSize; ++j)
+            {
+                PyObject* types = PyList_GetItem(pListParams, j);
+                string name(PyUnicode_AsUTF8(types));
+                parameters_types.push_back(name.c_str());
+                // printf("C: list_param_types() = %s\n", name.c_str());
+            }
+	}
+	else
+	{
+	    printf("ERROR: function list_param_types()\n");
+	}
+    }
+    else
+    {
+        printf("ERROR: Module not imported\n");
+    }
+    return parameters_types;
 }

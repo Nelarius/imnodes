@@ -73,8 +73,13 @@ void Block::setName(string n) {
 void Block::addInPort(int current_port_id, Port p) {
     _inPorts.insert({current_port_id, p});
 }
+
 void Block::addOutPort(int current_port_id, Port p) {
     _outPorts.insert({current_port_id, p});
+}
+
+void Block::addParam(int current_param_id, Parameter p) {
+    _parameters.insert({current_param_id, p});
 }
 
 void Block::deleteInPort(int portid) {

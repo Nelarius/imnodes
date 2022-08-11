@@ -20,13 +20,15 @@ void Context::init() {
     // Loop dsp names to retrieve each of their parameters
     for (auto dsp_name : names.dsp_names) 
     {
-        parameters.parameter_list.emplace(dsp_name, m_wrapper.get_parameters(dsp_name));
+        parameters.parameter_names_for_block.emplace(dsp_name, m_wrapper.get_parameter_names(dsp_name));
+        parameters.parameter_types_for_block.emplace(dsp_name, m_wrapper.get_parameter_types(dsp_name));
     }
 
     // Loop control names to retrieve each of their parameters
     for (auto control_name : names.control_names)
     {
-        parameters.parameter_list.emplace(control_name, m_wrapper.get_parameters(control_name));
+        parameters.parameter_names_for_block.emplace(control_name, m_wrapper.get_parameter_names(control_name));
+        parameters.parameter_types_for_block.emplace(control_name, m_wrapper.get_parameter_types(control_name));
     }
 
     // Rendering editor context
@@ -51,6 +53,15 @@ void Context::update(bool add, string blockname) {
             block.addOutPort(current_port_id, port);
             ++current_port_id;
         }
+
+        std::vector<std::string> parameter_names = parameters.parameter_names_for_block[block.getType()];
+        std::vector<std::string> parameter_types = parameters.parameter_types_for_block[block.getType()];
+        for (std::vector<std::string>::size_type i = 0; i != parameter_names.size(); i++) {
+            Parameter parameter(current_param_id, parameter_names[i], parameter_types[i]);
+            block.addParam(current_param_id, parameter);
+            ++current_param_id;
+        }
+
         ImNodes::SetNodeScreenSpacePos(block_id, ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y / 2));
         ImNodes::SnapNodeToGrid(block_id);  // add to canvas
         _blocks.push_back(block); // load names from block library
