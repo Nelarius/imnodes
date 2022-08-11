@@ -1,6 +1,7 @@
 #pragma once
 
 #define __STDC_WANT_LIB_EXT1__ 1
+#define RAPIDJSON_HAS_STDSTRING 1
 #include "GraphFileWriter.h"
 #include "block.h"
 #include "rapidjson/document.h"
