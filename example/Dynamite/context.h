@@ -37,6 +37,10 @@ public:
     DyndspWrapper m_wrapper;
     ImNodesEditorContext* m_context = nullptr;
     std::string           system_name;
+    std::string           target_ip_address;
+    bool                  chirp_enabled = false;
+    bool                  trueplay_enabled = false;
+    bool                  serialize_protobuf = false;
     std::vector<Block>    _blocks;
     std::vector<Link>     _links;
     int                   current_link_id = 0;

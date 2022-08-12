@@ -138,27 +138,7 @@ void Palette::drawBlockBrowser(Blocks contents)
     }
 }
 
-void Palette::drawSystemInfo(Context &m_context)
-{   
-    ImGui::TextUnformatted("System Information");
-    ImGui::NewLine();
-    ImGui::TextUnformatted("System name: ");
-    ImGui::SameLine();
-    static char systemname_field[40] = "";
-    // Check if system name already exists
-    if (m_context.system_name != "") {
-        std::strcpy(systemname_field, (m_context.system_name).c_str());
-    }
-    else {
-        std::strcpy(systemname_field, "");
-    }
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-    auto flag = ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_AutoSelectAll;
-    ImGui::InputText("##SystemName", systemname_field, 40, flag, PaletteFuncs::systemNameCallBack, (void *)&m_context);
-    ImGui::PopItemWidth();
-}
-
-void Palette::show(Context &m_context) 
+void Palette::show() 
 {
     // Left side
     ImGui::Columns(2);
@@ -202,10 +182,11 @@ void Palette::show(Context &m_context)
     // Right side
     ImGui::NextColumn();
     
-    // Block browser tab
+    // Use this switch statement for future palette button click actions
     switch (tab)
     {
         case 1: {
+            // Render block browser
             static std::vector<std::string> block_types;
             static std::vector<std::string> io_blocks;
             static std::vector<std::string> dsp_blocks;
@@ -231,7 +212,7 @@ void Palette::show(Context &m_context)
         }
 
         case 2: {
-            drawSystemInfo(m_context);
+            system_clicked = true;
             break;
         }
     }

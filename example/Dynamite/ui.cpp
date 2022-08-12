@@ -102,7 +102,7 @@ bool UI::show(bool done, Context &m_context) {
     UI::setSplitter();
     Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f);
     ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, -1), false, 0);
-    m_palette.show(m_context);
+    m_palette.show();
     ImGui::EndChild();
     ImGui::SameLine(0.0f, s_SplitterSize);
     ImGui::BeginChild("##central canvas", ImVec2(s_RightPaneSize, -1), false, 0);
@@ -117,7 +117,7 @@ bool UI::show(bool done, Context &m_context) {
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y * 0.246f));
     flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
     ImGui::Begin("##multipanel", NULL, flags);
-    m_multipanel.show(m_editor, m_context); 
+    m_multipanel.show(m_editor, m_palette, m_context); 
     ImGui::End();
 
     ImGui::End(); // end menu bar + canvas + multipanel window

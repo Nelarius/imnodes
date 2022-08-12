@@ -31,10 +31,11 @@ void Editor::show(Context &m_context) {
         block_info.clicked = false;
     }
 
-    // Delete a node by pressing "D" or "delete" keyboard
+    // Delete a node by pressing "delete" or "backspace" keyboard
     int nodeid = isBlockClicked();
     auto string_nodeid = std::to_string(nodeid);
-    if (nodeid != 0 && (ImGui::IsKeyReleased(SDL_SCANCODE_D) || ImGui::IsKeyReleased(SDL_SCANCODE_DELETE))) 
+    if (nodeid != 0 && ImNodes::IsEditorHovered() &&
+        (ImGui::IsKeyReleased(SDL_SCANCODE_DELETE) || ImGui::IsKeyReleased(SDL_SCANCODE_BACKSPACE))) 
     {
         static string current_block_type;
         for (auto i = 0; i < (int)m_context._blocks.size(); i++) {

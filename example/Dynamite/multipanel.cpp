@@ -19,36 +19,35 @@ void MultiPanel::init() {
     // do nothing
 }
 
-void MultiPanel::show(Editor& m_editor, Context& m_context) {
+void MultiPanel::show(Editor& m_editor, Palette& m_palette, Context& m_context) {
     // Flag allowing the tabs to be reorderable
-    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable;
+    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs;
 
     // Tab Bar
     // what are we using each of these tabs for? and where will block info go
+    const char* tabNames[4] = { "Inspector", "System Configuration", "Output", "Terminal" };
+    static bool opened[4] = { true, false, true, true }; // Persistent user state
 
-    const char* tabNames[3] = { "Inspector", "Output", "Terminal" };
-    static bool opened[3] = { true, true, true }; // Persistent user state
-    // Checkbox for checking if tab closed or not (remove in the future)
-    // for (int n = 0; n < IM_ARRAYSIZE(opened); n++)
-    // {
-    //     if (n > 0) 
-    //     { 
-    //         ImGui::SameLine(); 
-    //     }
-    //     ImGui::Checkbox(tabNames[n], &opened[n]);
-    // }
+    if (m_palette.system_clicked) {
+        opened[1] = true;
+        m_palette.system_clicked = false;
+    }
 
     // Underlying bool* will be set to false when the tab is closed
     if (ImGui::BeginTabBar("MultiTabBar", tab_bar_flags))
     {
         for (int n = 0; n < IM_ARRAYSIZE(opened); n++) 
         {
-
             if (opened[n] && ImGui::BeginTabItem(tabNames[n], &opened[n], ImGuiTabItemFlags_None))
             {
                 ImGui::NewLine();
-                // DISPLAY BLOCK INFO HERE
-                MultiPanel::showBlockInfo(m_editor, m_context);
+                // Display block attributes
+                if (n == 0) {
+                    MultiPanel::showBlockInfo(m_editor, m_context);
+                }
+                else if (n == 1) {
+                    MultiPanel::showSystemInfo(m_context);
+                }
                 ImGui::EndTabItem();
             }
         }
@@ -58,6 +57,56 @@ void MultiPanel::show(Editor& m_editor, Context& m_context) {
 
 void MultiPanel::exit() {
     // do nothing
+}
+
+void MultiPanel::showSystemInfo(Context& m_context) {
+    // System name
+    ImGui::TextUnformatted("System name: ");
+    ImGui::SameLine();
+    static char systemname_field[40] = "";
+    // Check if system name already exists
+    if (m_context.system_name != "") {
+        std::strcpy(systemname_field, (m_context.system_name).c_str());
+    }
+    else {
+        std::strcpy(systemname_field, "");
+    }
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.2);
+    auto flag = ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_AutoSelectAll;
+    ImGui::InputText("##SystemName", systemname_field, 40, flag, MultiPanelFuncs::systemNameCallBack, (void *)&m_context);
+    ImGui::PopItemWidth();
+
+    ImGui::NewLine();
+
+    static ImGuiTableFlags table_flags = ImGuiTableFlags_BordersInnerV; 
+    if (ImGui::BeginTable("system info", 3, table_flags)) {
+        ImGui::TableNextColumn();
+        // Target player IP address
+        ImGui::TextUnformatted("Player IP address: ");
+        ImGui::SameLine();
+        static char ip_field[40] = "";
+        // Check if system name already exists
+        if (m_context.target_ip_address != "") {
+            std::strcpy(ip_field, (m_context.target_ip_address).c_str());
+        }
+        else {
+            std::strcpy(ip_field, "");
+        }
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
+        ImGui::InputText("##IPAddress", ip_field, 40, flag, MultiPanelFuncs::ipAddressCallBack, (void *)&m_context);
+        ImGui::PopItemWidth();
+
+        // Enable chirp and Trueplay (no functionality yet)
+        ImGui::TableNextColumn();
+        ImGui::Checkbox("Enable Chirp", &m_context.chirp_enabled);
+        ImGui::Checkbox("Enable Trueplay", &m_context.trueplay_enabled);
+
+        // Serialize to JSON or Protobuf (no functionality yet)
+        ImGui::TableNextColumn();
+        ImGui::Checkbox("Serialize in Protobuf", &m_context.serialize_protobuf);
+
+        ImGui::EndTable();
+    }
 }
 
 void MultiPanel::showBlockInfo(Editor& editor, Context& context) {
