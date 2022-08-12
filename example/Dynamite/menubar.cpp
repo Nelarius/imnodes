@@ -1,32 +1,9 @@
 #include "menubar.h"
 
-struct MenuAction {
-    string name; 
-};
+static bool command = false;
+static void validate();
 
-struct SubMenu {
-    string name;
-    vector<MenuAction> menuItems; 
-};
-
-// menubar owns static copies of the structs
-// functions may not be static couz they are passed in at runtime
-// or use a function pointer
-/* 
-vector<MenuActions> = { name, action }
-
-vector<SubMenus>
-*/
-
-// document the editorcontext use cases into the google doc
-// creating subsystems, lives only in the app side of things, but not the code 
-// only the UI knows its a subsystem, click on it and see the context contained
-
-
-/*
-- add channel/delete channel button on multi purpose panel
-default each block to 2 input and output channels 
-*/ 
+CPyInstance hInst;
 
 void MenuBar::show() {
     if (ImGui::BeginMenuBar()) {
@@ -52,13 +29,13 @@ void MenuBar::show() {
             ImGui::EndMenu();
         }
 
+        if (command) validate();
+
         if (ImGui::BeginMenu("Commands")) {
             vector<std::string> menuItems { "Validate", "Generate", "Fetch", "Deploy", "Clean" };
             //createMenu(menuItems);
             for (auto Item : menuItems) {
-                if (ImGui::MenuItem(Item.c_str(), NULL)) {
-                    printf("menu opened!\n");
-                }
+                ImGui::MenuItem(Item.c_str(), NULL, &command);
             }
             ImGui::EndMenu();
         }
@@ -75,6 +52,36 @@ void MenuBar::show() {
         }
         ImGui::EndMenuBar();
     } 
+}
+
+static void validate() {
+    // Provide path for Python to find file
+    PyRun_SimpleString("import sys");
+    
+    // Find a Python file named run_test.py
+    CPyObject pName = PyUnicode_FromString("sonos.audio.dynamicdsp.commands.v1alpha1");
+    CPyObject pModule = PyImport_Import(pName);
+
+    if (pModule) {
+        printf("module accessed\n");
+        CPyObject pCommand = PyObject_GetAttrString(pModule, "validate");
+
+        if (pCommand && PyCallable_Check(pCommand)) {
+            printf("can open command\n");
+            //Create argument to send over
+            CPyObject pArg = PySys_GetObject("system.json");
+            CPyObject pRules = PyObject_CallObject(pCommand, pArg);
+
+            auto listRulesSize = PyList_Size(pRules);
+            for (Py_ssize_t j = 0 ; j < listRulesSize; ++j)
+            {
+                PyObject* rules = PyList_GetItem(pRules, j);
+                string rule(PyUnicode_AsUTF8(rules));
+                printf("Rules : %s\n", rule.c_str());
+            }
+        }
+    }
+    command = false;
 }
 
 /*
