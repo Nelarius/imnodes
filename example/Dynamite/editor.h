@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imnodes.h>
 #include <stdio.h>
+#include <string>
 
 #include "context.h"
 

@@ -14,7 +14,10 @@ struct Blocks
 struct FromPalette
 {
     bool clicked;
-    std::string block_name;
+    std::string block_type;
+    
+    bool input_placed = false;
+    bool output_placed = false;
 };
 
 struct PaletteFuncs {

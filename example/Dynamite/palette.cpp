@@ -67,8 +67,16 @@ void Palette::drawBlockBrowser(Blocks contents)
                         ImGui::TreeNodeEx(io_block.c_str(), node_flags);
                         if (ImGui::IsItemClicked()) 
                         {
-                            block_info.clicked = true;
-                            block_info.block_name = io_block;
+                            if ((!block_info.input_placed && io_block == "input")) {
+                                block_info.clicked = true;
+                                block_info.block_type = io_block;
+                                block_info.input_placed = true;
+                            }
+                            if ((!block_info.output_placed && io_block == "output")) {
+                                block_info.clicked = true;
+                                block_info.block_type = io_block;
+                                block_info.output_placed = true;
+                            }
                         }
                         if (ImGui::BeginDragDropSource())
                         {
@@ -91,7 +99,7 @@ void Palette::drawBlockBrowser(Blocks contents)
                         if (ImGui::IsItemClicked()) 
                         {
                             block_info.clicked = true;
-                            block_info.block_name = dsp_block;
+                            block_info.block_type = dsp_block;
                         }
                         if (ImGui::BeginDragDropSource())
                         {
@@ -114,7 +122,7 @@ void Palette::drawBlockBrowser(Blocks contents)
                         if (ImGui::IsItemClicked()) 
                         {
                             block_info.clicked = true;
-                            block_info.block_name = control_block;
+                            block_info.block_type = control_block;
                         }
                         if (ImGui::BeginDragDropSource())
                         {

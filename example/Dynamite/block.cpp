@@ -1,5 +1,4 @@
 #include "block.h"
-#include <iostream>
 
 Block::Block() {
     id = 0;
@@ -54,7 +53,9 @@ void Block::show() {
     for (itr = _outPorts.begin(); itr != _outPorts.end(); itr++) {
         ImNodes::BeginOutputAttribute(itr->first);
         const float text_width = ImGui::CalcTextSize(itr->second.name).x;
-        ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
+        if (type != "input") {
+            ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
+        }
         ImGui::TextUnformatted(itr->second.name);
         ImNodes::EndOutputAttribute(); 
     }

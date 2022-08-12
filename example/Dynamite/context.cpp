@@ -44,14 +44,18 @@ void Context::update(bool add, string blockname) {
         const int block_id = ++current_block_id;
         Block block(block_id, blockname);
         for (int i = 0; i < 2; i++) {
-            Port port(current_port_id, "INPUT");
-            block.addInPort(current_port_id, port);
-            ++current_port_id;
+            if (blockname != "input") {
+                Port port(current_port_id, "INPUT");
+                block.addInPort(current_port_id, port);
+                ++current_port_id;
+            }
         }
         for (int i = 0; i < 2; i++) {
-            Port port(current_port_id, "OUTPUT");
-            block.addOutPort(current_port_id, port);
-            ++current_port_id;
+            if (blockname != "output") {
+                Port port(current_port_id, "OUTPUT");
+                block.addOutPort(current_port_id, port);
+                ++current_port_id;
+            }
         }
 
         std::vector<std::string> parameter_names = parameters.parameter_names_for_block[block.getType()];

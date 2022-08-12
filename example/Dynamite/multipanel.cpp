@@ -146,14 +146,16 @@ void MultiPanel::formatInfo(Block& block) {
         // Call to retrieve block parameters
         for (const auto &itr : block._parameters)
         {
-            ImGui::TextUnformatted((itr.second.name).c_str());
-            ImGui::SameLine();
-            ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
-            std::string textFieldID = "##Parameter";
-            textFieldID.append(std::to_string(itr.first));
-            char* buf = (char*)itr.second.value;
-            ImGui::InputTextWithHint(textFieldID.c_str(), (itr.second.type).c_str(), buf, 40);
-            ImGui::PopItemWidth();
+            if (itr.second.name != "none") { // Don't render when there are no parameters
+                ImGui::TextUnformatted((itr.second.name).c_str());
+                ImGui::SameLine();
+                ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
+                std::string textFieldID = "##Parameter";
+                textFieldID.append(std::to_string(itr.first));
+                char* buf = (char*)itr.second.value;
+                ImGui::InputTextWithHint(textFieldID.c_str(), (itr.second.type).c_str(), buf, 40);
+                ImGui::PopItemWidth();
+            }
         }
 
         ImGui::EndTable();

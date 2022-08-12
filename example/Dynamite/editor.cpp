@@ -1,5 +1,6 @@
 #include "editor.h"
 #include <string>
+#include <iostream>
 
 #include "palette.h"
 // Retrieved from palette.h
@@ -26,7 +27,7 @@ void Editor::show(Context &m_context) {
     // Adding a node by clicking on palette
     if (block_info.clicked) 
     {
-        m_context.update(true, block_info.block_name);
+        m_context.update(true, block_info.block_type);
         block_info.clicked = false;
     }
 
@@ -35,6 +36,19 @@ void Editor::show(Context &m_context) {
     auto string_nodeid = std::to_string(nodeid);
     if (nodeid != 0 && (ImGui::IsKeyReleased(SDL_SCANCODE_D) || ImGui::IsKeyReleased(SDL_SCANCODE_DELETE))) 
     {
+        static string current_block_type;
+        for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
+            if (m_context._blocks[i].getID() == nodeid) {
+                current_block_type = m_context._blocks[i].getType();
+            }
+        }
+        if (current_block_type == "input") {
+            block_info.input_placed = false;
+        }
+        else if (current_block_type == "output") {
+            block_info.output_placed = false;
+        }
+
         m_context.update(false, string_nodeid);
     }
 
@@ -57,7 +71,7 @@ void Editor::displayInEditor(Context m_context) {
 }
 
 void Editor::showPopup(Context &m_context) {
-    int nodeid;
+    static int nodeid;
 
     if (ImNodes::IsNodeHovered(&nodeid) && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) { 
         ImGui::OpenPopup("my popup"); 
@@ -65,11 +79,26 @@ void Editor::showPopup(Context &m_context) {
     if (add_in_port) addBlockInPort(m_context, nodeid);
     if (add_out_port) addBlockOutPort(m_context, nodeid);
 
+    // Find out which block is getting right clicked
+    static string current_block_type;
+    for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
+        if (m_context._blocks[i].getID() == nodeid) {
+            current_block_type = m_context._blocks[i].getType();
+        }
+    }
+
     if (ImGui::BeginPopup("my popup")) {
         if (ImGui::MenuItem("Bypass")) { printf("Bypass\n"); } // link to block.bypass()
-        ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
-        ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
-        
+        if (current_block_type == "input") {
+            ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
+        }
+        else if (current_block_type == "output") {
+            ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
+        }
+        else {
+            ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
+            ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
+        }
         ImGui::EndPopup();
     }
 }
