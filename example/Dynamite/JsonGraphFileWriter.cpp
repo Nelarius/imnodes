@@ -51,6 +51,8 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
     Value block;
 
     for (Block& b: context._blocks) {
+        if ((0 == strcmp(b.getType().c_str(), "input")) || (0 == strcmp(b.getType().c_str(), "output"))) continue;
+        
         block.SetObject();
         s = StringRef(b.name);
         block.AddMember("name", s, allocator);
@@ -79,17 +81,19 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
 
         Value param;
         param.SetObject();
-        if (!b._parameters.empty()) {
-            map<int,Parameter>::iterator itp;
-            for (itp = b._parameters.begin(); itp != b._parameters.end(); itp++) {
-                Value n; n = StringRef(itp->second.name);
+        map<int,Parameter>::iterator itp;
+        for (itp = b._parameters.begin(); itp != b._parameters.end(); itp++) {
+            if (itp->second.name != "none") {
+                Value n; n = StringRef(itp->second.name.c_str());
                 Value v; v = StringRef(itp->second.value);
                 param.AddMember(n, v, allocator);
             }
-            Value t; t = StringRef(b.getType());
-            block.AddMember(t, param, allocator);
-        dsp_blocks.PushBack(block, allocator);
         }
+        //Value t(b.getType().c_str(), b.getType(),size(), allocator);
+        //t = StringRef(b.getType());
+    
+        block.AddMember(Value(b.getType().c_str(), b.getType().size(), allocator).Move(), param, allocator);
+        dsp_blocks.PushBack(block, allocator);
     }
     jsonDoc.AddMember("dsp_blocks", dsp_blocks, allocator);
 
