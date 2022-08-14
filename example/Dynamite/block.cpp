@@ -24,7 +24,7 @@ string Block::getName() {
 }
 
 string Block::getType() {
-    return this->type;
+    return this->type.c_str();
 }
 
 int Block::getNumInputs() {

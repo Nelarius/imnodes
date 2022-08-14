@@ -14,6 +14,8 @@ bool Dynamite::show(bool done) {
 
 void Dynamite::exit() {
     m_ui.exit();
+    JsonGraphFileWriter fw;
+    fw.writeToFile(m_context);
 }
 
 

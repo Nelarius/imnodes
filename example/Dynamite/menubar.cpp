@@ -2,7 +2,6 @@
 
 struct MenuAction {
     string name; 
-    //lambda menuAction; 
 };
 
 struct SubMenu {
