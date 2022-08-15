@@ -152,7 +152,11 @@ void MultiPanel::formatInfo(Block& block) {
         int channel_index = 1;
 
         // Input channels name text field generation
-        for (const auto &itr : block._inPorts) {
+        // Future potential edit:
+        // If we want input port names to not cascade other block's output port names and let it have its own name,
+        // delete the three lines below and the port class will utilize its own "name" member variable
+        // this will allow the port to have its name and not have it assigned to the input port name's reference.
+        for (auto &itr : block._inPorts) {
             std::string numberedInput = "INPUT ";
             numberedInput.append(std::to_string(channel_index));
             ImGui::TextUnformatted(numberedInput.c_str());
@@ -162,6 +166,9 @@ void MultiPanel::formatInfo(Block& block) {
             std::string textFieldID = "##InputName";
             textFieldID.append(std::to_string(itr.first));
             char* buf = (char*)itr.second.name;
+            if (itr.second.reference_name != nullptr) {
+                buf = itr.second.reference_name;
+            }
             ImGui::InputText(textFieldID.c_str(), buf, 40);
             ImGui::PopItemWidth();
         }

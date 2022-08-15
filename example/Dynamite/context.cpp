@@ -98,6 +98,21 @@ void Context::addLink() {
     if (ImNodes::IsLinkCreated(&link.start_attr, &link.end_attr)) {
         link.id = ++current_link_id;
         _links.push_back(link);
+
+        // Make a reference from output ports to other block's input port(s)
+        char* temp;
+        for (auto &block : _blocks) {
+            for (auto &port : block._outPorts) {
+                if (port.first == link.start_attr) {
+                    temp = (char*)port.second.name;
+                }
+            }
+            for (auto &port : block._inPorts) {
+                if (port.first == link.end_attr) {
+                    port.second.reference_name = temp;
+                }
+            }
+        }
     }
 }
 
@@ -108,6 +123,16 @@ void Context::deleteLink(int link_id) {
                 return link.id == link_id;
             });
         assert(iter != _links.end());
+
+        // Unlink the reference of output port its linked input port(s)
+        for (auto &block : _blocks) {
+            for (auto &port : block._inPorts) {
+                if (port.first == iter->end_attr) {
+                    port.second.reference_name = nullptr;
+                }
+            }
+        }
+
         _links.erase(iter);
     }
 }
