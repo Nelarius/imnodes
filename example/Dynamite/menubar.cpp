@@ -1,17 +1,26 @@
 #include "menubar.h"
 
+static bool save = false;
 static bool command = false;
-static void validate();
+static void saveToJson(Context& m_context);
 
 CPyInstance hInst;
 
-void MenuBar::show() {
+void MenuBar::show(Context& m_context) {
+    if (save) saveToJson(m_context);
+    if (command)  {
+        m_context.m_wrapper.validate();
+        command = false;
+    }
+
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             vector<std::string> menuItems { "New", "Open", "Save", "Save as", "Import", "Export", "Close"  };
             //createMenu(menuItems);
             for (auto Item : menuItems) {
-                if (ImGui::MenuItem(Item.c_str(), NULL)) {
+                if (strcmp(Item.c_str(), "Save") == 0) {
+                    ImGui::MenuItem(Item.c_str(), NULL, &save);
+                } else if (ImGui::MenuItem(Item.c_str(), NULL)) {
                     printf("menu opened!\n");
                 }
             }
@@ -28,8 +37,6 @@ void MenuBar::show() {
             }
             ImGui::EndMenu();
         }
-
-        if (command) validate();
 
         if (ImGui::BeginMenu("Commands")) {
             vector<std::string> menuItems { "Validate", "Generate", "Fetch", "Deploy", "Clean" };
@@ -54,34 +61,10 @@ void MenuBar::show() {
     } 
 }
 
-static void validate() {
-    // Provide path for Python to find file
-    PyRun_SimpleString("import sys");
-    
-    // Find a Python file named run_test.py
-    CPyObject pName = PyUnicode_FromString("sonos.audio.dynamicdsp.commands.v1alpha1");
-    CPyObject pModule = PyImport_Import(pName);
-
-    if (pModule) {
-        printf("module accessed\n");
-        CPyObject pCommand = PyObject_GetAttrString(pModule, "validate");
-
-        if (pCommand && PyCallable_Check(pCommand)) {
-            printf("can open command\n");
-            //Create argument to send over
-            CPyObject pArg = PySys_GetObject("system.json");
-            CPyObject pRules = PyObject_CallObject(pCommand, pArg);
-
-            auto listRulesSize = PyList_Size(pRules);
-            for (Py_ssize_t j = 0 ; j < listRulesSize; ++j)
-            {
-                PyObject* rules = PyList_GetItem(pRules, j);
-                string rule(PyUnicode_AsUTF8(rules));
-                printf("Rules : %s\n", rule.c_str());
-            }
-        }
-    }
-    command = false;
+static void saveToJson(Context& m_context) {
+    JsonGraphFileWriter fw;
+    fw.writeToFile(m_context);
+    save = false;
 }
 
 /*

@@ -3,6 +3,8 @@
 #include <imgui.h>
 #include <vector>
 #include <string>
+#include "context.h"
+#include "JsonGraphFileWriter.h"
 
 #include <Python.h>
 #include "pyhelper.h"
@@ -33,7 +35,7 @@ vector<SubMenus>
 
 class MenuBar {
 public:
-    void show();
+    void show(Context &m_context);
     //void createMenu(vector<std::string> &menuItems);
     //void createMenu(vector<std::string> menuItems);
 
