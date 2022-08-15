@@ -18,7 +18,7 @@ void DyndspWrapper::validate() {
 
     if (pModule) {
         // Find the method defined in Python file
-        CPyObject pCommand = PyObject_GetAttrString(pModule, "list_rules");
+        CPyObject pCommand = PyObject_GetAttrString(pModule, "validate");
 
         if (pCommand && PyCallable_Check(pCommand)) {
             CPyObject pRules = PyObject_CallObject(pCommand, NULL);

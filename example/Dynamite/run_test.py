@@ -58,7 +58,7 @@ def list_param_types(block_name):
     return block_param_types
 
 
-def list_rules(): 
+def validate(): 
     api_version = sonos.audio.dynamicdsp.ApiVersion.v1alpha1
     f = open("system.json", 'r')
 
