@@ -1,6 +1,5 @@
 #include "editor.h"
 #include <string>
-#include <iostream>
 
 #include "palette.h"
 // Retrieved from palette.h
@@ -142,4 +141,3 @@ int Editor::isBlockClicked() {
     }
     return 0;
 }
-

@@ -36,6 +36,12 @@ int Block::getNumOutputs() {
 }
 
 void Block::show() {
+    // Set Input and Output blocks' node colors to red/orange
+    if (type == "input" || type =="output") {
+        ImNodes::PushColorStyle(ImNodesCol_TitleBar, IM_COL32(175, 41, 0, 255));
+        ImNodes::PushColorStyle(ImNodesCol_TitleBarHovered, IM_COL32(255, 127, 80, 255));
+        ImNodes::PushColorStyle(ImNodesCol_TitleBarSelected, IM_COL32(255, 127, 80, 255));
+    }
     ImNodes::BeginNode(id);
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted(name.c_str());
@@ -44,12 +50,14 @@ void Block::show() {
     ImNodes::EndNodeTitleBar();
 
     map<int,Port>::iterator itr;
+    // Display input port names on the block
     for (itr = _inPorts.begin(); itr != _inPorts.end(); itr++) {
         ImNodes::BeginInputAttribute(itr->first);
-        ImGui::TextUnformatted(itr->second.name);
+        ImGui::TextUnformatted(itr->second.reference_name);
         ImNodes::EndInputAttribute();
     }
 
+    // Display output port names on the block
     for (itr = _outPorts.begin(); itr != _outPorts.end(); itr++) {
         ImNodes::BeginOutputAttribute(itr->first);
         const float text_width = ImGui::CalcTextSize(itr->second.name).x;
@@ -61,6 +69,11 @@ void Block::show() {
     }
 
     ImNodes::EndNode();
+    if (type == "input" || type =="output") {
+        ImNodes::PopColorStyle();
+        ImNodes::PopColorStyle();
+        ImNodes::PopColorStyle();
+    }
 }
 
 void Block::bypass() {

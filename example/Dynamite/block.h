@@ -15,6 +15,7 @@ struct Port {
     int id;
     string type;
     char name[40] = "";
+    char* reference_name = nullptr;
     Port() {};
     Port(int n, string s) {
         this->id = n;
