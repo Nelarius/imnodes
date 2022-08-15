@@ -5,7 +5,6 @@
 
 #include "ui.h"
 #include "context.h"
-#include "JsonGraphFileWriter.h"
 #include <string>
 
 using namespace std;

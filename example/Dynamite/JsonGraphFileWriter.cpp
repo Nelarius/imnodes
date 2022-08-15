@@ -99,4 +99,5 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
 
     // write to file
     jsonDoc.Accept(pwriter);
+    fclose(fp);
 }

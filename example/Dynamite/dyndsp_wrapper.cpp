@@ -1,13 +1,35 @@
 #include "dyndsp_wrapper.h" 
-#include <Python.h>
-#include "pyhelper.h"
-#include <vector>
-#include <string>
 
 using namespace std;
 
 // Single initialization of Python interpreter
 CPyInstance hInstance;
+
+void DyndspWrapper::validate() {
+    static std::vector<std::string> dsp_blocknames;
+
+    // Provide path for Python to find file
+    PyRun_SimpleString("import sys");
+    PyRun_SimpleString("sys.path.append(\"./example/Dynamite\")");
+
+    // Find a Python file named run_test.py
+    CPyObject pName = PyUnicode_FromString("run_test");
+    CPyObject pModule = PyImport_Import(pName);
+
+    if (pModule) {
+        // Find the method defined in Python file
+        CPyObject pCommand = PyObject_GetAttrString(pModule, "validate");
+
+        if (pCommand && PyCallable_Check(pCommand)) {
+            CPyObject pRules = PyObject_CallObject(pCommand, NULL);
+        }
+        else {
+            printf("ERROR: function validate()\n");
+        }
+    } else {
+        printf("ERROR: Module not imported\n");
+    }
+}
 
 std::vector<std::string> DyndspWrapper::get_dsp_list() 
 {

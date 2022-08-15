@@ -1,40 +1,26 @@
 #include "menubar.h"
 
-struct MenuAction {
-    string name; 
-};
+static bool save = false;
+static bool command = false;
+static void saveToJson(Context& m_context);
 
-struct SubMenu {
-    string name;
-    vector<MenuAction> menuItems; 
-};
+CPyInstance hInst;
 
-// menubar owns static copies of the structs
-// functions may not be static couz they are passed in at runtime
-// or use a function pointer
-/* 
-vector<MenuActions> = { name, action }
+void MenuBar::show(Context& m_context) {
+    if (save) saveToJson(m_context);
+    if (command)  {
+        m_context.m_wrapper.validate();
+        command = false;
+    }
 
-vector<SubMenus>
-*/
-
-// document the editorcontext use cases into the google doc
-// creating subsystems, lives only in the app side of things, but not the code 
-// only the UI knows its a subsystem, click on it and see the context contained
-
-
-/*
-- add channel/delete channel button on multi purpose panel
-default each block to 2 input and output channels 
-*/ 
-
-void MenuBar::show() {
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             vector<std::string> menuItems { "New", "Open", "Save", "Save as", "Import", "Export", "Close"  };
             //createMenu(menuItems);
             for (auto Item : menuItems) {
-                if (ImGui::MenuItem(Item.c_str(), NULL)) {
+                if (strcmp(Item.c_str(), "Save") == 0) {
+                    ImGui::MenuItem(Item.c_str(), NULL, &save);
+                } else if (ImGui::MenuItem(Item.c_str(), NULL)) {
                     printf("menu opened!\n");
                 }
             }
@@ -56,9 +42,7 @@ void MenuBar::show() {
             vector<std::string> menuItems { "Validate", "Generate", "Fetch", "Deploy", "Clean" };
             //createMenu(menuItems);
             for (auto Item : menuItems) {
-                if (ImGui::MenuItem(Item.c_str(), NULL)) {
-                    printf("menu opened!\n");
-                }
+                ImGui::MenuItem(Item.c_str(), NULL, &command);
             }
             ImGui::EndMenu();
         }
@@ -75,6 +59,12 @@ void MenuBar::show() {
         }
         ImGui::EndMenuBar();
     } 
+}
+
+static void saveToJson(Context& m_context) {
+    JsonGraphFileWriter fw;
+    fw.writeToFile(m_context);
+    save = false;
 }
 
 /*
