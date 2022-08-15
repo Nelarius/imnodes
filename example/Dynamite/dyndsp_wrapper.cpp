@@ -21,9 +21,7 @@ void DyndspWrapper::validate() {
         CPyObject pCommand = PyObject_GetAttrString(pModule, "list_rules");
 
         if (pCommand && PyCallable_Check(pCommand)) {
-            // Create argument to send over
             CPyObject pRules = PyObject_CallObject(pCommand, NULL);
-            if (pRules) printf("validated\n");
         }
         else {
             printf("ERROR: function validate()\n");

@@ -3,11 +3,19 @@ from typing import List, TextIO, cast
 
 # Third Party
 import betterproto
+import click
+import colorama
+from loguru import logger
 
 # Sonos
 import sonos.audio.dynamicdsp
 import sonos.audio.dynamicdsp.commands
 import sonos.coreaudio.dsp.v1alpha1 as api
+
+# - Helper Function
+def _print_error(error_msg: str) -> None:
+    """Print a standard error message using click.echo."""
+    click.echo(colorama.Fore.RED + error_msg + colorama.Style.RESET_ALL)
 
 def list_dsp():
     api_version = sonos.audio.dynamicdsp.ApiVersion.v1alpha1
@@ -53,4 +61,24 @@ def list_param_types(block_name):
 def list_rules(): 
     api_version = sonos.audio.dynamicdsp.ApiVersion.v1alpha1
     f = open("system.json", 'r')
-    rules_output = sonos.audio.dynamicdsp.commands.validate(api_version, f)
+
+
+    # validate each input file
+    did_find_errors = False
+    click.echo("Validating {}...".format(f.name))
+    rule_outputs = sonos.audio.dynamicdsp.commands.validate(api_version, f)
+
+    # check the rule outputs
+    is_valid = all(rule_outputs)
+    if not is_valid:
+        did_find_errors = True
+        rules_broken = [r for r in rule_outputs if not r]
+        logger.info("Found {} errors in {}", len(rules_broken), f.name)
+        for rule in rules_broken:
+            _print_error(rule.message)
+
+    if not did_find_errors:
+        #sys.exit(1)
+        click.echo(
+            "File{} look{} good! \U00002728 \U0001F9C1 \U00002728"
+        )
