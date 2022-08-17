@@ -1,16 +1,33 @@
 #include "menubar.h"
 
-static bool save = false;
-static bool command = false;
+// Forward declarations
 static void saveToJson(Context& m_context);
+
+static bool save = false;
+static bool validate = false;
+static bool generate_bin = false;
+static bool deploy = false;
+static bool clean = false;
 
 CPyInstance hInst;
 
 void MenuBar::show(Context& m_context) {
     if (save) saveToJson(m_context);
-    if (command)  {
-        m_context.m_wrapper.validate();
-        command = false;
+    if (validate) {
+        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(validate));
+        validate = false;
+    }
+    if (generate_bin) {
+        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(generate_bin));
+        generate_bin = false;
+    }
+    if (deploy) {
+        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(deploy));
+        deploy = false;
+    }
+    if (clean) {
+        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(clean));
+        clean = false;
     }
 
     if (ImGui::BeginMenuBar()) {
@@ -39,11 +56,12 @@ void MenuBar::show(Context& m_context) {
         }
 
         if (ImGui::BeginMenu("Commands")) {
-            vector<std::string> menuItems { "Validate", "Generate", "Fetch", "Deploy", "Clean" };
-            //createMenu(menuItems);
-            for (auto Item : menuItems) {
-                ImGui::MenuItem(Item.c_str(), NULL, &command);
-            }
+            ImGui::MenuItem("Validate", NULL, &validate);
+            ImGui::MenuItem("Generate", NULL, &generate_bin);
+            ImGui::MenuItem("Deploy", NULL, &deploy);
+            ImGui::MenuItem("Clean", NULL, &clean);
+            ImGui::MenuItem("Fetch", NULL, &validate);
+
             ImGui::EndMenu();
         }
 

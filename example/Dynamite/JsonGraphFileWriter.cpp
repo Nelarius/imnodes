@@ -39,7 +39,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                 Value channel;
                 channel.SetObject();
                 Value o;
-                o = StringRef(it->second.name);
+                o = StringRef(it->second.reference_name);
                 channel.AddMember("name", o, allocator);
                 out_ch_ar.PushBack(channel, allocator);
             }
@@ -62,7 +62,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         for (it = b._inPorts.begin(); it != b._inPorts.end(); it++) {
             Value input_ch;
             input_ch.SetObject();
-            s = StringRef(it->second.name);
+            s = StringRef(it->second.reference_name);
             input_ch.AddMember("name", s, allocator);
             input_chans.PushBack(input_ch, allocator);
         }

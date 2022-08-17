@@ -1,6 +1,7 @@
 #pragma once
 
 #include <imgui.h>
+#include <stdio.h>
 #include <vector>
 #include <string>
 #include "context.h"
@@ -8,6 +9,8 @@
 
 #include <Python.h>
 #include "pyhelper.h"
+
+#define GET_VAR_NAME(var) (#var)
 
 using namespace std;
 
