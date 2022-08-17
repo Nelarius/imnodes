@@ -2,29 +2,17 @@
 
 #include "pyhelper.h"
 #include <fstream>
-
-// Single initialization of Python interpreter
-CPyInstance hInstance;
+#include <stdio.h>
 
 // forward declarations
 bool validateIP(std::string ip);
 bool isNumber(const std::string &str);
 vector<string> split(const string &str, char delim);
 
-void DyndspWrapper::getData(Context &m_context) {
-    ip_address = &m_context.target_ip_address;
-    sys_name = m_context.system_name;
-    chirp_en = m_context.chirp_enabled;
-    trueplay_en = m_context.trueplay_enabled;
-}
+// Single initialization of Python interpreter
+CPyInstance hInstance;
 
-void DyndspWrapper::generic_wrapper(std::string command) {
-    if (validateIP(*ip_address)) {
-        printf("ip address = %s\n", (*ip_address).c_str());
-    } else {
-        printf("invalid ip address!\n");
-    }
-
+void DyndspWrapper::call_dyndsp_command(std::string command) {
     // Provide path for Python to find file
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.path.append(\"./example/Dynamite\")");
@@ -33,28 +21,29 @@ void DyndspWrapper::generic_wrapper(std::string command) {
     CPyObject pName = PyUnicode_FromString("run_test");
     CPyObject pModule = PyImport_Import(pName);
 
-    if (pModule) {
-        // Find the method defined in Python file
-        CPyObject pCommand = PyObject_GetAttrString(pModule, command.c_str());
-
-        if (pCommand && PyCallable_Check(pCommand)) {
-            CPyObject pRules = PyObject_CallObject(pCommand, NULL);
+    if (pModule) 
+    {
+        CPyObject pCommand = PyObject_GetAttrString(pModule, command.c_str()); // Find the method defined in Python file
+        if (pCommand && PyCallable_Check(pCommand)) 
+        {
+            if ((strcmp(command.c_str(), "deploy") == 0) || (strcmp(command.c_str(), "clean") == 0)) 
+            {
+                // validate IP
+                if (validateIP(*ip_address)) {
+                    CPyObject pArg = PyTuple_New(1); // Create argument to send over
+                    PyTuple_SetItem(pArg, 0, PyUnicode_FromString((*ip_address).c_str()));
+                    CPyObject pResult = PyObject_CallObject(pCommand, pArg); // call object with arg
+                } 
+                else { printf("ERROR : cannot deploy without valid IP address\n"); }
+            } 
+            else { CPyObject pResult = PyObject_CallObject(pCommand, NULL); }   // call object without arg
         }
-        else {
-            printf("ERROR: function %s()\n", command.c_str());
-        }
-    } else {
-        printf("ERROR: Module not imported\n");
-    }
-}
-
-// TO DO : go to menubar and fix callback function call for deploy() command
-void DyndspWrapper::deploy() {
-
+        else { printf("ERROR: function %s()\n", command.c_str()); }
+    } 
+    else { printf("ERROR: Module not imported\n"); }
 }
 
 // TO DO : clean up/ generalize other functions
-
 std::vector<std::string> DyndspWrapper::get_dsp_list() 
 {
     static std::vector<std::string> dsp_blocknames;
@@ -113,7 +102,7 @@ std::vector<std::string> DyndspWrapper::get_control_list()
     // Find a Python file named run_test.py
     CPyObject pName = PyUnicode_FromString("run_test");
     CPyObject pModule = PyImport_Import(pName);
-
+    
     if (pModule)
     {
         // Find the method defined in Python file
@@ -152,7 +141,7 @@ std::vector<std::string> DyndspWrapper::get_parameter_names(std::string block_na
 
     // Find a Python file named run_test.py
     CPyObject pName = PyUnicode_FromString("run_test");
-    CPyObject pModule = PyImport_Import(pName);
+    CPyObject pModule = PyImport_Import(pName); 
 
     if (pModule)
     {
@@ -232,6 +221,11 @@ std::vector<std::string> DyndspWrapper::get_parameter_types(std::string block_na
         printf("ERROR: Module not imported\n");
     }
     return parameters_types;
+}
+
+void DyndspWrapper::getData(Context &m_context) {
+    ip_address = &m_context.target_ip_address;
+    //sys_name = m_context.system_name;
 }
 
 // Helper functions for validateIP() //

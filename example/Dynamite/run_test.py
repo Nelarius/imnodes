@@ -18,7 +18,6 @@ import sonos.coreaudio.dsp.v1alpha1 as api
 api_version = sonos.audio.dynamicdsp.ApiVersion.v1alpha1
 
 # Config details
-ip_address = "10.22.85.21"
 password = None
 identity_file = None
 passphrase = None
@@ -115,7 +114,7 @@ def generate_bin():
     click.echo("DSP System{} generated! \U00002728 \U0001F9C1 \U00002728")
 
 
-def deploy():
+def deploy(ip_address):
     with open("system.bin", 'r') as bf:
         click.echo("Deploying {} to device {}...".format(bf.name, ip_address))
 
@@ -134,7 +133,7 @@ def deploy():
 
     click.echo("DSP System deployed to {}! \U00002728 \U0001F9C1 \U00002728".format(ip_address))
 
-def clean():
+def clean(ip_address):
     click.echo("Removing DSP System from device {}...".format(ip_address))
     config = sonos.audio.dynamicdsp.SSHConfig(
         ip_address, password=password, identity_file=identity_file, passphrase=passphrase

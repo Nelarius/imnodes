@@ -18,19 +18,19 @@ static bool clean = false;
 void MenuBar::show(Context& m_context, DyndspWrapper m_wrapper) {
     if (save) saveToJson(m_context);
     if (validate) {
-        m_wrapper.generic_wrapper(GET_VAR_NAME(validate));
+        m_wrapper.call_dyndsp_command(GET_VAR_NAME(validate));
         validate = false;
     }
     if (generate_bin) {
-        m_wrapper.generic_wrapper(GET_VAR_NAME(generate_bin));
+        m_wrapper.call_dyndsp_command(GET_VAR_NAME(generate_bin));
         generate_bin = false;
     }
     if (deploy) {
-        m_wrapper.generic_wrapper(GET_VAR_NAME(deploy));
+        m_wrapper.call_dyndsp_command(GET_VAR_NAME(deploy));
         deploy = false;
     }
     if (clean) {
-        m_wrapper.generic_wrapper(GET_VAR_NAME(clean));
+        m_wrapper.call_dyndsp_command(GET_VAR_NAME(clean));
         clean = false;
     }
     
