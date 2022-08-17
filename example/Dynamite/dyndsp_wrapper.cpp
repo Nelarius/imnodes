@@ -9,8 +9,7 @@ bool validateIP(std::string ip);
 bool isNumber(const std::string &str);
 vector<string> split(const string &str, char delim);
 
-// Single initialization of Python interpreter
-CPyInstance hInstance;
+CPyInstance hInstance; // Single initialization of Python interpreter
 
 void DyndspWrapper::call_dyndsp_command(std::string command) {
     // Provide path for Python to find file

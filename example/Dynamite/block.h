@@ -3,13 +3,12 @@
 #include <string>
 #include <map>
 
-using namespace std;
-
 struct Port {
     int id;
     std::string type;
     char name[40] = "";
     char* reference_name = nullptr;
+
     Port() {};
     Port(int n, std::string s) {
         this->id = n;
@@ -22,6 +21,7 @@ struct Parameter {
     std::string name;
     std::string type;
     char value[40] = "";
+    
     Parameter() {};
     Parameter(int n, std::string param_name, std::string param_type) {
         this->id = n;
@@ -39,10 +39,10 @@ class Block {
     public:
         std::string name;
 
-        map<int, Port> _inPorts;
-        map<int, Port> _outPorts;
+        std::map<int, Port> _inPorts;
+        std::map<int, Port> _outPorts;
 
-        map<int, Parameter> _parameters;
+        std::map<int, Parameter> _parameters;
         
         Block();
         Block(const int i);

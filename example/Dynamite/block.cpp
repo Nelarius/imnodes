@@ -1,9 +1,10 @@
 #include "block.h"
 
 #include <iterator>
-
 #include <imgui.h>
 #include <imnodes.h>
+
+using namespace std;
 
 Block::Block() {
     id = 0;

@@ -5,14 +5,10 @@
 
 #include "context.h"
 
-using namespace std;
-
 class DyndspWrapper {
 
     std::string *ip_address;
     std::string sys_name;
-    //bool chirp_en;
-    //bool trueplay_en;
 
     public:
 
