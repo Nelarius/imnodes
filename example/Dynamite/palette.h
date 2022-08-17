@@ -25,6 +25,7 @@ class Palette {
         void drawBlockBrowser(Blocks contents);
     public:
         bool system_clicked;
+        bool block_clicked;
 
         Palette();
         void init();

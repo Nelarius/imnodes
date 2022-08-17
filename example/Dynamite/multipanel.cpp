@@ -28,6 +28,13 @@ void MultiPanel::show(Editor& m_editor, Palette& m_palette, Context& m_context) 
     const char* tabNames[4] = { "Inspector", "System Configuration", "Output", "Terminal" };
     static bool opened[4] = { true, false, true, true }; // Persistent user state
 
+    // Show 'Inspector' tab
+    if (m_palette.block_clicked) {
+        opened[0] = true;
+        m_palette.block_clicked = false;
+    }
+
+    // Show 'System Configuration' Tab
     if (m_palette.system_clicked) {
         opened[1] = true;
         m_palette.system_clicked = false;

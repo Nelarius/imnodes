@@ -96,6 +96,27 @@ void Context::deleteBlock(int node_id) {
 void Context::addLink() {
     Link link;
     if (ImNodes::IsLinkCreated(&link.start_attr, &link.end_attr)) {
+        // Check if the end attribute already has a link
+        // If so, delete the old link
+        if ((int)_links.size() > 0) {
+            auto iter = std::find_if(
+                _links.begin(), _links.end(), [link](const Link& temp) -> bool {
+                    return temp.end_attr == link.end_attr;
+                });
+            if (iter != _links.end()){
+                // Unlink the reference of output port its linked input port(s)
+                for (auto &block : _blocks) {
+                    for (auto &port : block._inPorts) {
+                        if (port.first == iter->end_attr) {
+                            port.second.reference_name = nullptr;
+                        }
+                    }
+                }
+                
+                _links.erase(iter);
+            }
+        }
+
         link.id = ++current_link_id;
         _links.push_back(link);
 

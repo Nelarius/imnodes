@@ -208,6 +208,8 @@ void Palette::show()
 
             // Render list of blocks
             drawBlockBrowser(contents);
+
+            block_clicked = true;
             break;
         }
 
