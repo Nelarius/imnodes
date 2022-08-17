@@ -2,18 +2,29 @@
 
 #include <vector>
 #include <string>
-#include <fstream>
 
-#include <Python.h>
-#include "pyhelper.h"
+#include "context.h"
 
 using namespace std;
 
+struct DynDSPData {
+    std::string ip_address;
+    // sys_name
+    // chirp_en
+    // trueplay_en
+};
+
 class DyndspWrapper {
+
+    std::string *ip_address;
+    std::string sys_name;
+    bool chirp_en;
+    bool trueplay_en;
+
     public:
-        static void generic_wrapper(string command);
-        static void validate();
-        static void generate();
+
+        void getData(Context &m_context);
+        void generic_wrapper(std::string command);
         static void deploy();
         static std::vector<std::string> get_dsp_list();
         static std::vector<std::string> get_control_list();

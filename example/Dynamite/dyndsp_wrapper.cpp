@@ -1,9 +1,30 @@
 #include "dyndsp_wrapper.h" 
 
+#include "pyhelper.h"
+#include <fstream>
+
 // Single initialization of Python interpreter
 CPyInstance hInstance;
 
-void DyndspWrapper::generic_wrapper(string command) {
+// forward declarations
+bool validateIP(std::string ip);
+bool isNumber(const std::string &str);
+vector<string> split(const string &str, char delim);
+
+void DyndspWrapper::getData(Context &m_context) {
+    ip_address = &m_context.target_ip_address;
+    sys_name = m_context.system_name;
+    chirp_en = m_context.chirp_enabled;
+    trueplay_en = m_context.trueplay_enabled;
+}
+
+void DyndspWrapper::generic_wrapper(std::string command) {
+    if (validateIP(*ip_address)) {
+        printf("ip address = %s\n", (*ip_address).c_str());
+    } else {
+        printf("invalid ip address!\n");
+    }
+
     // Provide path for Python to find file
     PyRun_SimpleString("import sys");
     PyRun_SimpleString("sys.path.append(\"./example/Dynamite\")");
@@ -25,6 +46,11 @@ void DyndspWrapper::generic_wrapper(string command) {
     } else {
         printf("ERROR: Module not imported\n");
     }
+}
+
+// TO DO : go to menubar and fix callback function call for deploy() command
+void DyndspWrapper::deploy() {
+
 }
 
 // TO DO : clean up/ generalize other functions
@@ -58,7 +84,7 @@ std::vector<std::string> DyndspWrapper::get_dsp_list()
             for (Py_ssize_t i = 0 ; i < listDSPSize; ++i)
             {
                 PyObject* dsp_block = PyList_GetItem(pListDSP, i);
-                string name(PyUnicode_AsUTF8(dsp_block));
+                std::string name(PyUnicode_AsUTF8(dsp_block));
                 dsp_blocknames.push_back(name.c_str());
                 // printf("C: list_dsp() = %s\n", name.c_str());
             }
@@ -103,7 +129,7 @@ std::vector<std::string> DyndspWrapper::get_control_list()
             for (Py_ssize_t j = 0 ; j < listControlSize; ++j)
             {
                 PyObject* control_block = PyList_GetItem(pListControl, j);
-                string name(PyUnicode_AsUTF8(control_block));
+                std::string name(PyUnicode_AsUTF8(control_block));
                 control_blocknames.push_back(name.c_str());
                 // printf("C: list_control() = %s\n", name.c_str());
             }
@@ -147,7 +173,7 @@ std::vector<std::string> DyndspWrapper::get_parameter_names(std::string block_na
             for (Py_ssize_t j = 0 ; j < listParamsSize; ++j)
             {
                 PyObject* parameters = PyList_GetItem(pListParams, j);
-                string name(PyUnicode_AsUTF8(parameters));
+                std::string name(PyUnicode_AsUTF8(parameters));
                 parameters_names.push_back(name.c_str());
                 // printf("C: list_params() = %s\n", name.c_str());
             }
@@ -191,7 +217,7 @@ std::vector<std::string> DyndspWrapper::get_parameter_types(std::string block_na
             for (Py_ssize_t j = 0 ; j < listParamsSize; ++j)
             {
                 PyObject* types = PyList_GetItem(pListParams, j);
-                string name(PyUnicode_AsUTF8(types));
+                std::string name(PyUnicode_AsUTF8(types));
                 parameters_types.push_back(name.c_str());
                 // printf("C: list_param_types() = %s\n", name.c_str());
             }
@@ -206,4 +232,51 @@ std::vector<std::string> DyndspWrapper::get_parameter_types(std::string block_na
         printf("ERROR: Module not imported\n");
     }
     return parameters_types;
+}
+
+// Helper functions for validateIP() //
+bool validateIP(std::string ip) {
+    // split the string into tokens
+    std::vector<std::string> list = split(ip, '.');
+ 
+    // if the token size is not equal to four
+    if (list.size() != 4) {
+        return false;
+    }
+ 
+    // validate each token
+    for (std::string str: list)
+    {
+        // verify that the string is a number or not, and the numbers
+        // are in the valid range
+        if (!isNumber(str) || stoi(str) > 255 || stoi(str) < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isNumber(const std::string &str) {
+    return !str.empty() &&
+        (str.find_first_not_of("[0123456789]") == std::string::npos);
+}
+
+// Function to split string `str` using a given delimiter
+vector<string> split(const string &str, char delim)
+{
+    auto i = 0;
+    vector<string> list;
+ 
+    auto pos = str.find(delim);
+ 
+    while (pos != string::npos)
+    {
+        list.push_back(str.substr(i, pos - i));
+        i = ++pos;
+        pos = str.find(delim, pos);
+    }
+ 
+    list.push_back(str.substr(i, str.length()));
+ 
+    return list;
 }

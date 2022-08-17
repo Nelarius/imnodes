@@ -1,25 +1,19 @@
 #pragma once
 
-#include <imgui.h>
-#include <stdio.h>
 #include <vector>
 #include <string>
 #include "context.h"
 #include "JsonGraphFileWriter.h"
-
-#include <Python.h>
-#include "pyhelper.h"
-
-#define GET_VAR_NAME(var) (#var)
+#include "dyndsp_wrapper.h"
 
 using namespace std;
 
 struct MenuAction {
-    string name; 
+    std::string name; 
 };
 
 struct SubMenu {
-    string name;
+    std::string name;
     std::vector<MenuAction> menuItems; 
 };
 
@@ -38,7 +32,7 @@ vector<SubMenus>
 
 class MenuBar {
 public:
-    void show(Context &m_context);
+    void show(Context &m_context, DyndspWrapper m_wrapper);
     //void createMenu(vector<std::string> &menuItems);
     //void createMenu(vector<std::string> menuItems);
 

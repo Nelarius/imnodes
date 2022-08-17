@@ -1,5 +1,6 @@
 #include "editor.h"
 #include <string>
+#include <SDL_scancode.h>
 
 #include "palette.h"
 // Retrieved from palette.h

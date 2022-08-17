@@ -1,7 +1,9 @@
 #include "context.h"
-#include <vector>
-#include <map>
-#include <string>
+#include "dyndsp_wrapper.h"
+#include <SDL_scancode.h>
+
+// Retrieve from DyndspWrapper
+//extern struct DynDSPData;
 
 struct BlockNames names;
 struct BlockParameters parameters;
@@ -14,21 +16,21 @@ Context::Context() {}
 
 void Context::init() {
     // Calling dyndsp_wrapper
-    names.dsp_names = m_wrapper.get_dsp_list();
-    names.control_names = m_wrapper.get_control_list();
+    names.dsp_names = DyndspWrapper::get_dsp_list();
+    names.control_names = DyndspWrapper::get_control_list();
 
     // Loop dsp names to retrieve each of their parameters
     for (auto dsp_name : names.dsp_names) 
     {
-        parameters.parameter_names_for_block.emplace(dsp_name, m_wrapper.get_parameter_names(dsp_name));
-        parameters.parameter_types_for_block.emplace(dsp_name, m_wrapper.get_parameter_types(dsp_name));
+        parameters.parameter_names_for_block.emplace(dsp_name, DyndspWrapper::get_parameter_names(dsp_name));
+        parameters.parameter_types_for_block.emplace(dsp_name, DyndspWrapper::get_parameter_types(dsp_name));
     }
 
     // Loop control names to retrieve each of their parameters
     for (auto control_name : names.control_names)
     {
-        parameters.parameter_names_for_block.emplace(control_name, m_wrapper.get_parameter_names(control_name));
-        parameters.parameter_types_for_block.emplace(control_name, m_wrapper.get_parameter_types(control_name));
+        parameters.parameter_names_for_block.emplace(control_name, DyndspWrapper::get_parameter_names(control_name));
+        parameters.parameter_types_for_block.emplace(control_name, DyndspWrapper::get_parameter_types(control_name));
     }
 
     // Rendering editor context
@@ -38,7 +40,7 @@ void Context::init() {
 
 void Context::loadContext() { }
 
-void Context::update(bool add, string blockname) {
+void Context::update(bool add, std::string blockname) {
     if (add) // add a block
     {
         const int block_id = ++current_block_id;

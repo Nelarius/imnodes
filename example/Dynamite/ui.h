@@ -24,6 +24,7 @@
 #include "palette.h" 
 #include "multipanel.h" 
 #include "context.h"
+#include "dyndsp_wrapper.h"
 
 class UI {
 
@@ -59,7 +60,7 @@ public:
 
     UI();
     void init();
-    bool show(bool done, Context &m_context);
+    bool show(bool done, Context &m_context, DyndspWrapper m_wrapper);
     void exit();
     void setSplitter();
 

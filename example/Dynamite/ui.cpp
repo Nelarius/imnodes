@@ -72,7 +72,7 @@ void UI::init() {
     m_palette.init();
 }
 
-bool UI::show(bool done, Context &m_context) {
+bool UI::show(bool done, Context &m_context, DyndspWrapper m_wrapper) {
     (void) done;
     
     SDL_Event event;
@@ -97,7 +97,7 @@ bool UI::show(bool done, Context &m_context) {
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y * 0.75f));
     auto flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
     ImGui::Begin("Dynamite Editor", NULL, flags); // begin menu bar + canvas + multipanel window
-    m_menu.show(m_context); 
+    m_menu.show(m_context, m_wrapper); 
 
     UI::setSplitter();
     Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f);

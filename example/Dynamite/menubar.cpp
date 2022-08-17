@@ -1,4 +1,10 @@
 #include "menubar.h"
+#include "dyndsp_wrapper.h"
+
+#include <imgui.h>
+#include <stdio.h>
+
+#define GET_VAR_NAME(var) (#var)
 
 // Forward declarations
 static void saveToJson(Context& m_context);
@@ -9,26 +15,25 @@ static bool generate_bin = false;
 static bool deploy = false;
 static bool clean = false;
 
-CPyInstance hInst;
-
-void MenuBar::show(Context& m_context) {
+void MenuBar::show(Context& m_context, DyndspWrapper m_wrapper) {
     if (save) saveToJson(m_context);
     if (validate) {
-        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(validate));
+        m_wrapper.generic_wrapper(GET_VAR_NAME(validate));
         validate = false;
     }
     if (generate_bin) {
-        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(generate_bin));
+        m_wrapper.generic_wrapper(GET_VAR_NAME(generate_bin));
         generate_bin = false;
     }
     if (deploy) {
-        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(deploy));
+        m_wrapper.generic_wrapper(GET_VAR_NAME(deploy));
         deploy = false;
     }
     if (clean) {
-        m_context.m_wrapper.generic_wrapper(GET_VAR_NAME(clean));
+        m_wrapper.generic_wrapper(GET_VAR_NAME(clean));
         clean = false;
     }
+    
 
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("File")) {

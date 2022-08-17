@@ -3,9 +3,7 @@
 #include <imgui.h>
 #include <imnodes.h>
 #include "block.h"
-#include "dyndsp_wrapper.h"
 
-#include <SDL_scancode.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -29,12 +27,19 @@ struct Link
     int start_attr, end_attr;
 };
 
+struct SessionData {
+    std::string           system_name;
+    std::string           target_ip_address;
+    bool                  chirp_enabled = false;
+    bool                  trueplay_enabled = false;
+    bool                  serialize_protobuf = false;
+};
+
 class Context {
 
     
 public:
 
-    DyndspWrapper m_wrapper;
     ImNodesEditorContext* m_context = nullptr;
     std::string           system_name;
     std::string           target_ip_address;
@@ -52,7 +57,7 @@ public:
         //~Context();
         void init();
         void loadContext(); 
-        void update(bool add, string blockname);
+        void update(bool add, std::string blockname);
         int addBlock();
         void deleteBlock(int node_id);
         void addLink();
