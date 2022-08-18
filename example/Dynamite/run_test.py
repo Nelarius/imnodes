@@ -95,8 +95,8 @@ def validate():
 
 # TO DO : add error statements, possibly toast notifications in app
 def generate_bin():
+    validate()
     with open("system.json", 'r') as jf:
-        validate()
         # figure out file paths and names
         default_output_file = pathlib.Path(jf.name).with_suffix(".bin").name
         # - if no output path was specified, we put the file in the current directory
@@ -107,6 +107,7 @@ def generate_bin():
         raw_bytes = sonos.audio.dynamicdsp.commands.generate(api_version, jf)
 
         # write the output file
+        click.echo("hello?")
         click.echo("Writing DSP API message to {}...".format(output_file))
         with open(output_file, mode="wb") as bin_file:
             bin_file.write(raw_bytes)

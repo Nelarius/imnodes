@@ -67,22 +67,24 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
     }
 
     Value dsp_blocks(kArrayType);
-    Value block;
-
+    Value name;
     for (Block& b: context._blocks) {
+        // Skip over input and output blocks
         if ((0 == strcmp(b.getType().c_str(), "input")) || (0 == strcmp(b.getType().c_str(), "output"))) continue;
         
+        Value block;
         block.SetObject();
-        s = StringRef(b.name);
-        block.AddMember("name", s, allocator);
+        name = StringRef(b.name);
+        block.AddMember("name", name, allocator);
 
         Value input_chans(kArrayType);
         map<int, Port>::iterator it;
         for (it = b._inPorts.begin(); it != b._inPorts.end(); it++) {
             Value input_ch;
             input_ch.SetObject();
-            s = StringRef(it->second.reference_name);
-            input_ch.AddMember("name", s, allocator);
+            Value ref_name;
+            ref_name = StringRef(it->second.reference_name);
+            input_ch.AddMember("name", ref_name, allocator);
             input_chans.PushBack(input_ch, allocator);
         }
         block.AddMember("input_channels", input_chans, allocator);
@@ -91,9 +93,8 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         for (it = b._outPorts.begin(); it != b._outPorts.end(); it++) {
             Value output_ch;
             output_ch.SetObject();
-            Value s;
-            s = StringRef(it->second.name);
-            output_ch.AddMember("name", s, allocator);
+            name = StringRef(it->second.name);
+            output_ch.AddMember("name", name, allocator);
             output_chans.PushBack(output_ch, allocator);
         }
         block.AddMember("output_channels", output_chans, allocator);
@@ -108,8 +109,6 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                 param.AddMember(n, v, allocator);
             }
         }
-        //Value t(b.getType().c_str(), b.getType(),size(), allocator);
-        //t = StringRef(b.getType());
     
         block.AddMember(Value(b.getType().c_str(), b.getType().size(), allocator).Move(), param, allocator);
         dsp_blocks.PushBack(block, allocator);
@@ -119,4 +118,42 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
     // write to file
     jsonDoc.Accept(pwriter);
     fclose(fp);
+}
+
+// Helper functions
+
+void writeInputChannels(Context& context, Document& jsonDoc, Document::AllocatorType& allocator) {
+    Value input_channels(kArrayType);
+    for (Block& b : context._blocks) {
+        if (b.getType() == "input") {
+            std::map<int, Port>::iterator it;
+            for (it = b._outPorts.begin(); it != b._outPorts.end(); it++) {
+                Value channel;
+                channel.SetObject();
+                Value name;
+                name = StringRef(it->second.name);
+                channel.AddMember("name", name, allocator);
+                input_channels.PushBack(channel, allocator);
+            }
+            jsonDoc.AddMember("input_channels", input_channels, allocator);
+        }
+    }
+}
+
+void writeOutputChannels(Context& context, Document& jsonDoc, Document::AllocatorType& allocator) {
+    Value output_channels(kArrayType);
+    for (Block& b : context._blocks) {
+        if (b.getType() == "output") {
+            map<int, Port>::iterator it;
+            for (it = b._inPorts.begin(); it != b._inPorts.end(); it++) {
+                Value channel;
+                channel.SetObject();
+                Value name;
+                name = StringRef(it->second.reference_name);
+                channel.AddMember("name", name, allocator);
+                output_channels.PushBack(channel, allocator);
+            }
+            jsonDoc.AddMember("output_channels", output_channels, allocator);
+        }
+    }
 }
