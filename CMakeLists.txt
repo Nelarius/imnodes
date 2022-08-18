@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 # set(CMAKE_OSX_DEPLOYMENT_TARGET "12.3" CACHE STRING "Minimum Mac OS X deployment version" FORCE)
 
 project(imnodes)
+#project(spdlog_examples CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -25,6 +26,13 @@ target_sources(imnodes PRIVATE
     imnodes.cpp)
 target_include_directories(imnodes PUBLIC ${CMAKE_SOURCE_DIR})
 target_link_libraries(imnodes PUBLIC imgui::imgui)
+
+#[[ SPDLOG
+if(NOT TARGET spdlog)
+    # Stand-alone build
+    find_package(spdlog REQUIRED)
+endif()
+]]
 
 # Python
 
@@ -124,6 +132,7 @@ add_executable(Dynamite
     )
 target_link_libraries(Dynamite imnodes SDL2::SDL2)
 target_link_libraries(Dynamite ${Python_LIBRARIES})
+#target_link_libraries(Dynamite spdlog::spdlog)
 target_include_directories(Dynamite PRIVATE ${Python_INCLUDE_DIRS})
 if (APPLE)
     target_link_libraries(Dynamite "-framework OpenGL")

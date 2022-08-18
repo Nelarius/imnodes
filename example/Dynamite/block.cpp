@@ -1,5 +1,11 @@
 #include "block.h"
 
+#include <iterator>
+#include <imgui.h>
+#include <imnodes.h>
+
+using namespace std;
+
 Block::Block() {
     id = 0;
     type = "Block";
@@ -10,7 +16,7 @@ Block::Block(const int i) {
     type = "Block";
 }
 
-Block::Block(const int i, string n) {
+Block::Block(const int i, std::string n) {
     id = i;
     type = n;
 }
@@ -19,11 +25,11 @@ int Block::getID() {
     return this->id;
 }
 
-string Block::getName() {
+std::string Block::getName() {
     return this->name;
 }
 
-string Block::getType() {
+std::string Block::getType() {
     return this->type.c_str();
 }
 
@@ -80,7 +86,7 @@ void Block::bypass() {
     // gets called by block -> pop up -> edit menu
 }
 
-void Block::setName(string n) {
+void Block::setName(std::string n) {
     this->name = n;
 }
 
