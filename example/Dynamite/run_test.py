@@ -107,7 +107,6 @@ def generate_bin():
         raw_bytes = sonos.audio.dynamicdsp.commands.generate(api_version, jf)
 
         # write the output file
-        click.echo("hello?")
         click.echo("Writing DSP API message to {}...".format(output_file))
         with open(output_file, mode="wb") as bin_file:
             bin_file.write(raw_bytes)

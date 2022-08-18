@@ -15,6 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
+#include <cstdlib>
 
 using namespace rapidjson;
 using namespace std;
@@ -105,7 +106,14 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         for (itp = b._parameters.begin(); itp != b._parameters.end(); itp++) {
             if (itp->second.name != "none") {
                 Value n; n = StringRef(itp->second.name.c_str());
-                Value v; v = StringRef(itp->second.value);
+                Value v;
+                if (itp->second.type == "int") {
+                    v.SetInt(std::strtol(itp->second.value, nullptr, 10));
+                } else if (itp->second.type == "float") {
+                    v.SetFloat(*itp->second.value);
+                } else {
+                    v = StringRef(itp->second.value);
+                }
                 param.AddMember(n, v, allocator);
             }
         }
