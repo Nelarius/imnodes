@@ -146,6 +146,8 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                         v.SetInt(std::strtol(itp->second.value, nullptr, 10));
                     } else if (itp->second.type == "float") {
                         v.SetFloat(*itp->second.value);
+                    } else if (itp->second.type == "bool") {
+                        v.SetBool(*itp->second.value);
                     } else {
                         v = StringRef(itp->second.value);
                     }
