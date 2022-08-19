@@ -45,11 +45,11 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
     jsonDoc.SetObject();    // set the current document as an object, that is, the entire doc is an object type DOM element
 
     // populate data
-    Value s;
+    Value name;
     
     if (validate_sys_name(*sys_name)) {
-        s = StringRef(*sys_name);
-        jsonDoc.AddMember("name", s, allocator);
+        name = StringRef(*sys_name);
+        jsonDoc.AddMember("name", name, allocator);
     } else {
         std::cerr << "ERROR : cannot serialize without system name" << std::endl;
     }
@@ -61,31 +61,43 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         Value input_channels(kArrayType);
         Value output_channels(kArrayType);
         Value scratch_buffers(kArrayType);
+        Value channel;
         for (Block& b : context._blocks) {
-            Value channel;
             if (b.getType() == "input") {
-                map<int, Port>::iterator it;
-                for (it = b._outPorts.begin(); it != b._outPorts.end(); it++) {
+                for (auto &port : b._outPorts) {
                     channel.SetObject();
-                    s = StringRef(it->second.name);
-                    channel.AddMember("name", s, allocator);
+                    name = StringRef(port.second.name);
+                    channel.AddMember("name", name, allocator);
                     input_channels.PushBack(channel, allocator);
                 }
                 jsonDoc.AddMember("input_channels", input_channels, allocator);
             }
             if (b.getType() == "output") {
-                map<int, Port>::iterator it;
-                for (it = b._inPorts.begin(); it != b._inPorts.end(); it++) {
+                for (auto &port : b._inPorts) {
                     channel.SetObject();
-                    Value o;
-                    o = StringRef(it->second.reference_name);
-                    channel.AddMember("name", o, allocator);
+                    name = StringRef(port.second.reference_name);
+                    channel.AddMember("name", name, allocator);
                     output_channels.PushBack(channel, allocator);
                 }
                 jsonDoc.AddMember("output_channels", output_channels, allocator);
             }
         }
+        /*
+        for (Block& b : context._blocks) {
+            for (auto &port : b._outPorts) {
+                auto member_val = input_channels.FindMember(port.second.name); 
+                auto member_val_out = output_channels.FindMember(port.second.name);
 
+                if ((strcmp(port.second.name, member_val) || (port.second.name != member_val_out)) {
+                    channel.SetObject();
+                    name = StringRef(port.second.name);
+                    channel.AddMember("name", name, allocator);
+                    scratch_buffers.PushBack(channel, allocator);
+                }
+            }
+        }
+        jsonDoc.AddMember("scratch_buffers", scratch_buffers, allocator);
+        //*/
         // add DSP blocks
         Value dsp_blocks(kArrayType);
         Value name;
