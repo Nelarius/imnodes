@@ -27,17 +27,8 @@ struct Link
     int start_attr, end_attr;
 };
 
-struct SessionData {
-    std::string           system_name;
-    std::string           target_ip_address;
-    bool                  chirp_enabled = false;
-    bool                  trueplay_enabled = false;
-    bool                  serialize_protobuf = false;
-};
-
 class Context {
 
-    
 public:
 
     ImNodesEditorContext* m_context = nullptr;

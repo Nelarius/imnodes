@@ -8,7 +8,6 @@
 class DyndspWrapper {
 
     std::string *ip_address;
-    std::string sys_name;
 
     public:
 
