@@ -123,15 +123,20 @@ void Context::addLink() {
         _links.push_back(link);
 
         // Make a reference from output ports to other block's input port(s)
-        char* temp;
+        static char* temp;
         for (auto &block : _blocks) {
             for (auto &port : block._outPorts) {
                 if (port.first == link.start_attr) {
+                    printf("PASSED");
                     temp = (char*)port.second.name;
+                    printf("Temp name: %c\n", *(temp));
                 }
             }
+        }
+        for (auto &block : _blocks) {
             for (auto &port : block._inPorts) {
                 if (port.first == link.end_attr) {
+                    printf("Reference name: %c\n", *(temp));
                     port.second.reference_name = temp;
                 }
             }

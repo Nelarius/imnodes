@@ -53,6 +53,48 @@ void Editor::show(Context &m_context) {
         m_context.update(false, string_nodeid);
     }
 
+    // Clear the canvas by pressing "C" keyboard
+    static bool messagebox = false;
+    if (ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_C)) 
+    {
+        messagebox = true;
+    }
+    if (messagebox) {
+        ImGui::OpenPopup("Clear");
+
+        // Always center this window when appearing
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+        if (ImGui::BeginPopupModal("Clear", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Are you sure you want to delete the system?\nThis operation cannot be undone!\n\n");
+            ImGui::Separator();
+
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+            ImGui::PopStyleVar();
+
+            if (ImGui::Button("OK", ImVec2(150, 0))) { 
+                // Clearing blocks and links
+                m_context._blocks.clear();
+                block_info.input_placed = false;
+                block_info.output_placed = false;
+
+                m_context._links.clear();
+
+                messagebox = false;
+                ImGui::CloseCurrentPopup(); 
+            }
+            ImGui::SetItemDefaultFocus();
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(150, 0))) {
+                messagebox = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+    }
+
     displayInEditor(m_context);
 
     ImNodes::MiniMap(0.1f, ImNodesMiniMapLocation_BottomRight);
