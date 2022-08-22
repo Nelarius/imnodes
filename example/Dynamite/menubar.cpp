@@ -3,6 +3,7 @@
 
 #include <imgui.h>
 #include <stdio.h>
+#include <iostream>
 
 #define GET_VAR_NAME(var) (#var)
 

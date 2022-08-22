@@ -224,7 +224,6 @@ std::vector<std::string> DyndspWrapper::get_parameter_types(std::string block_na
 
 void DyndspWrapper::getData(Context &m_context) {
     ip_address = &m_context.target_ip_address;
-    //sys_name = m_context.system_name;
 }
 
 // Helper functions for validateIP() //

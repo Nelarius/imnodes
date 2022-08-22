@@ -92,7 +92,7 @@ void MultiPanel::showSystemInfo(Context& m_context) {
         ImGui::TextUnformatted("Player IP address: ");
         ImGui::SameLine();
         static char ip_field[40] = "";
-        // Check if system name already exists
+        // Check if ip address already exists
         if (m_context.target_ip_address != "") {
             std::strcpy(ip_field, (m_context.target_ip_address).c_str());
         }
