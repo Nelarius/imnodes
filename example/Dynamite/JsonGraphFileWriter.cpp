@@ -37,7 +37,7 @@ bool validate_sys_name(std::string sysname) {
 }
 
 void JsonGraphFileWriter::writeToFile(Context& context) {
-    getSysName(context);
+    getSysName(context); // get reference to system_name from m_context
     // set up .json file
     FILE* fp = fopen("system.json", "w");
     char buffer[65536];
@@ -58,7 +58,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
     } else {
         std::cerr << "ERROR : cannot serialize without system name" << std::endl;
     }
-    //*/
+
     if (context._blocks.empty()) {
         std::cerr << "ERROR : no blocks in system" << std::endl;
     } else {
@@ -102,12 +102,11 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
 
             // add block input channels
             Value input_chans(kArrayType);
-            map<int, Port>::iterator it;
-            for (it = b._inPorts.begin(); it != b._inPorts.end(); it++) {
+            for (auto it : b._inPorts) {
                 Value input_ch;
                 input_ch.SetObject();
                 Value ref_name;
-                ref_name = StringRef(it->second.reference_name);
+                ref_name = StringRef(it.second.reference_name);
                 input_ch.AddMember("name", ref_name, allocator);
                 input_chans.PushBack(input_ch, allocator);
             }
@@ -115,10 +114,10 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
 
             // add block output channels
             Value output_chans(kArrayType);
-            for (it = b._outPorts.begin(); it != b._outPorts.end(); it++) {
+            for (auto it : b._outPorts) {
                 Value output_ch;
                 output_ch.SetObject();
-                name = StringRef(it->second.name);
+                name = StringRef(it.second.name);
                 output_ch.AddMember("name", name, allocator);
                 output_chans.PushBack(output_ch, allocator);
             }
@@ -127,22 +126,21 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
             // add block parameters
             Value param;
             param.SetObject();
-            map<int,Parameter>::iterator itp;
-            for (itp = b._parameters.begin(); itp != b._parameters.end(); itp++) {
-                if (itp->second.name != "none") {
-                    Value n; n = StringRef(itp->second.name.c_str());
+            for (auto itp : b._parameters) {
+                if (itp.second.name != "none") {
+                    Value n; n = StringRef(itp.second.name.c_str());
                     Value v;
-                    if (itp->second.type == "int") {
-                        v.SetInt(std::strtol(itp->second.value, nullptr, 10));
-                    } else if (itp->second.type == "float") {
-                        v.SetFloat(*itp->second.value);
-                    } else if (itp->second.type == "bool") {
-                        std::istringstream is(itp->second.value);
+                    if (itp.second.type == "int") {
+                        v.SetInt(std::strtol(itp.second.value, nullptr, 10));
+                    } else if (itp.second.type == "float") {
+                        v.SetFloat(*itp.second.value);
+                    } else if (itp.second.type == "bool") {
+                        std::istringstream is(itp.second.value);
                         bool b;
                         is >> std::boolalpha >> b;
                         v.SetBool(b);
                     } else {
-                        v = StringRef(itp->second.value);
+                        v = StringRef(itp.second.value);
                     }
                     param.AddMember(n, v, allocator);
                 }
@@ -156,42 +154,4 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
     // write to file
     jsonDoc.Accept(pwriter);
     fclose(fp);
-}
-
-// Helper functions
-
-void writeInputChannels(Context& context, Document& jsonDoc, Document::AllocatorType& allocator) {
-    Value input_channels(kArrayType);
-    for (Block& b : context._blocks) {
-        if (b.getType() == "input") {
-            std::map<int, Port>::iterator it;
-            for (it = b._outPorts.begin(); it != b._outPorts.end(); it++) {
-                Value channel;
-                channel.SetObject();
-                Value name;
-                name = StringRef(it->second.name);
-                channel.AddMember("name", name, allocator);
-                input_channels.PushBack(channel, allocator);
-            }
-            jsonDoc.AddMember("input_channels", input_channels, allocator);
-        }
-    }
-}
-
-void writeOutputChannels(Context& context, Document& jsonDoc, Document::AllocatorType& allocator) {
-    Value output_channels(kArrayType);
-    for (Block& b : context._blocks) {
-        if (b.getType() == "output") {
-            map<int, Port>::iterator it;
-            for (it = b._inPorts.begin(); it != b._inPorts.end(); it++) {
-                Value channel;
-                channel.SetObject();
-                Value name;
-                name = StringRef(it->second.reference_name);
-                channel.AddMember("name", name, allocator);
-                output_channels.PushBack(channel, allocator);
-            }
-            jsonDoc.AddMember("output_channels", output_channels, allocator);
-        }
-    }
 }
