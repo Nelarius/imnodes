@@ -87,22 +87,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                 jsonDoc.AddMember("output_channels", output_channels, allocator);
             }
         }
-        /*
-        for (Block& b : context._blocks) {
-            for (auto &port : b._outPorts) {
-                auto member_val = input_channels.FindMember(port.second.name); 
-                auto member_val_out = output_channels.FindMember(port.second.name);
-
-                if ((strcmp(port.second.name, member_val) || (port.second.name != member_val_out)) {
-                    channel.SetObject();
-                    name = StringRef(port.second.name);
-                    channel.AddMember("name", name, allocator);
-                    scratch_buffers.PushBack(channel, allocator);
-                }
-            }
-        }
-        jsonDoc.AddMember("scratch_buffers", scratch_buffers, allocator);
-        //*/
+ 
         // add DSP blocks
         Value dsp_blocks(kArrayType);
         Value name;
