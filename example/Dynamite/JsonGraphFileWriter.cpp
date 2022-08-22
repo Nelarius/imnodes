@@ -17,6 +17,11 @@
 #include <stdio.h>
 #include <cstdlib>
 
+#include <sstream>
+#include <iomanip>
+#include <algorithm>
+#include <cctype>
+
 using namespace rapidjson;
 using namespace std;
 
@@ -147,7 +152,10 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                     } else if (itp->second.type == "float") {
                         v.SetFloat(*itp->second.value);
                     } else if (itp->second.type == "bool") {
-                        v.SetBool(*itp->second.value);
+                        std::istringstream is(itp->second.value);
+                        bool b;
+                        is >> std::boolalpha >> b;
+                        v.SetBool(b);
                     } else {
                         v = StringRef(itp->second.value);
                     }

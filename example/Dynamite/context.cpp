@@ -127,16 +127,13 @@ void Context::addLink() {
         for (auto &block : _blocks) {
             for (auto &port : block._outPorts) {
                 if (port.first == link.start_attr) {
-                    printf("PASSED");
                     temp = (char*)port.second.name;
-                    printf("Temp name: %c\n", *(temp));
                 }
             }
         }
         for (auto &block : _blocks) {
             for (auto &port : block._inPorts) {
                 if (port.first == link.end_attr) {
-                    printf("Reference name: %c\n", *(temp));
                     port.second.reference_name = temp;
                 }
             }
