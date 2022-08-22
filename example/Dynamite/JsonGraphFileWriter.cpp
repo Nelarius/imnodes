@@ -102,22 +102,22 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
 
             // add block input channels
             Value input_chans(kArrayType);
-            for (auto it : b._inPorts) {
+            map<int, Port>::iterator it;
+            for (it = b._inPorts.begin(); it != b._inPorts.end(); it++) {
                 Value input_ch;
                 input_ch.SetObject();
                 Value ref_name;
-                ref_name = StringRef(it.second.reference_name);
+                ref_name = StringRef(it->second.reference_name);
                 input_ch.AddMember("name", ref_name, allocator);
                 input_chans.PushBack(input_ch, allocator);
             }
             block.AddMember("input_channels", input_chans, allocator);
 
-            // add block output channels
             Value output_chans(kArrayType);
-            for (auto it : b._outPorts) {
+            for (it = b._outPorts.begin(); it != b._outPorts.end(); it++) {
                 Value output_ch;
                 output_ch.SetObject();
-                name = StringRef(it.second.name);
+                name = StringRef(it->second.name);
                 output_ch.AddMember("name", name, allocator);
                 output_chans.PushBack(output_ch, allocator);
             }
@@ -126,26 +126,26 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
             // add block parameters
             Value param;
             param.SetObject();
-            for (auto itp : b._parameters) {
-                if (itp.second.name != "none") {
-                    Value n; n = StringRef(itp.second.name.c_str());
+            std::map<int, Parameter>::iterator itp;
+            for (itp = b._parameters.begin(); itp != b._parameters.end(); itp++) {
+                if (itp->second.name != "none") {
+                    Value n; n = StringRef(itp->second.name.c_str());
                     Value v;
-                    if (itp.second.type == "int") {
-                        v.SetInt(std::strtol(itp.second.value, nullptr, 10));
-                    } else if (itp.second.type == "float") {
-                        v.SetFloat(*itp.second.value);
-                    } else if (itp.second.type == "bool") {
-                        std::istringstream is(itp.second.value);
+                    if (itp->second.type == "int") {
+                        v.SetInt(std::strtol(itp->second.value, nullptr, 10));
+                    } else if (itp->second.type == "float") {
+                        v.SetFloat(*itp->second.value);
+                    } else if (itp->second.type == "bool") {
+                        std::istringstream is(itp->second.value);
                         bool b;
                         is >> std::boolalpha >> b;
                         v.SetBool(b);
                     } else {
-                        v = StringRef(itp.second.value);
+                        v = StringRef(itp->second.value);
                     }
                     param.AddMember(n, v, allocator);
                 }
             }
-        
             block.AddMember(Value(b.getType().c_str(), b.getType().size(), allocator).Move(), param, allocator);
             dsp_blocks.PushBack(block, allocator);
         }
