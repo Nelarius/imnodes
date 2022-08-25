@@ -116,7 +116,6 @@ void Context::buildGraph() {
                 } 
             }         
         }
-        printf("\n\n");
     }
     m_graph.display();
 }
