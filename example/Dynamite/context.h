@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imnodes.h>
 #include "block.h"
+#include "graph.h"
 
 #include <vector>
 #include <map>
@@ -29,6 +30,8 @@ struct Link
 
 class Context {
 
+    Graph m_graph;
+
 public:
 
     ImNodesEditorContext* m_context = nullptr;
@@ -47,8 +50,9 @@ public:
         Context();
         //~Context();
         void init();
-        void loadContext(); 
+        void loadContext();     // to be defined when the reverse deployment process is implemented
         void update(bool add, std::string blockname);
+        void buildGraph();
         int addBlock();
         void deleteBlock(int node_id);
         void addLink();

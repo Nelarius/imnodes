@@ -129,6 +129,7 @@ add_executable(Dynamite
     ${CMAKE_SOURCE_DIR}/example/Dynamite/multipanel.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/dyndsp_wrapper.cpp
     ${CMAKE_SOURCE_DIR}/example/Dynamite/JsonGraphFileWriter.cpp
+    ${CMAKE_SOURCE_DIR}/example/Dynamite/graph.cpp
     )
 target_link_libraries(Dynamite imnodes SDL2::SDL2)
 target_link_libraries(Dynamite ${Python_LIBRARIES})
