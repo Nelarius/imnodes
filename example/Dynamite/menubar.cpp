@@ -34,7 +34,6 @@ void MenuBar::show(Context& m_context, DyndspWrapper m_wrapper) {
         m_wrapper.call_dyndsp_command(GET_VAR_NAME(clean));
         clean = false;
     }
-    
 
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("File")) {

@@ -33,7 +33,6 @@ vector<SubMenus>
 class MenuBar {
 public:
     void show(Context &m_context, DyndspWrapper m_wrapper);
-    //void createMenu(vector<std::string> &menuItems);
     //void createMenu(vector<std::string> menuItems);
 
 };

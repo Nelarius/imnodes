@@ -10,7 +10,7 @@ class JsonGraphFileWriter : public GraphFileWriter {
     std::string *sys_name;
 
     public:
-        void getSysName(Context& m_context);
+        void setSysName(Context& m_context);
         void writeToFile(Context& context);
 };
 

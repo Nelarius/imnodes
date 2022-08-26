@@ -12,7 +12,7 @@ struct adjlist;
 struct BlockNames names;
 struct BlockParameters parameters;
 
-void Graph::init(Context &m_context) {
+void Graph::init() {
     // Calling dyndsp_wrapper
     names.dsp_names = DyndspWrapper::get_dsp_list();
     names.control_names = DyndspWrapper::get_control_list();

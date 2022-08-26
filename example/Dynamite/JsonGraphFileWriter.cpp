@@ -4,6 +4,7 @@
 #define RAPIDJSON_HAS_STDSTRING 1
 
 #include "block.h"
+#include "graph.h"
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -25,7 +26,7 @@
 using namespace rapidjson;
 using namespace std;
 
-void JsonGraphFileWriter::getSysName(Context& m_context) {
+void JsonGraphFileWriter::setSysName(Context& m_context) {
     sys_name = &m_context.system_name;
 }
 
@@ -37,7 +38,8 @@ bool validate_sys_name(std::string sysname) {
 }
 
 void JsonGraphFileWriter::writeToFile(Context& context) {
-    getSysName(context); // get reference to system_name from m_context
+    Graph graph = context.m_graph;
+    setSysName(context); // get reference to system_name from m_context
     // set up .json file
     FILE* fp = fopen("system.json", "w");
     char buffer[65536];
@@ -59,7 +61,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         std::cerr << "ERROR : cannot serialize without system name" << std::endl;
     }
 
-    if (context._blocks.empty()) {
+    if (graph._blocks.empty()) {
         std::cerr << "ERROR : no blocks in system" << std::endl;
     } else {
         // add global input, output, and scratch buffer channels
@@ -67,7 +69,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         Value output_channels(kArrayType);
         Value scratch_buffers(kArrayType);
         Value channel;
-        for (Block& b : context._blocks) {
+        for (Block& b : graph._blocks) {
             if (b.getType() == "input") {
                 for (auto &port : b._outPorts) {
                     channel.SetObject();
@@ -88,7 +90,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
             }
         }
 
-        for (Block& b : context._blocks) {
+        for (Block& b : graph._blocks) {
             bool is_match = false;
             if (b.getType() == "input" || b.getType() == "output") {
                 continue;
@@ -135,7 +137,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         // add DSP blocks
         Value dsp_blocks(kArrayType);
         Value name;
-        for (Block& b: context._blocks) {
+        for (Block& b: graph._blocks) {
             // Skip over input and output blocks
             if ((0 == strcmp(b.getType().c_str(), "input")) || (0 == strcmp(b.getType().c_str(), "output"))) continue;
             

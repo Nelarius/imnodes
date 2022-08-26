@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "context.h"
+#include "graph.h"
 
 class Editor {
 
@@ -26,9 +27,9 @@ public:
 
     Editor();
     void show(Context &m_context);
-    void displayInEditor(Context m_context);
+    void displayInEditor(Graph graph);
     void clickHandler();
-    void showPopup(Context &m_context);
-    void deletePort(Context &m_context);
+    void showPopup(Graph &graph);
+    void deletePort(Graph &graph);
     int isBlockClicked();
 };

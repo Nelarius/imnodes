@@ -122,12 +122,9 @@ bool UI::show(bool done, Context &m_context, DyndspWrapper m_wrapper) {
     m_editor.show(m_context); 
     ImGui::EndChild(); 
 
-    // Revisit this when refactoring
-    // This is related to the case of adding and deleting ports
-    // editor.cpp Line 102
-    m_context.addLink();
+    m_context.m_graph.addLink();
     int link_id = 0;
-    m_context.deleteLink(link_id);
+    m_context.m_graph.deleteLink(link_id);
 
     /* This is the hacky way that Jehan and Kevin
     have done to manage windows. This part of the code
