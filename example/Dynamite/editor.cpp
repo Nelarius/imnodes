@@ -144,7 +144,8 @@ void Editor::showPopup(Graph &graph) {
         if (ImGui::MenuItem("Bypass")) { printf("Bypass\n"); } // link to block.bypass()
         if (current_block_type != "input") {
             ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
-        } else if (current_block_type != "output") {
+        } 
+        if (current_block_type != "output") {
             ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
         }
 

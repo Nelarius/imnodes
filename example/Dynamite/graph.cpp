@@ -171,8 +171,8 @@ adjlist_node* Graph::newNode(int dest) {
 
 // buildAdjacencyList helper function
 bool portIterator(Block& b, std::vector<Link>::iterator link_iter) {
-    for (auto& p : b._inPorts) {
-        if (p.first == link_iter->end_attr) {
+    for (auto& p : b._outPorts) {
+        if (p.first == link_iter->start_attr) {
             return true;
         } else {
             continue;
@@ -191,22 +191,22 @@ void Graph::buildAdjacencyList() {
     }
 
     for (auto& block : _blocks) {
-        for (auto& port : block._outPorts) {
+        for (auto& port : block._inPorts) {
             auto link_iter = std::find_if(
                 _links.begin(), _links.end(), [port](const Link& temp) -> bool {
-                    return port.first == temp.start_attr;
+                    return port.first == temp.end_attr;
             });
             if (link_iter != _links.end()) {
                 auto block_iter = std::find_if(
                     _blocks.begin(), _blocks.end(), [link_iter](Block& b) -> bool {
-                            return portIterator(b, link_iter);
+                        return portIterator(b, link_iter);
                 });
                 if (block_iter != _blocks.end()) {
-                    if (!Graph::containsEdge(block.getID(), block_iter->getID())) {
-                        Graph::addEdge(block.getID(), block_iter->getID());
+                    if (!Graph::containsEdge(block_iter->getID(), block.getID())) {
+                        Graph::addEdge(block_iter->getID(), block.getID());
                     }
                 } 
-            }         
+            }
         }
     }
 }
@@ -234,7 +234,8 @@ void Graph::display() {
         cout<<"\n Adjacency list of vertex "<<v<<"\n head ";
         while (pCrawl)
         {
-            cout<<"-> "<<pCrawl->dest;
+            std::string blockname = pCrawl->block.getName();
+            cout << "-> " << pCrawl->dest;
             pCrawl = pCrawl->next;
         }
         cout<<endl;
