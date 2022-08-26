@@ -81,7 +81,6 @@ void Context::update(bool add, std::string blockname) {
 
 bool port_iterator(Block& b, std::vector<Link>::iterator link_iter) {
     for (auto& p : b._inPorts) {
-        printf("comparing link end attr %d to port id %d on block %d\n", link_iter->end_attr, p.first, b.getID());
         if (p.first == link_iter->end_attr) {
             return true;
         } else {
@@ -109,9 +108,6 @@ void Context::buildGraph() {
                 if (block_iter != _blocks.end()) {
                     if (!m_graph.contains_edge(block.getID(), block_iter->getID())) {
                         m_graph.add_edge(block.getID(), block_iter->getID());
-                        // move on to serialization by breadth first
-                        // when a branch diverges, print block up until the path unites again from where it broke off, a
-                        // then go back to the reference where it splits and print those until the convergence point
                     }
                 } 
             }         
