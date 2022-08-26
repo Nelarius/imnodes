@@ -155,6 +155,20 @@ void Graph::clearLinks() {
 
 /* Adjacency list */
 
+adjlist_node* Graph::newNode(int dest) {
+    adjlist_node* newNode = new adjlist_node;
+    for (auto& b : _blocks) {
+        if (b.getID() == dest) {
+            newNode->block = b;
+        } else {
+            newNode->block = NULL;
+        }
+    }
+    newNode->dest = dest;
+    newNode->next = NULL;
+    return newNode;
+}
+
 // buildAdjacencyList helper function
 bool portIterator(Block& b, std::vector<Link>::iterator link_iter) {
     for (auto& p : b._inPorts) {
@@ -195,13 +209,6 @@ void Graph::buildAdjacencyList() {
             }         
         }
     }
-}
-
-adjlist_node* Graph::newNode(int dest) {
-    adjlist_node* newNode = new adjlist_node;
-    newNode->dest = dest;
-    newNode->next = NULL;
-    return newNode;
 }
 
 void Graph::addEdge(int src, int dest) {

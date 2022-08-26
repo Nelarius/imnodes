@@ -97,25 +97,19 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
             }
             for (auto& p : b._outPorts) {
                 for (Value::ConstValueIterator it = input_channels.Begin(); it != input_channels.End(); ++it) { 
-                    printf("Input channel name : %s, Port name : %s\n", it->GetString(), p.second.name);
                     if (strcmp(it->MemberBegin()->value.GetString(), p.second.name) == 0) {
-                        printf("is match\n"); 
                         is_match = true;
                         continue;
                     }
                 }
                 for (Value::ConstValueIterator it = output_channels.Begin(); it != output_channels.End(); ++it) {
-                    printf("Output channel name : %s, Port name : %s\n", it->GetString(), p.second.name);
                     if (strcmp(it->MemberBegin()->value.GetString(), p.second.name) == 0) {
-                        printf("is match\n"); 
                         is_match = true;
                         continue;
                     }
                 }
                 for (Value::ConstValueIterator it = scratch_buffers.Begin(); it != scratch_buffers.End(); ++it) {
-                    printf("Scratch channel name : %s, Port name : %s\n", it->GetString(), p.second.name);
                     if (strcmp(it->MemberBegin()->value.GetString(), p.second.name) == 0) {
-                        printf("is match\n"); 
                         is_match = true;
                         continue;
                     }

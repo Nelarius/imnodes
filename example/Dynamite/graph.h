@@ -16,6 +16,7 @@ struct Link
 
 // adjacency list helper structs
 struct adjlist_node {
+    Block block;
     int dest;
     struct adjlist_node* next;
 };
