@@ -87,6 +87,50 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                 jsonDoc.AddMember("output_channels", output_channels, allocator);
             }
         }
+
+        for (Block& b : context._blocks) {
+            bool is_match = false;
+            if (b.getType() == "input" || b.getType() == "output") {
+                continue;
+            }
+            for (auto& p : b._outPorts) {
+                for (Value::ConstValueIterator it = input_channels.Begin(); it != input_channels.End(); ++it) { 
+                    printf("Input channel name : %s, Port name : %s\n", it->GetString(), p.second.name);
+                    if (strcmp(it->MemberBegin()->value.GetString(), p.second.name) == 0) {
+                        printf("is match\n"); 
+                        is_match = true;
+                        continue;
+                    }
+                }
+                for (Value::ConstValueIterator it = output_channels.Begin(); it != output_channels.End(); ++it) {
+                    printf("Output channel name : %s, Port name : %s\n", it->GetString(), p.second.name);
+                    if (strcmp(it->MemberBegin()->value.GetString(), p.second.name) == 0) {
+                        printf("is match\n"); 
+                        is_match = true;
+                        continue;
+                    }
+                }
+                for (Value::ConstValueIterator it = scratch_buffers.Begin(); it != scratch_buffers.End(); ++it) {
+                    printf("Scratch channel name : %s, Port name : %s\n", it->GetString(), p.second.name);
+                    if (strcmp(it->MemberBegin()->value.GetString(), p.second.name) == 0) {
+                        printf("is match\n"); 
+                        is_match = true;
+                        continue;
+                    }
+                }
+
+                if (!is_match) {
+                    channel.SetObject();
+                    name = StringRef(p.second.name);
+                    channel.AddMember("name", name, allocator);
+                    scratch_buffers.PushBack(channel, allocator);
+                }
+            }
+        }
+        if (!scratch_buffers.Empty()) {
+            jsonDoc.AddMember("scratch_buffers", scratch_buffers, allocator);
+        }
+        
  
         // add DSP blocks
         Value dsp_blocks(kArrayType);
