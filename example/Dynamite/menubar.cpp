@@ -86,6 +86,8 @@ void MenuBar::show(Context& m_context, DyndspWrapper m_wrapper) {
 }
 
 static void saveToJson(Context& m_context) {
+    m_context.buildGraph();
+    
     JsonGraphFileWriter fw;
     fw.writeToFile(m_context);
     save = false;

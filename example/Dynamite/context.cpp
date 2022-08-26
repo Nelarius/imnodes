@@ -1,14 +1,13 @@
 #include "context.h"
 #include "dyndsp_wrapper.h"
 #include <SDL_scancode.h>
-
-// Retrieve from DyndspWrapper
-//extern struct DynDSPData;
+#include <iostream>
 
 struct BlockNames names;
 struct BlockParameters parameters;
 
-Context::Context() {}
+Context::Context() {
+}
 
 /*Context::~Context() {
     ImNodes::EditorContextFree(m_context);
@@ -80,10 +79,41 @@ void Context::update(bool add, std::string blockname) {
     }
 }
 
-int Context::addBlock() {
-    const int block_id = ++current_block_id;
-    _blocks.push_back(Block(block_id, "DSPBlock")); // load names from block library
-    return block_id;
+bool port_iterator(Block& b, std::vector<Link>::iterator link_iter) {
+    for (auto& p : b._inPorts) {
+        if (p.first == link_iter->end_attr) {
+            return true;
+        } else {
+            continue;
+        }
+    }
+    return false;
+}
+
+void Context::buildGraph() {
+    // initialize graph
+    m_graph = Graph(_blocks.back().getID() + 1); 
+
+    for (auto& block : _blocks) {
+        for (auto& port : block._outPorts) {
+            auto link_iter = std::find_if(
+                _links.begin(), _links.end(), [port](const Link& temp) -> bool {
+                    return port.first == temp.start_attr;
+            });
+            if (link_iter != _links.end()) {
+                auto block_iter = std::find_if(
+                    _blocks.begin(), _blocks.end(), [link_iter](Block& b) -> bool {
+                            return port_iterator(b, link_iter);
+                });
+                if (block_iter != _blocks.end()) {
+                    if (!m_graph.contains_edge(block.getID(), block_iter->getID())) {
+                        m_graph.add_edge(block.getID(), block_iter->getID());
+                    }
+                } 
+            }         
+        }
+    }
+    m_graph.display();
 }
 
 void Context::deleteBlock(int node_id) {
@@ -114,7 +144,6 @@ void Context::addLink() {
                         }
                     }
                 }
-                
                 _links.erase(iter);
             }
         }
