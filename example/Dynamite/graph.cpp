@@ -1,6 +1,7 @@
 #include "graph.h"
 
 #include <iostream>
+#include <algorithm>
 #include <imgui.h>
 #include "dyndsp_wrapper.h"
 
@@ -238,8 +239,64 @@ void Graph::display() {
             cout << "-> " << pCrawl->dest;
             pCrawl = pCrawl->next;
         }
-        cout<<endl;
+        cout << endl;
     }
 }
 
 /* Sort */
+
+// TO DO : this works for simple parallel paths that rejoin, are there any edge cases? 
+int Graph::findStartNode() {
+    std::vector<int> pathLens(num_vertices);
+    for (int v = 0; v < num_vertices; ++v) {
+        adjlist_node* pCrawl = array[v].head;
+
+        int len = 0;
+        while(pCrawl) {
+            len++;
+            pCrawl = array[pCrawl->dest].head;
+        }
+        pathLens.at(v) = len;
+    }
+    int max_index = max_element(pathLens.begin(), pathLens.end()) - pathLens.begin();
+    return max_index;
+}
+
+void Graph::topologicalSortHelper(int v, bool visited[], std::stack<int>& _stack) {
+    visited[v] = true;
+    printf("visited node : %d\n", v);
+    adjlist_node* dep = array[v].head;
+    while(dep) {
+        if (!visited[dep->dest]) {
+            topologicalSortHelper(dep->dest, visited, _stack);
+        }
+        dep = dep->next;
+    }
+    _stack.push(v);
+}
+
+void Graph::topologicalSort() {
+    int max_index = Graph::findStartNode(); 
+    int curr_index = max_index;
+
+    std::stack<int> _stack;
+    bool* visited = new bool[num_vertices];
+    for (int i = 0; i < num_vertices; i++) {
+        visited[i] = false;
+    }
+
+    adjlist_node* pCrawl = array[max_index].head; // the first block in the graph
+    while (pCrawl) {
+        if (visited[curr_index] == false) {
+            printf("calling helper on %d\n", curr_index);
+            topologicalSortHelper(curr_index, visited, _stack);
+        }
+        pCrawl = pCrawl->next;
+    }
+
+    while (_stack.empty() == false) {
+        cout << _stack.top() << " ";
+        _stack.pop();
+    }
+    cout << endl;
+}

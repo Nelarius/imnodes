@@ -18,7 +18,7 @@ void Context::loadContext() { }
 void Context::buildGraph() {
     m_graph.buildAdjacencyList();
     m_graph.display();
+    m_graph.topologicalSort();
 }
-
 
 

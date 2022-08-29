@@ -3,6 +3,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <stack>
 
 #include <imnodes.h>
 #include "block.h"
@@ -76,4 +77,7 @@ class Graph {
         void display();
         bool containsEdge(int src, int dest);
 
+        void topologicalSortHelper(int v, bool visited[], std::stack<int>& _stack);
+        void topologicalSort();
+        int findStartNode();
 };

@@ -28,5 +28,4 @@ public:
     void init();
     void loadContext();     // to be defined when the reverse deployment process is implemented
     void buildGraph();
-
 };
