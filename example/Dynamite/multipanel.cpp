@@ -1,5 +1,6 @@
 #include "multipanel.h"
 #include "context.h"
+#include "graph.h"
 #include <map>
 #include <iterator>
 #include <string>
@@ -8,7 +9,7 @@
 
 using namespace std;
 
-// Retrieved from context.h
+// Retrieved from graph.h
 extern struct BlockParameters parameters;
 
 MultiPanel::MultiPanel() {
@@ -134,7 +135,7 @@ void MultiPanel::showSystemInfo(Context& m_context) {
 void MultiPanel::showBlockInfo(Editor& editor, Context& context) {
     int nodeid = editor.isBlockClicked();
     if (nodeid != 0) {
-        for (Block& block : context._blocks) {
+        for (Block& block : context.m_graph._blocks) {
             if (nodeid == block.getID()) {
                 MultiPanel::formatInfo(block);
             }

@@ -3,46 +3,48 @@
 #include <SDL_scancode.h>
 
 #include "palette.h"
+#include "graph.h"
+
 // Retrieved from palette.h
 extern struct FromPalette block_info;
 
 static bool add_in_port = false;
 static bool add_out_port = false;
 
-static void addBlockInPort(Context &m_context, int id);
-static void addBlockOutPort(Context &m_contect, int id);
+static void addBlockInPort(Graph &graph, int id);
+static void addBlockOutPort(Graph &graph, int id);
 
 Editor::Editor() { }
 
 void Editor::show(Context &m_context) {
     ImNodes::BeginNodeEditor();
+    Graph &graph = m_context.m_graph;
 
     // Adding a node by pressing "A" keyboard
     // This can be deleted as it is not being used
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
         ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A)) 
     {
-        m_context.update(true, "Block");
+        graph.addBlock("Block");
     }
 
     // Adding a node by clicking on palette
     if (block_info.clicked) 
     {
-        m_context.update(true, block_info.block_type);
+        graph.addBlock(block_info.block_type);
         block_info.clicked = false;
     }
 
     // Delete a node by pressing "delete" or "backspace" keyboard
-    int nodeid = isBlockClicked();
-    auto string_nodeid = std::to_string(nodeid);
-    if (nodeid != 0 && ImNodes::IsEditorHovered() &&
+    int node_id = isBlockClicked();
+    //auto string_nodeid = std::to_string(node_id);
+    if (node_id != 0 && ImNodes::IsEditorHovered() &&
         (ImGui::IsKeyReleased(SDL_SCANCODE_DELETE) || ImGui::IsKeyReleased(SDL_SCANCODE_BACKSPACE))) 
     {
         static string current_block_type;
-        for (auto i = 0; i < (int)m_context._blocks.size(); i++) 
-        {
-            if (m_context._blocks[i].getID() == nodeid) {
-                current_block_type = m_context._blocks[i].getType();
+        for (auto i = 0; i < (int)graph._blocks.size(); i++) {
+            if (graph._blocks[i].getID() == node_id) {
+                current_block_type = graph._blocks[i].getType();
             }
         }
 
@@ -55,7 +57,7 @@ void Editor::show(Context &m_context) {
             block_info.output_placed = false;
         }
 
-        m_context.update(false, string_nodeid);
+        graph.deleteBlock(node_id);
     }
 
     // Clear the editor by pressing "C" keyboard
@@ -81,11 +83,12 @@ void Editor::show(Context &m_context) {
 
             if (ImGui::Button("OK", ImVec2(150, 0))) { 
                 // Clearing blocks and links
-                m_context._blocks.clear();
+                //graph._blocks.clear();
+                graph.clearBlocks();
                 block_info.input_placed = false;
                 block_info.output_placed = false;
-
-                m_context._links.clear();
+                graph.clearLinks();
+                //m_context._links.clear();
 
                 messagebox = false;
                 ImGui::CloseCurrentPopup(); 
@@ -100,54 +103,53 @@ void Editor::show(Context &m_context) {
         }
     }
 
-    // Displays blocks and links in the editor
-    displayInEditor(m_context);
+    displayInEditor(graph);
 
     // Displays the minimap
     ImNodes::MiniMap(0.1f, ImNodesMiniMapLocation_BottomRight);
 
     ImNodes::EndNodeEditor();
-    Editor::showPopup(m_context);
+    Editor::showPopup(graph);
 
-    // Check if there are triggers to delete a port
-    // Revisit this when refactoring
-    // This is related to the case of adding and deleting ports
-    // ui.cpp Line 128
-    deletePort(m_context);
+    deletePort(graph);
 }
 
-void Editor::displayInEditor(Context m_context) {
-    for (Block& block : m_context._blocks) {
+void Editor::displayInEditor(Graph graph) {
+    for (Block& block : graph._blocks) {
         block.show();
     } 
-    for (const Link& link : m_context._links) {
+    for (const Link& link : graph._links) {
         ImNodes::Link(link.id, link.start_attr, link.end_attr);
     } 
 }
 
-void Editor::showPopup(Context &m_context) {
-    static int nodeid;
+void Editor::showPopup(Graph &graph) {
+    static int node_id;
 
-    if (ImNodes::IsNodeHovered(&nodeid) && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) { 
+    if (ImNodes::IsNodeHovered(&node_id) && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) { 
         ImGui::OpenPopup("my popup"); 
     }
-    if (add_in_port) {
-        addBlockInPort(m_context, nodeid);
-    }
-    if (add_out_port) {
-        addBlockOutPort(m_context, nodeid);
-    }
+    if (add_in_port) addBlockInPort(graph, node_id);
+    if (add_out_port) addBlockOutPort(graph, node_id);
 
     // Find out which block is getting right clicked
     static string current_block_type;
-    for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
-        if (m_context._blocks[i].getID() == nodeid) {
-            current_block_type = m_context._blocks[i].getType();
+    for (auto i = 0; i < (int)graph._blocks.size(); i++) {
+        if (graph._blocks[i].getID() == node_id) {
+            current_block_type = graph._blocks[i].getType();
         }
     }
 
     if (ImGui::BeginPopup("my popup")) {
-        if (ImGui::MenuItem("Bypass")) { printf("Bypass\n"); } // Link to block.bypass()
+        if (ImGui::MenuItem("Bypass")) { printf("Bypass\n"); } // link to block.bypass()
+        if (current_block_type != "input") {
+            ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
+        } 
+        if (current_block_type != "output") {
+            ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
+        }
+
+        /*
         if (current_block_type == "input") {
             ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
         }
@@ -158,35 +160,36 @@ void Editor::showPopup(Context &m_context) {
             ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
             ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
         }
+        //*/
         ImGui::EndPopup();
     }
 }
 
-static void addBlockInPort(Context &m_context, int nodeid) {
-    for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
-        if (m_context._blocks[i].getID() == nodeid) {
-            Port port(m_context.current_port_id, "INPUT");
-            m_context._blocks[i].addInPort(m_context.current_port_id, port);
-            ++m_context.current_port_id;
+static void addBlockInPort(Graph &graph, int nodeid) {
+    for (auto i = 0; i < (int)graph._blocks.size(); i++) {
+        if (graph._blocks[i].getID() == nodeid) {
+            Port port(graph.current_port_id, "INPUT");
+            graph._blocks[i].addInPort(graph.current_port_id, port);
+            ++graph.current_port_id;
         }
     }
     add_in_port = false;
 }
 
-static void addBlockOutPort(Context &m_context, int nodeid) {
-    for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
-        if (m_context._blocks[i].getID() == nodeid) {
-            Port port(m_context.current_port_id, "OUTPUT");
-            m_context._blocks[i].addOutPort(m_context.current_port_id, port);
-            ++m_context.current_port_id;
+static void addBlockOutPort(Graph &graph, int nodeid) {
+    for (auto i = 0; i < (int)graph._blocks.size(); i++) {
+        if (graph._blocks[i].getID() == nodeid) {
+            Port port(graph.current_port_id, "OUTPUT");
+            graph._blocks[i].addOutPort(graph.current_port_id, port);
+            ++graph.current_port_id;
         }
     }
     add_out_port = false; 
 }
 
-void Editor::deletePort(Context &m_context) {
+void Editor::deletePort(Graph &graph) {
     int portid = 0;
-    for (Block& block : m_context._blocks) {
+    for (Block& block : graph._blocks) {
         block.deleteInPort(portid);
         block.deleteOutPort(portid);
     }
