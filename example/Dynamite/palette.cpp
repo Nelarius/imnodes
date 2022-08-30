@@ -41,9 +41,14 @@ void Palette::init()
 void Palette::drawBlockBrowser(Blocks contents)
 {
     ImGui::TextUnformatted("Block Browser");
-    // ImGui::NewLine();
+
+    // Rendering the block search bar
     static ImGuiTextFilter filter;
-    filter.Draw("##Search", ImGui::GetContentRegionAvail().x); // Need to fix inputTextHint in imgui.cpp
+    /* Need to fix the filter.Draw() in imgui.cpp
+    Replace inputText() to inputTextHint() 
+    Then pass the hint string (ex. "Search")
+    as an argument in filter.Draw() */
+    filter.Draw("##Search", ImGui::GetContentRegionAvail().x);
 
     static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen;
 
@@ -51,6 +56,7 @@ void Palette::drawBlockBrowser(Blocks contents)
     for (int i = 0; i < block_types_len; i++)
     {
         ImGuiTreeNodeFlags node_flags = base_flags;
+
         // Tree node for block types
         bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, contents.block_types[i].c_str(), i);
 
@@ -61,10 +67,13 @@ void Palette::drawBlockBrowser(Blocks contents)
             {
                 for (const auto& io_block : contents.io_blocks)
                 {
-                    if (filter.PassFilter(io_block.c_str())) // Search bar filter for io blocks
+                    // Search bar filter for io blocks
+                    if (filter.PassFilter(io_block.c_str()))
                     {
                         node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                         ImGui::TreeNodeEx(io_block.c_str(), node_flags);
+
+                        // Set block info to pass over to Context
                         if (ImGui::IsItemClicked()) 
                         {
                             if ((!block_info.input_placed && io_block == "input")) {
@@ -78,6 +87,11 @@ void Palette::drawBlockBrowser(Blocks contents)
                                 block_info.output_placed = true;
                             }
                         }
+
+                        /* Set each blocks to be drag-and-droppable
+                        When the docking branch is brought into this repo,
+                        this feature can work as dragging and dropping 
+                        between windows only works with the docking feature*/
                         if (ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload(io_block.c_str(), NULL, 0);
@@ -92,15 +106,23 @@ void Palette::drawBlockBrowser(Blocks contents)
             {
                 for (const auto& dsp_block : contents.dsp_blocks) 
                 {
-                    if (filter.PassFilter(dsp_block.c_str())) // Search bar filter for dsp blocks
+                    // Search bar filter for dsp blocks
+                    if (filter.PassFilter(dsp_block.c_str()))
                     {
                         node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                         ImGui::TreeNodeEx(dsp_block.c_str(), node_flags);
+
+                        // Set block info to pass over to Context
                         if (ImGui::IsItemClicked()) 
                         {
                             block_info.clicked = true;
                             block_info.block_type = dsp_block;
                         }
+
+                        /* Set each blocks to be drag-and-droppable
+                        When the docking branch is brought into this repo,
+                        this feature can work as dragging and dropping 
+                        between windows only works with the docking feature*/
                         if (ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload(dsp_block.c_str(), NULL, 0);
@@ -115,15 +137,23 @@ void Palette::drawBlockBrowser(Blocks contents)
             {
                 for (const auto& control_block : contents.control_blocks)
                 {
-                    if (filter.PassFilter(control_block.c_str())) // Search bar filter for control blocks
+                    // Search bar filter for control blocks
+                    if (filter.PassFilter(control_block.c_str()))
                     {
                         node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                         ImGui::TreeNodeEx(control_block.c_str(), node_flags);
+
+                        // Set block info to pass over to Context
                         if (ImGui::IsItemClicked()) 
                         {
                             block_info.clicked = true;
                             block_info.block_type = control_block;
                         }
+
+                        /* Set each blocks to be drag-and-droppable
+                        When the docking branch is brought into this repo,
+                        this feature can work as dragging and dropping 
+                        between windows only works with the docking feature*/
                         if (ImGui::BeginDragDropSource())
                         {
                             ImGui::SetDragDropPayload(control_block.c_str(), NULL, 0);
@@ -149,9 +179,10 @@ void Palette::show()
     ImDrawList* drawListR = ImGui::GetWindowDrawList();
     drawListR->AddRectFilled(ImVec2(0, 0), ImVec2(palette_width, ImGui::GetIO().DisplaySize.y), IM_COL32(51, 51, 51, 255));
 
+    ImGui::NewLine();
+
     static int tab = 0;
 
-    ImGui::NewLine();
     // Rendering all the buttons in a column
     ImGui::PushStyleColor(ImGuiCol_Button, tab == 1 ? IM_COL32(41, 40, 41, 255) : IM_COL32(31, 30, 31, 255));
     if (ImGui::Button("DSP", ImVec2(50 - 15, 40)))
@@ -185,8 +216,8 @@ void Palette::show()
     // Use this switch statement for future palette button click actions
     switch (tab)
     {
+        // Render block browser
         case 1: {
-            // Render block browser
             static std::vector<std::string> block_types;
             static std::vector<std::string> io_blocks;
             static std::vector<std::string> dsp_blocks;
@@ -213,6 +244,7 @@ void Palette::show()
             break;
         }
 
+        // Render "System Configuration" tab in multi-purpose panel
         case 2: {
             system_clicked = true;
             break;

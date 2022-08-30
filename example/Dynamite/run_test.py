@@ -33,7 +33,7 @@ def _print_warning(error_msg: str) -> None:
     """Print a warning message using click.echo."""
     click.echo(colorama.Fore.YELLOW + error_msg + colorama.Style.RESET_ALL)
 
-# - Other functions
+# - Command call functions
 
 def list_dsp():
     list_output = sonos.audio.dynamicdsp.commands.list(api_version)
@@ -74,12 +74,12 @@ def list_param_types(block_name):
 
 def validate(): 
     with open("system.json", 'r') as jf:
-        # validate each input file
+        # Validate each input file
         did_find_errors = False
         click.echo("Validating {}...".format(jf.name))
         rule_outputs = sonos.audio.dynamicdsp.commands.validate(api_version, jf)
 
-        # check the rule outputs
+        # Check the rule outputs
         is_valid = all(rule_outputs)
         if not is_valid:
             did_find_errors = True
@@ -90,23 +90,23 @@ def validate():
 
         if did_find_errors:
             sys.exit(1)
-        #if not did_find_errors:
+        # If not did_find_errors:
         click.echo("File {} looks good! \U00002728 \U0001F9C1 \U00002728".format(jf.name))
 
-# TO DO : add error statements, possibly toast notifications in app
+# TO DO : Add error statements, possibly toast notifications in app
 def generate_bin():
     validate()
     with open("system.json", 'r') as jf:
-        # figure out file paths and names
+        # Figure out file paths and names
         default_output_file = pathlib.Path(jf.name).with_suffix(".bin").name
-        # - if no output path was specified, we put the file in the current directory
+        # If no output path was specified, we put the file in the current directory
         output_file = pathlib.Path(default_output_file)
 
-        # generate the message binary from the given json file
+        # Generate the message binary from the given json file
         click.echo("Generating DSP API message from {}...".format(jf.name))
         raw_bytes = sonos.audio.dynamicdsp.commands.generate(api_version, jf)
 
-        # write the output file
+        # Write the output file
         click.echo("Writing DSP API message to {}...".format(output_file))
         with open(output_file, mode="wb") as bin_file:
             bin_file.write(raw_bytes)

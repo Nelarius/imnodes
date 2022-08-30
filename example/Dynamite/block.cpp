@@ -11,6 +11,7 @@ Block::Block() {
     type = "Block";
 }
 
+// This can be deleted as we don't use it
 Block::Block(const int i) {
     id = i;
     type = "Block";
@@ -43,16 +44,16 @@ int Block::getNumOutputs() {
 
 void Block::show() {
     // Set Input and Output blocks' node colors to red/orange
-    if (type == "input" || type =="output") {
-        ImNodes::PushColorStyle(ImNodesCol_TitleBar, IM_COL32(175, 41, 0, 255));
-        ImNodes::PushColorStyle(ImNodesCol_TitleBarHovered, IM_COL32(255, 127, 80, 255));
-        ImNodes::PushColorStyle(ImNodesCol_TitleBarSelected, IM_COL32(255, 127, 80, 255));
+    if (type == "input" || type == "output") {
+        ImNodes::PushColorStyle(ImNodesCol_TitleBar, IM_COL32(175, 41, 0, 255)); // Red
+        ImNodes::PushColorStyle(ImNodesCol_TitleBarHovered, IM_COL32(255, 127, 80, 255)); // Orange
+        ImNodes::PushColorStyle(ImNodesCol_TitleBarSelected, IM_COL32(255, 127, 80, 255)); // Orange
     }
     ImNodes::BeginNode(id);
     ImNodes::BeginNodeTitleBar();
-    ImGui::TextUnformatted(name.c_str());
+    ImGui::TextUnformatted(name.c_str()); // Name of the block (ex. FIR_Block_1)
     ImGui::NewLine();
-    ImGui::TextUnformatted(type.c_str());
+    ImGui::TextUnformatted(type.c_str()); // Type of the block (ex. dynamic_hi_pass)
     ImNodes::EndNodeTitleBar();
 
     map<int,Port>::iterator itr;
@@ -67,6 +68,7 @@ void Block::show() {
     for (itr = _outPorts.begin(); itr != _outPorts.end(); itr++) {
         ImNodes::BeginOutputAttribute(itr->first);
         const float text_width = ImGui::CalcTextSize(itr->second.name).x;
+        // Spacing needed for DSP/Control block output ports
         if (type != "input") {
             ImGui::Indent(120.f + ImGui::CalcTextSize("value").x - text_width);
         }
@@ -83,7 +85,7 @@ void Block::show() {
 }
 
 void Block::bypass() {
-    // gets called by block -> pop up -> edit menu
+    // Gets called by block -> pop up -> edit menu
 }
 
 void Block::setName(std::string n) {
@@ -113,7 +115,3 @@ void Block::deleteOutPort(int portid) {
         _outPorts.erase(portid); 
     }
 }
-
-// void Block::deleteBlock(Block block) {
-
-// }

@@ -10,6 +10,7 @@
 #include "palette.h"
 
 struct MultiPanelFuncs {
+    // Callback function to save the inputted block name
     static int blockNameCallBack(ImGuiInputTextCallbackData* data) {
         if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
             ((Block*)data->UserData)->setName(std::string(data->Buf));
@@ -17,6 +18,7 @@ struct MultiPanelFuncs {
         return 0;
     }
 
+    // Callback function to save the inputted system name
     static int systemNameCallBack(ImGuiInputTextCallbackData* data) {
         if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
             ((Context*)data->UserData)->system_name = (std::string(data->Buf));
@@ -24,6 +26,7 @@ struct MultiPanelFuncs {
         return 0;
     }
 
+    // Callback function to save the inputted ip address
     static int ipAddressCallBack(ImGuiInputTextCallbackData* data) {
         if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
             ((Context*)data->UserData)->target_ip_address = (std::string(data->Buf));

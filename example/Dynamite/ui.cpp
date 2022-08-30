@@ -92,116 +92,59 @@ bool UI::show(bool done, Context &m_context, DyndspWrapper m_wrapper) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    // set up UI
+    // Set up base app window
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), 0, ImVec2(0.0f, 0.0f));
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y * 0.75f));
+
+    // Render base app window
     auto flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
-    ImGui::Begin("Dynamite Editor", NULL, flags); // begin menu bar + canvas + multipanel window
+    ImGui::Begin("Dynamite Editor", NULL, flags);
+
+    // Render the menu bar
     m_menu.show(m_context, m_wrapper); 
 
+    /* This is the hacky way that Jehan and Kevin
+    have done to manage windows. This part of the code
+    should be fixed when the "docking" branch is 
+    pulled to this repo.*/
+    // Splitter between palette and editor
     UI::setSplitter();
     Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 100.0f, 100.0f);
+
+    // Render 
     ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, -1), false, 0);
     m_palette.show();
     ImGui::EndChild();
     ImGui::SameLine(0.0f, s_SplitterSize);
+
+    // Render the editor
     ImGui::BeginChild("##central canvas", ImVec2(s_RightPaneSize, -1), false, 0);
     m_editor.show(m_context); 
     ImGui::EndChild(); 
 
+    // Revisit this when refactoring
+    // This is related to the case of adding and deleting ports
+    // editor.cpp Line 102
     m_context.addLink();
     int link_id = 0;
     m_context.deleteLink(link_id);
 
+    /* This is the hacky way that Jehan and Kevin
+    have done to manage windows. This part of the code
+    should be fixed when the "docking" branch is 
+    pulled to this repo.*/
+    // Set (hard code) multi-purpose position and size
     ImGui::SetNextWindowPos(ImVec2(0.0f, ImGui::GetIO().DisplaySize.y * 0.755f));
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y * 0.246f));
+
+    // Render multi-purpose panel
     flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
     ImGui::Begin("##multipanel", NULL, flags);
     m_multipanel.show(m_editor, m_palette, m_context); 
     ImGui::End();
 
-    ImGui::End(); // end menu bar + canvas + multipanel window
-
-    /*
-    auto availableRegion = ImGui::GetContentRegionAvail();
-    static float s_SplitterSize     = 6.0f;
-    static float s_SplitterArea     = 0.0f;
-    static float s_TopPaneSize     = 0.0f;
-    static float s_BottomPaneSize    = 0.0f;
-
-    if (s_SplitterArea != availableRegion.y) {
-        if (s_SplitterArea == 0.0f) {
-            s_SplitterArea     = availableRegion.y;
-            s_TopPaneSize     = ImFloor(availableRegion.y * 0.75f);
-            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
-        } else {
-            auto ratio = availableRegion.y / s_SplitterArea;
-            s_SplitterArea     = availableRegion.y;
-            s_TopPaneSize     = s_TopPaneSize * ratio;
-            s_BottomPaneSize    = availableRegion.y - s_TopPaneSize - s_SplitterSize;
-        }
-    } 
-    Splitter(false, s_SplitterSize, &s_TopPaneSize, &s_BottomPaneSize, 100.0f, 100.0f); 
-    ImGui::BeginChild("##palette", ImVec2(-1, s_TopPaneSize), false, ImGuiWindowFlags_NoScrollWithMouse);
-    ImGui::EndChild();
-    ImGui::SameLine(0.0f, s_SplitterSize);
-    ImGui::BeginChild("##canvas", ImVec2(-1, s_BottomPaneSize), false, ImGuiWindowFlags_NoScrollWithMouse);
-    ImGui::EndChild(); */
-    /*
-    auto availableRegion = ImGui::GetContentRegionAvail();
-    printf("available region.x = %f \n", availableRegion.x);
-    static float s_SplitterSize     = 6.0f;
-    static float s_SplitterArea     = 0.0f;
-    static float s_LeftPaneSize     = 0.0f;
-    static float s_RightPaneSize    = 0.0f;
-
-    if (s_SplitterArea != availableRegion.x) {
-        if (s_SplitterArea == 0.0f) {
-            s_SplitterArea     = availableRegion.x;
-            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.33f);
-            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
-        } else {
-            auto ratio = availableRegion.x / s_SplitterArea;
-            s_SplitterArea     = availableRegion.x;
-            s_LeftPaneSize     = s_LeftPaneSize * ratio;
-            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
-        }
-    }
-
-    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 50.0f, 50.0f);
-    ImGui::BeginChild("##palette", ImVec2(s_LeftPaneSize, 0.0), false, 0); 
-    ImGui::EndChild();
-    ImGui::SameLine(0.0f, s_SplitterSize);
-
-    ImGui::BeginChild("##right hand side", ImVec2(s_RightPaneSize, 0.0), false, 0); 
-    availableRegion = ImGui::GetContentRegionAvail();
-    s_SplitterArea     = 0.0f;
-    s_LeftPaneSize     = 0.0f;
-    s_RightPaneSize    = 0.0f;
-
-    if (s_SplitterArea != availableRegion.x) {
-        if (s_SplitterArea == 0.0f) {
-            s_SplitterArea     = availableRegion.x;
-            s_LeftPaneSize     = ImFloor(availableRegion.x * 0.33f);
-            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
-        } else {
-            auto ratio = availableRegion.x / s_SplitterArea;
-            s_SplitterArea     = availableRegion.x;
-            s_LeftPaneSize     = s_LeftPaneSize * ratio;
-            s_RightPaneSize    = availableRegion.x - s_LeftPaneSize - s_SplitterSize;
-        }
-    }
-
-    Splitter(true, s_SplitterSize, &s_LeftPaneSize, &s_RightPaneSize, 50.0f, 50.0f);
-    ImGui::BeginChild("##editor", ImVec2(s_LeftPaneSize, 0.0), false, 0); 
-    m_editor.show(m_context);
-    ImGui::EndChild();
-    ImGui::SameLine(0.0f, s_SplitterSize);
-
-    ImGui::BeginChild("##multipurpose panel", ImVec2(0.0, 0.0), false, 0); 
-    ImGui::EndChild();
-
-    ImGui::EndChild(); */
+    // End menu bar + canvas + multipanel window
+    ImGui::End();
 
     // Rendering
     ImGui::Render();

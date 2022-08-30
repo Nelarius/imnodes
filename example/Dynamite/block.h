@@ -5,29 +5,22 @@
 
 struct Port {
     int id;
-    std::string type;
+    std::string type; // "INPUT" or "OUTPUT"
     char name[40] = "";
     char* reference_name = nullptr;
 
     Port() {};
-    Port(int n, std::string s) {
-        this->id = n;
-        this->type = s;
-    };
+    Port(int n, std::string s) : id(n), type(s) {}
 };
 
 struct Parameter {
     int id;
-    std::string name;
-    std::string type;
+    std::string name; // ex. delay_amt
+    std::string type; // ex. bool
     char value[40] = "";
     
     Parameter() {};
-    Parameter(int n, std::string param_name, std::string param_type) {
-        this->id = n;
-        this->name = param_name;
-        this->type = param_type;
-    };
+    Parameter(int n, std::string param_name, std::string param_type) : id(n), name(param_name), type(param_type) {}
 };
 
 class Block {
@@ -45,7 +38,7 @@ class Block {
         std::map<int, Parameter> _parameters;
         
         Block();
-        Block(const int i);
+        Block(const int i); // This can be deleted as we don't use it
         Block(const int i, std::string n);
 
         int getID();

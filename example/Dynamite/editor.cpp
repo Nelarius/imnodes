@@ -18,6 +18,7 @@ void Editor::show(Context &m_context) {
     ImNodes::BeginNodeEditor();
 
     // Adding a node by pressing "A" keyboard
+    // This can be deleted as it is not being used
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
         ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_A)) 
     {
@@ -38,22 +39,26 @@ void Editor::show(Context &m_context) {
         (ImGui::IsKeyReleased(SDL_SCANCODE_DELETE) || ImGui::IsKeyReleased(SDL_SCANCODE_BACKSPACE))) 
     {
         static string current_block_type;
-        for (auto i = 0; i < (int)m_context._blocks.size(); i++) {
+        for (auto i = 0; i < (int)m_context._blocks.size(); i++) 
+        {
             if (m_context._blocks[i].getID() == nodeid) {
                 current_block_type = m_context._blocks[i].getType();
             }
         }
-        if (current_block_type == "input") {
+
+        if (current_block_type == "input")
+        {
             block_info.input_placed = false;
         }
-        else if (current_block_type == "output") {
+        else if (current_block_type == "output") 
+        {
             block_info.output_placed = false;
         }
 
         m_context.update(false, string_nodeid);
     }
 
-    // Clear the canvas by pressing "C" keyboard
+    // Clear the editor by pressing "C" keyboard
     static bool messagebox = false;
     if (ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(SDL_SCANCODE_C)) 
     {
@@ -95,12 +100,19 @@ void Editor::show(Context &m_context) {
         }
     }
 
+    // Displays blocks and links in the editor
     displayInEditor(m_context);
 
+    // Displays the minimap
     ImNodes::MiniMap(0.1f, ImNodesMiniMapLocation_BottomRight);
+
     ImNodes::EndNodeEditor();
     Editor::showPopup(m_context);
 
+    // Check if there are triggers to delete a port
+    // Revisit this when refactoring
+    // This is related to the case of adding and deleting ports
+    // ui.cpp Line 128
     deletePort(m_context);
 }
 
@@ -119,8 +131,12 @@ void Editor::showPopup(Context &m_context) {
     if (ImNodes::IsNodeHovered(&nodeid) && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) { 
         ImGui::OpenPopup("my popup"); 
     }
-    if (add_in_port) addBlockInPort(m_context, nodeid);
-    if (add_out_port) addBlockOutPort(m_context, nodeid);
+    if (add_in_port) {
+        addBlockInPort(m_context, nodeid);
+    }
+    if (add_out_port) {
+        addBlockOutPort(m_context, nodeid);
+    }
 
     // Find out which block is getting right clicked
     static string current_block_type;
@@ -131,7 +147,7 @@ void Editor::showPopup(Context &m_context) {
     }
 
     if (ImGui::BeginPopup("my popup")) {
-        if (ImGui::MenuItem("Bypass")) { printf("Bypass\n"); } // link to block.bypass()
+        if (ImGui::MenuItem("Bypass")) { printf("Bypass\n"); } // Link to block.bypass()
         if (current_block_type == "input") {
             ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
         }

@@ -28,21 +28,34 @@ void DyndspWrapper::call_dyndsp_command(std::string command) {
             if ((strcmp(command.c_str(), "deploy") == 0) || (strcmp(command.c_str(), "clean") == 0)) 
             {
                 // validate IP
-                if (validateIP(*ip_address)) {
+                if (validateIP(*ip_address)) 
+                {
                     CPyObject pArg = PyTuple_New(1); // Create argument to send over
                     PyTuple_SetItem(pArg, 0, PyUnicode_FromString((*ip_address).c_str()));
-                    CPyObject pResult = PyObject_CallObject(pCommand, pArg); // call object with arg
+                    CPyObject pResult = PyObject_CallObject(pCommand, pArg); // Call object with arg
                 } 
-                else { printf("ERROR : cannot deploy without valid IP address\n"); }
+                else 
+                { 
+                    printf("ERROR : cannot deploy without valid IP address\n"); 
+                }
             } 
-            else { CPyObject pResult = PyObject_CallObject(pCommand, NULL); }   // call object without arg
+            else 
+            { 
+                CPyObject pResult = PyObject_CallObject(pCommand, NULL); // Call object without arg
+            }
         }
-        else { printf("ERROR: function %s()\n", command.c_str()); }
+        else 
+        { 
+            printf("ERROR: function %s()\n", command.c_str()); 
+        }
     } 
-    else { printf("ERROR: Module not imported\n"); }
+    else 
+    { 
+        printf("ERROR: Module not imported\n"); 
+    }
 }
 
-// TO DO : clean up/ generalize other functions
+// TO DO : Clean up / generalize other functions
 std::vector<std::string> DyndspWrapper::get_dsp_list() 
 {
     static std::vector<std::string> dsp_blocknames;
@@ -58,7 +71,7 @@ std::vector<std::string> DyndspWrapper::get_dsp_list()
 
     if (pModule)
     {
-        // Find the method defined in Python file
+    // Find the method defined in Python file
 	CPyObject pDSP = PyObject_GetAttrString(pModule, "list_dsp");
 
 	if (pDSP && PyCallable_Check(pDSP))
@@ -226,21 +239,21 @@ void DyndspWrapper::getData(Context &m_context) {
     ip_address = &m_context.target_ip_address;
 }
 
-// Helper functions for validateIP() //
+// Helper functions for validateIP()
 bool validateIP(std::string ip) {
-    // split the string into tokens
+    // Split the string into tokens
     std::vector<std::string> list = split(ip, '.');
  
-    // if the token size is not equal to four
+    // If the token size is not equal to four
     if (list.size() != 4) {
         return false;
     }
  
-    // validate each token
+    // Validate each token
     for (std::string str: list)
     {
-        // verify that the string is a number or not, and the numbers
-        // are in the valid range
+        /* Verify that the string is a number or not, 
+        and the numbers are in the valid range */
         if (!isNumber(str) || stoi(str) > 255 || stoi(str) < 0) {
             return false;
         }

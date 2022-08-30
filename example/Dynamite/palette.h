@@ -11,6 +11,7 @@ struct Blocks
     std::vector<std::string> block_types, io_blocks, dsp_blocks, control_blocks;
 };
 
+// Block information used in Context
 struct FromPalette
 {
     bool clicked;
@@ -23,6 +24,7 @@ struct FromPalette
 class Palette {
     private: 
         void drawBlockBrowser(Blocks contents);
+        
     public:
         bool system_clicked;
         bool block_clicked;

@@ -11,21 +11,24 @@
 
 using namespace std;
 
+// Used when retrieving block names from Dynamic DSP
 struct BlockNames 
 {
     std::vector<std::string> dsp_names, control_names;
 };
 
+// Used when retrieving block parameters from Dynamic DSP
 struct BlockParameters
 {
     std::map<std::string, std::vector<std::string>> parameter_names_for_block;
     std::map<std::string, std::vector<std::string>> parameter_types_for_block;
 };
 
-struct Link 
+struct Link
 {
     int id;
     int start_attr, end_attr;
+    int start_block, end_block;
 };
 
 class Context {
@@ -66,6 +69,5 @@ all before being sent to the UI to be displayed in the central canvas
 most likely an init function so that that happens on function call, because we might load the app 
 on to a blank canvas, then go File->Open->select an instance and load that saved context 
 */
-
 
 };

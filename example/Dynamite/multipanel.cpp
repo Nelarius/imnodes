@@ -20,11 +20,10 @@ void MultiPanel::init() {
 }
 
 void MultiPanel::show(Editor& m_editor, Palette& m_palette, Context& m_context) {
-    // Flag allowing the tabs to be reorderable
+    // Flag allowing the tabs to be reorderable and autoselect new tabs
     static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs;
 
     // Tab Bar
-    // what are we using each of these tabs for? and where will block info go
     const char* tabNames[4] = { "Inspector", "System Configuration", "Output", "Terminal" };
     static bool opened[4] = { true, false, true, true }; // Persistent user state
 
@@ -48,13 +47,17 @@ void MultiPanel::show(Editor& m_editor, Palette& m_palette, Context& m_context) 
             if (opened[n] && ImGui::BeginTabItem(tabNames[n], &opened[n], ImGuiTabItemFlags_None))
             {
                 ImGui::NewLine();
+
                 // Display block attributes
-                if (n == 0) {
+                if (n == 0) 
+                {
                     MultiPanel::showBlockInfo(m_editor, m_context);
                 }
-                else if (n == 1) {
+                else if (n == 1) 
+                {
                     MultiPanel::showSystemInfo(m_context);
                 }
+
                 ImGui::EndTabItem();
             }
         }
@@ -66,11 +69,13 @@ void MultiPanel::exit() {
     // do nothing
 }
 
+// Renders the "System Configuration" tab
 void MultiPanel::showSystemInfo(Context& m_context) {
     // System name
     ImGui::TextUnformatted("System name: ");
     ImGui::SameLine();
     static char systemname_field[40] = "";
+
     // Check if system name already exists
     if (m_context.system_name != "") {
         std::strcpy(systemname_field, (m_context.system_name).c_str());
@@ -78,9 +83,13 @@ void MultiPanel::showSystemInfo(Context& m_context) {
     else {
         std::strcpy(systemname_field, "");
     }
+
+    // Width of the input text field
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.2);
+
     auto flag = ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_AutoSelectAll;
     ImGui::InputText("##SystemName", systemname_field, 40, flag, MultiPanelFuncs::systemNameCallBack, (void *)&m_context);
+
     ImGui::PopItemWidth();
 
     ImGui::NewLine();
@@ -88,10 +97,12 @@ void MultiPanel::showSystemInfo(Context& m_context) {
     static ImGuiTableFlags table_flags = ImGuiTableFlags_BordersInnerV; 
     if (ImGui::BeginTable("system info", 3, table_flags)) {
         ImGui::TableNextColumn();
+
         // Target player IP address
         ImGui::TextUnformatted("Player IP address: ");
         ImGui::SameLine();
         static char ip_field[40] = "";
+
         // Check if ip address already exists
         if (m_context.target_ip_address != "") {
             std::strcpy(ip_field, (m_context.target_ip_address).c_str());
@@ -99,8 +110,12 @@ void MultiPanel::showSystemInfo(Context& m_context) {
         else {
             std::strcpy(ip_field, "");
         }
+
+        // Width of the input text field
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
+
         ImGui::InputText("##IPAddress", ip_field, 40, flag, MultiPanelFuncs::ipAddressCallBack, (void *)&m_context);
+
         ImGui::PopItemWidth();
 
         // Enable chirp and Trueplay (no functionality yet)
@@ -128,15 +143,16 @@ void MultiPanel::showBlockInfo(Editor& editor, Context& context) {
 }
 
 void MultiPanel::formatInfo(Block& block) {
-    // Block type
+    // Display block type
     ImGui::TextUnformatted("Block type: ");
     ImGui::SameLine();
     ImGui::TextUnformatted(block.getType().c_str());
 
-    // Block name
+    // Display block name
     ImGui::TextUnformatted("Block name: ");
     ImGui::SameLine();
     static char blockname_field[40] = "";
+
     // Check if block name already exists
     if (block.getName() != "") {
         std::strcpy(blockname_field, block.getName().c_str());
@@ -144,9 +160,13 @@ void MultiPanel::formatInfo(Block& block) {
     else {
         std::strcpy(blockname_field, "");
     }
+
+    // Width of the input text field
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.2);
+
     auto flag = ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_AutoSelectAll;
     ImGui::InputText("##BlockName", blockname_field, IM_ARRAYSIZE(blockname_field), flag, MultiPanelFuncs::blockNameCallBack, (void *)&block);
+
     ImGui::PopItemWidth();
 
     // Block input/output and parameters
@@ -158,25 +178,30 @@ void MultiPanel::formatInfo(Block& block) {
 
         int channel_index = 1;
 
-        // Input channels name text field generation
-        // Future potential edit:
-        // If we want input port names to not cascade other block's output port names and let it have its own name,
-        // delete the three lines below and the port class will utilize its own "name" member variable
-        // this will allow the port to have its name and not have it assigned to the input port name's reference.
+        // Input port name text field generation
         for (auto &itr : block._inPorts) {
+            // Display input port ordering (ex. INPUT 1)
             std::string numberedInput = "INPUT ";
             numberedInput.append(std::to_string(channel_index));
             ImGui::TextUnformatted(numberedInput.c_str());
             ++channel_index;
             ImGui::SameLine();
+
+            // Width of the input text field
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
+
+            // Create text field ID
             std::string textFieldID = "##InputName";
             textFieldID.append(std::to_string(itr.first));
+
+            // Check if port name has a cascaded name
             char* buf = (char*)itr.second.name;
             if (itr.second.reference_name != nullptr) {
                 buf = itr.second.reference_name;
             }
+
             ImGui::InputText(textFieldID.c_str(), buf, 40);
+
             ImGui::PopItemWidth();
         }
         
@@ -187,18 +212,25 @@ void MultiPanel::formatInfo(Block& block) {
         // Reset index for output ports
         channel_index = 1;
 
-        // Output channels name text field generation
+        // Output port name text field generation
         for (const auto &itr : block._outPorts) {
+            // Display output port ordering (ex. OUTPUT 1)
             std::string numberedOutput = "OUTPUT ";
             numberedOutput.append(std::to_string(channel_index));
             ImGui::TextUnformatted(numberedOutput.c_str());
             ++channel_index;
             ImGui::SameLine();
+
+            // Width of the input text field
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
+
+            // Create text field ID
             std::string textFieldID = "##OutputName";
             textFieldID.append(std::to_string(itr.first));
+
             char* buf = (char*)itr.second.name;
             ImGui::InputText(textFieldID.c_str(), buf, 40);
+
             ImGui::PopItemWidth();
         }
 
@@ -209,18 +241,25 @@ void MultiPanel::formatInfo(Block& block) {
         // Call to retrieve block parameters
         for (const auto &itr : block._parameters)
         {
-            if (itr.second.name != "none") { // Don't render when there are no parameters
+            // Don't render when there are no parameters
+            if (itr.second.name != "none")
+            {
                 ImGui::TextUnformatted((itr.second.name).c_str());
                 ImGui::SameLine();
+
+                // Width of the input text field
                 ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5);
+
+                // Create text field ID
                 std::string textFieldID = "##Parameter";
                 textFieldID.append(std::to_string(itr.first));
+
                 char* buf = (char*)itr.second.value;
                 ImGui::InputTextWithHint(textFieldID.c_str(), (itr.second.type).c_str(), buf, 40);
+
                 ImGui::PopItemWidth();
             }
         }
-
         ImGui::EndTable();
     }
 }

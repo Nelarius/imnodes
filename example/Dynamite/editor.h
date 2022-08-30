@@ -9,9 +9,6 @@
 class Editor {
 
 public:
-
-    //static int current_attr_id;
-
     static void init() {
         ImNodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
 
@@ -21,7 +18,6 @@ public:
 
         ImNodesStyle& style = ImNodes::GetStyle();
         style.Flags |= ImNodesStyleFlags_GridLinesPrimary | ImNodesStyleFlags_GridSnapping;
-        //ImFontAtlas::Build
     }
 
     static void exit() {
