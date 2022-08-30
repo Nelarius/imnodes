@@ -8,7 +8,7 @@
 #define GET_VAR_NAME(var) (#var)
 
 // Forward declarations
-static void saveToJson(Context& m_context);
+static void saveGraph(Context& m_context);
 
 static bool save = false;
 static bool validate = false;
@@ -17,7 +17,7 @@ static bool deploy = false;
 static bool clean = false;
 
 void MenuBar::show(Context& m_context, DyndspWrapper m_wrapper) {
-    if (save) saveToJson(m_context);
+    if (save) saveGraph(m_context);
     if (validate) {
         m_wrapper.call_dyndsp_command(GET_VAR_NAME(validate));
         validate = false;
@@ -84,9 +84,8 @@ void MenuBar::show(Context& m_context, DyndspWrapper m_wrapper) {
     } 
 }
 
-static void saveToJson(Context& m_context) {
-    m_context.buildGraph();
-    
+static void saveGraph(Context& m_context) {
+    m_context.sortGraph();
     JsonGraphFileWriter fw;
     fw.writeToFile(m_context);
     save = false;

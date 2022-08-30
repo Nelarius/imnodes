@@ -47,6 +47,8 @@ class Graph {
     public: 
         std::vector<Block>  _blocks;
         std::vector<Link>   _links;
+        std::stack<int>     blockid_stack;
+        std::stack<Block>   block_stack;
 
         int                   current_link_id = 0;
         int                   current_block_id = 0;
@@ -65,6 +67,7 @@ class Graph {
 
         void addBlock(std::string blockname);
         void deleteBlock(int node_id);
+        Block findBlock(int id);
         void clearBlocks();
 
         void addLink();
@@ -77,7 +80,7 @@ class Graph {
         void display();
         bool containsEdge(int src, int dest);
 
-        void topologicalSortHelper(int v, bool visited[], std::stack<int>& _stack);
-        void topologicalSort();
+        void topologicalSortHelper(int v, bool visited[]);
+        void topologicalSort(); // change return type to vector<Block>
         int findStartNode();
 };

@@ -80,6 +80,14 @@ void Graph::deleteBlock(int node_id) {
         _blocks.erase(iter);
 }
 
+Block Graph::findBlock(int id) {
+    auto iter = std::find_if(
+        _blocks.begin(), _blocks.end(), [id](Block& block) -> bool {
+            return id == block.getID();
+    });
+    return *iter;
+}
+
 void Graph::clearBlocks() {
     _blocks.clear();
 }
@@ -245,7 +253,6 @@ void Graph::display() {
 
 /* Sort */
 
-// TO DO : this works for simple parallel paths that rejoin, are there any edge cases? 
 int Graph::findStartNode() {
     std::vector<int> pathLens(num_vertices);
     for (int v = 0; v < num_vertices; ++v) {
@@ -262,41 +269,45 @@ int Graph::findStartNode() {
     return max_index;
 }
 
-void Graph::topologicalSortHelper(int v, bool visited[], std::stack<int>& _stack) {
+void Graph::topologicalSortHelper(int v, bool visited[]) {
     visited[v] = true;
-    printf("visited node : %d\n", v);
     adjlist_node* dep = array[v].head;
     while(dep) {
         if (!visited[dep->dest]) {
-            topologicalSortHelper(dep->dest, visited, _stack);
+            topologicalSortHelper(dep->dest, visited);
         }
         dep = dep->next;
     }
-    _stack.push(v);
+    blockid_stack.push(v);
+    block_stack.push(findBlock(v));
 }
 
+// change return type to vector<Block>
 void Graph::topologicalSort() {
+    while (!block_stack.empty()) {
+        block_stack.pop();
+    }
+
     int max_index = Graph::findStartNode(); 
     int curr_index = max_index;
 
-    std::stack<int> _stack;
     bool* visited = new bool[num_vertices];
     for (int i = 0; i < num_vertices; i++) {
         visited[i] = false;
     }
 
-    adjlist_node* pCrawl = array[max_index].head; // the first block in the graph
+    adjlist_node* pCrawl = array[max_index].head;
     while (pCrawl) {
         if (visited[curr_index] == false) {
-            printf("calling helper on %d\n", curr_index);
-            topologicalSortHelper(curr_index, visited, _stack);
+            topologicalSortHelper(curr_index, visited);
         }
         pCrawl = pCrawl->next;
     }
 
-    while (_stack.empty() == false) {
-        cout << _stack.top() << " ";
-        _stack.pop();
+    while (blockid_stack.empty() == false) {
+        cout << blockid_stack.top() << " ";
+        blockid_stack.pop();
     }
+    // std::stack<Block> -> std::vector<vector>
     cout << endl;
 }

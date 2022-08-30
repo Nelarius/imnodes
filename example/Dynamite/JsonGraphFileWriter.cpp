@@ -22,6 +22,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <cctype>
+#include <vector>
 
 using namespace rapidjson;
 using namespace std;
@@ -38,7 +39,8 @@ bool validate_sys_name(std::string sysname) {
 }
 
 void JsonGraphFileWriter::writeToFile(Context& context) {
-    Graph graph = context.m_graph;
+    Graph i_graph = context.m_graph;
+
     setSysName(context); // get reference to system_name from m_context
     // set up .json file
     FILE* fp = fopen("system.json", "w");
@@ -61,7 +63,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         std::cerr << "ERROR : cannot serialize without system name" << std::endl;
     }
 
-    if (graph._blocks.empty()) {
+    if (i_graph._blocks.empty()) {
         std::cerr << "ERROR : no blocks in system" << std::endl;
     } else {
         // add global input, output, and scratch buffer channels
@@ -69,7 +71,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         Value output_channels(kArrayType);
         Value scratch_buffers(kArrayType);
         Value channel;
-        for (Block& b : graph._blocks) {
+        for (Block& b : i_graph._blocks) {
             if (b.getType() == "input") {
                 for (auto &port : b._outPorts) {
                     channel.SetObject();
@@ -90,7 +92,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
             }
         }
 
-        for (Block& b : graph._blocks) {
+        for (Block& b : i_graph._blocks) {
             bool is_match = false;
             if (b.getType() == "input" || b.getType() == "output") {
                 continue;
@@ -114,7 +116,6 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                         continue;
                     }
                 }
-
                 if (!is_match) {
                     channel.SetObject();
                     name = StringRef(p.second.name);
@@ -126,14 +127,20 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
         if (!scratch_buffers.Empty()) {
             jsonDoc.AddMember("scratch_buffers", scratch_buffers, allocator);
         }
-        
  
         // add DSP blocks
         Value dsp_blocks(kArrayType);
         Value name;
-        for (Block& b: graph._blocks) {
+
+        while (i_graph.block_stack.empty() == false) {
+            auto& b = i_graph.block_stack.top();
+            printf("block name = %s\n", b.getName().c_str());
+
             // Skip over input and output blocks
-            if ((0 == strcmp(b.getType().c_str(), "input")) || (0 == strcmp(b.getType().c_str(), "output"))) continue;
+            if ((0 == strcmp(b.getType().c_str(), "input")) || (0 == strcmp(b.getType().c_str(), "output"))) {
+                i_graph.block_stack.pop();
+                continue;
+            }    
             
             Value block;
             block.SetObject();
@@ -188,6 +195,8 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
             }
             block.AddMember(Value(b.getType().c_str(), b.getType().size(), allocator).Move(), param, allocator);
             dsp_blocks.PushBack(block, allocator);
+
+            i_graph.block_stack.pop();
         }
         jsonDoc.AddMember("dsp_blocks", dsp_blocks, allocator);
     }
