@@ -12,10 +12,6 @@ using namespace std;
 // Retrieved from graph.h
 extern struct BlockParameters parameters;
 
-MultiPanel::MultiPanel() {
-    // do nothing
-}
-
 void MultiPanel::init() {
     // do nothing
 }
@@ -70,7 +66,6 @@ void MultiPanel::exit() {
     // do nothing
 }
 
-// Renders the "System Configuration" tab
 void MultiPanel::showSystemInfo(Context& m_context) {
     // System name
     ImGui::TextUnformatted("System name: ");

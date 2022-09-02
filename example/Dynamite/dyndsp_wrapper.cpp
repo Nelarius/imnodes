@@ -239,7 +239,6 @@ void DyndspWrapper::getData(Context &m_context) {
     ip_address = &m_context.target_ip_address;
 }
 
-// Helper functions for validateIP()
 bool validateIP(std::string ip) {
     // Split the string into tokens
     std::vector<std::string> list = split(ip, '.');
@@ -261,6 +260,7 @@ bool validateIP(std::string ip) {
     return true;
 }
 
+// Helper functions for validateIP()
 bool isNumber(const std::string &str) {
     return !str.empty() &&
         (str.find_first_not_of("[0123456789]") == std::string::npos);

@@ -14,8 +14,6 @@ static bool add_out_port = false;
 static void addBlockInPort(Graph &graph, int id);
 static void addBlockOutPort(Graph &graph, int id);
 
-Editor::Editor() { }
-
 void Editor::show(Context &m_context) {
     ImNodes::BeginNodeEditor();
     Graph &graph = m_context.m_graph;
@@ -148,19 +146,6 @@ void Editor::showPopup(Graph &graph) {
         if (current_block_type != "output") {
             ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
         }
-
-        /*
-        if (current_block_type == "input") {
-            ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
-        }
-        else if (current_block_type == "output") {
-            ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
-        }
-        else {
-            ImGui::MenuItem("Add Channel-In", NULL, &add_in_port);
-            ImGui::MenuItem("Add Channel-Out", NULL, &add_out_port);
-        }
-        //*/
         ImGui::EndPopup();
     }
 }

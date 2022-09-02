@@ -6,22 +6,6 @@
 
 using namespace std;
 
-Block::Block() {
-    id = 0;
-    type = "Block";
-}
-
-// This can be deleted as we don't use it
-Block::Block(const int i) {
-    id = i;
-    type = "Block";
-}
-
-Block::Block(const int i, std::string n) {
-    id = i;
-    type = n;
-}
-
 int Block::getID() {
     return this->id;
 }

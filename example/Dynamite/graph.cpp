@@ -42,6 +42,8 @@ void Graph::init() {
 void Graph::addBlock(std::string blockname) {
     const int block_id = ++current_block_id;
     Block block(block_id, blockname);
+
+    // TO DO : anything that repeats should go in a function
     for (int i = 0; i < 2; i++) {
         if (blockname != "input") {
             Port port(current_port_id, "INPUT");
@@ -169,8 +171,6 @@ adjlist_node* Graph::newNode(int dest) {
     for (auto& b : _blocks) {
         if (b.getID() == dest) {
             newNode->block = b;
-        } else {
-            newNode->block = NULL;
         }
     }
     newNode->dest = dest;
@@ -201,16 +201,19 @@ void Graph::buildAdjacencyList() {
 
     for (auto& block : _blocks) {
         for (auto& port : block._inPorts) {
+            // find the link that has the port we are currently looking at
             auto link_iter = std::find_if(
                 _links.begin(), _links.end(), [port](const Link& temp) -> bool {
                     return port.first == temp.end_attr;
             });
             if (link_iter != _links.end()) {
+                // find the block that contains the port on the other end of that same link
                 auto block_iter = std::find_if(
                     _blocks.begin(), _blocks.end(), [link_iter](Block& b) -> bool {
                         return portIterator(b, link_iter);
                 });
                 if (block_iter != _blocks.end()) {
+                    // check for duplicate edges between two blocks
                     if (!Graph::containsEdge(block_iter->getID(), block.getID())) {
                         Graph::addEdge(block_iter->getID(), block.getID());
                     }
@@ -235,6 +238,7 @@ bool Graph::containsEdge(int src, int dest) {
     return false;
 }
 
+// Prints adjacency list to terminal, for debugging
 void Graph::display() {
     int v;
     for (v = 0; v < num_vertices; ++v)

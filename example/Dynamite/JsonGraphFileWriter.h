@@ -11,6 +11,9 @@ class JsonGraphFileWriter : public GraphFileWriter {
 
     public:
         void setSysName(Context& m_context);
+
+        // Serializes a graph to Pretty JSON
+        // JSON saved to 'system.json' in project folder
         void writeToFile(Context& context);
 };
 

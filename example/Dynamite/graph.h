@@ -16,6 +16,7 @@ struct Link
 };
 
 // adjacency list helper structs
+// TO DO : do we need two separate structs for this linked list type struct
 struct adjlist_node {
     Block block;
     int dest;
@@ -38,49 +39,51 @@ struct BlockParameters
 
 class Graph {
 
-    private:
-        int                 num_vertices;
-        struct adjlist*     array;
+public: 
+    std::vector<Block>  _blocks;
+    std::vector<Link>   _links;
+    // TO DO : delete member stacks and have adjlist/sort functions return them instead 
+    std::stack<int>     blockid_stack;
+    std::stack<Block>   block_stack;
 
-        ImNodesEditorContext* m_context = nullptr;
+    int                   current_link_id = 0;
+    int                   current_block_id = 0;
+    int                   current_port_id = 0;
+    int                   current_param_id = 0;
 
-    public: 
-        std::vector<Block>  _blocks;
-        std::vector<Link>   _links;
-        std::stack<int>     blockid_stack;
-        std::stack<Block>   block_stack;
-
-        int                   current_link_id = 0;
-        int                   current_block_id = 0;
-        int                   current_port_id = 0;
-        int                   current_param_id = 0;
-
-        Graph() {}
-        Graph(int v) {
-            this->num_vertices = v;
-            array = new adjlist[v];
-            for (int i = 0; i<v; i++) {
-                array[i].head = NULL;
-            }
+    Graph() = default;
+    Graph(int v) : num_vertices{ v } {
+        array = new adjlist[v];
+        for (int i = 0; i<v; i++) {
+            array[i].head = NULL;
         }
-        void init();
+    }
+    // Initialize the ImNodes::EditorContext ( TO DO : move this action to the editor)
+    // Calls to the dyndspwrapper for getting block name and parameters data
+    void init();
 
-        void addBlock(std::string blockname);
-        void deleteBlock(int node_id);
-        Block findBlock(int id);
-        void clearBlocks();
+    void addBlock(std::string blockname);
+    void deleteBlock(int node_id);
+    Block findBlock(int id);
+    void clearBlocks();
 
-        void addLink();
-        void deleteLink(int link_id);
-        void clearLinks();
+    void addLink();
+    void deleteLink(int link_id);
+    void clearLinks();
 
-        void buildAdjacencyList();
-        adjlist_node* newNode(int dest);
-        void addEdge(int src, int dest);
-        void display();
-        bool containsEdge(int src, int dest);
+    void buildAdjacencyList();
+    adjlist_node* newNode(int dest);
+    void addEdge(int src, int dest);
+    void display();
+    bool containsEdge(int src, int dest);
 
-        void topologicalSortHelper(int v, bool visited[]);
-        void topologicalSort(); // change return type to vector<Block>
-        int findStartNode();
+    void topologicalSortHelper(int v, bool visited[]);
+    void topologicalSort(); // change return type to vector<Block>
+    int findStartNode();
+
+private:
+    int                 num_vertices;
+    struct adjlist*     array;
+
+    ImNodesEditorContext* m_context = nullptr;
 };

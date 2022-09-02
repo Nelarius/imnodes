@@ -38,12 +38,23 @@ struct MultiPanelFuncs {
 class MultiPanel {
 
     public:
-        MultiPanel();
+        MultiPanel() = default;
+
+        // Doesnt't need to do anything
         void init();
+
+        //Display the multipurpose panel 
         void show(Editor& m_editor, Palette& m_palette, Context& m_context);
+
+        // Doesn't need to do anything
         void exit();
 
+        // Renders the "System Configuration" tab
         void showSystemInfo(Context& m_context);
+
+        // Displays information for block that is clicked in the editor
         void showBlockInfo(Editor& m_editor, Context& m_context);
+
+        // Helper for showBlockInfo
         void formatInfo(Block& block);
 };

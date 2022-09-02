@@ -38,6 +38,7 @@ bool validate_sys_name(std::string sysname) {
     return true;
 }
 
+// TO DO : break down into multiple functions, all actions have a descriptive commment above them
 void JsonGraphFileWriter::writeToFile(Context& context) {
     Graph i_graph = context.m_graph;
 
@@ -91,7 +92,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
                 jsonDoc.AddMember("output_channels", output_channels, allocator);
             }
         }
-
+        // scratch buffers 
         for (Block& b : i_graph._blocks) {
             bool is_match = false;
             if (b.getType() == "input" || b.getType() == "output") {
@@ -134,7 +135,6 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
 
         while (i_graph.block_stack.empty() == false) {
             auto& b = i_graph.block_stack.top();
-            printf("block name = %s\n", b.getName().c_str());
 
             // Skip over input and output blocks
             if ((0 == strcmp(b.getType().c_str(), "input")) || (0 == strcmp(b.getType().c_str(), "output"))) {
@@ -160,6 +160,7 @@ void JsonGraphFileWriter::writeToFile(Context& context) {
             }
             block.AddMember("input_channels", input_chans, allocator);
 
+            // add block output channels
             Value output_chans(kArrayType);
             for (it = b._outPorts.begin(); it != b._outPorts.end(); it++) {
                 Value output_ch;

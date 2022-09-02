@@ -14,7 +14,6 @@ void Context::loadContext() { }
 
 void Context::sortGraph() {
     m_graph.buildAdjacencyList();
-    m_graph.display(); // can get rid of this later
     m_graph.topologicalSort(); // sorts adjacency list
 }
 

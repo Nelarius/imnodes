@@ -17,6 +17,7 @@ static bool deploy = false;
 static bool clean = false;
 
 void MenuBar::show(Context& m_context, DyndspWrapper m_wrapper) {
+    // functions are triggered by selecting a menu item in the editor
     if (save) saveGraph(m_context);
     if (validate) {
         m_wrapper.call_dyndsp_command(GET_VAR_NAME(validate));
@@ -90,13 +91,3 @@ static void saveGraph(Context& m_context) {
     fw.writeToFile(m_context);
     save = false;
 }
-
-/*
-void createMenu(vector<std::string> menuItems) {
-    for (auto Item : menuItems) {
-        if (ImGui::MenuItem(Item.c_str(), NULL)) {
-            printf("menu opened!\n");
-        }
-    }
-}
-*/
