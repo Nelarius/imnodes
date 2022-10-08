@@ -3,13 +3,9 @@
 #include <stddef.h>
 #include <imgui.h>
 
-#ifdef IMNODES_USER_CONFIG
-#include IMNODES_USER_CONFIG
-#endif
+#include "imnodes_config_or_default.h"
 
-#ifndef IMNODES_NAMESPACE
-#define IMNODES_NAMESPACE ImNodes
-#endif
+#include "IMNODES_NAMESPACE.h"
 
 typedef int ImNodesCol;             // -> enum ImNodesCol_
 typedef int ImNodesStyleVar;        // -> enum ImNodesStyleVar_
@@ -230,7 +226,7 @@ struct ImNodesEditorContext;
 
 // Callback type used to specify special behavior when hovering a node in the minimap
 #ifndef ImNodesMiniMapNodeHoveringCallback
-typedef void (*ImNodesMiniMapNodeHoveringCallback)(int, void*);
+typedef void (*ImNodesMiniMapNodeHoveringCallback)(IMNODES_NAMESPACE::ID, void*);
 #endif
 
 #ifndef ImNodesMiniMapNodeHoveringCallbackUserData
@@ -253,7 +249,7 @@ void                  EditorContextFree(ImNodesEditorContext*);
 void                  EditorContextSet(ImNodesEditorContext*);
 ImVec2                EditorContextGetPanning();
 void                  EditorContextResetPanning(const ImVec2& pos);
-void                  EditorContextMoveToNode(const int node_id);
+void                  EditorContextMoveToNode(const ID node_id);
 
 ImNodesIO& GetIO();
 
@@ -285,11 +281,10 @@ void PushStyleVar(ImNodesStyleVar style_item, float value);
 void PushStyleVar(ImNodesStyleVar style_item, const ImVec2& value);
 void PopStyleVar(int count = 1);
 
-// id can be any positive or negative integer, but INT_MIN is currently reserved for internal use.
-void BeginNode(int id);
+void BeginNode(ID id);
 void EndNode();
 
-ImVec2 GetNodeDimensions(int id);
+ImVec2 GetNodeDimensions(ID id);
 
 // Place your node title bar content (such as the node title, using ImGui::Text) between the
 // following function calls. These functions have to be called before adding any attributes, or the
@@ -307,15 +302,15 @@ void EndNodeTitleBar();
 // Each attribute id must be unique.
 
 // Create an input attribute block. The pin is rendered on left side.
-void BeginInputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
+void BeginInputAttribute(ID id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
 void EndInputAttribute();
 // Create an output attribute block. The pin is rendered on the right side.
-void BeginOutputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
+void BeginOutputAttribute(ID id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
 void EndOutputAttribute();
 // Create a static attribute block. A static attribute has no pin, and therefore can't be linked to
 // anything. However, you can still use IsAttributeActive() and IsAnyAttributeActive() to check for
 // attribute activity.
-void BeginStaticAttribute(int id);
+void BeginStaticAttribute(ID id);
 void EndStaticAttribute();
 
 // Push a single AttributeFlags value. By default, only AttributeFlags_None is set.
@@ -325,10 +320,10 @@ void PopAttributeFlag();
 // Render a link between attributes.
 // The attributes ids used here must match the ids used in Begin(Input|Output)Attribute function
 // calls. The order of start_attr and end_attr doesn't make a difference for rendering the link.
-void Link(int id, int start_attribute_id, int end_attribute_id);
+void Link(ID id, ID start_attribute_id, ID end_attribute_id);
 
 // Enable or disable the ability to click and drag a specific node.
-void SetNodeDraggable(int node_id, const bool draggable);
+void SetNodeDraggable(ID node_id, const bool draggable);
 
 // The node's position can be expressed in three coordinate systems:
 // * screen space coordinates, -- the origin is the upper left corner of the window.
@@ -339,16 +334,16 @@ void SetNodeDraggable(int node_id, const bool draggable);
 
 // Use the following functions to get and set the node's coordinates in these coordinate systems.
 
-void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
-void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
-void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
+void SetNodeScreenSpacePos(ID node_id, const ImVec2& screen_space_pos);
+void SetNodeEditorSpacePos(ID node_id, const ImVec2& editor_space_pos);
+void SetNodeGridSpacePos(ID node_id, const ImVec2& grid_pos);
 
-ImVec2 GetNodeScreenSpacePos(const int node_id);
-ImVec2 GetNodeEditorSpacePos(const int node_id);
-ImVec2 GetNodeGridSpacePos(const int node_id);
+ImVec2 GetNodeScreenSpacePos(const ID node_id);
+ImVec2 GetNodeEditorSpacePos(const ID node_id);
+ImVec2 GetNodeGridSpacePos(const ID node_id);
 
 // If ImNodesStyleFlags_GridSnapping is enabled, snap the specified node's origin to the grid.
-void SnapNodeToGrid(int node_id);
+void SnapNodeToGrid(ID node_id);
 
 // Returns true if the current node editor canvas is being hovered over by the mouse, and is not
 // blocked by any other windows.
@@ -356,9 +351,9 @@ bool IsEditorHovered();
 // The following functions return true if a UI element is being hovered over by the mouse cursor.
 // Assigns the id of the UI element being hovered over to the function argument. Use these functions
 // after EndNodeEditor() has been called.
-bool IsNodeHovered(int* node_id);
-bool IsLinkHovered(int* link_id);
-bool IsPinHovered(int* attribute_id);
+bool IsNodeHovered(ID* node_id);
+bool IsLinkHovered(ID* link_id);
+bool IsPinHovered(ID* attribute_id);
 
 // Use The following two functions to query the number of selected nodes or links in the current
 // editor. Use after calling EndNodeEditor().
@@ -367,8 +362,8 @@ int NumSelectedLinks();
 // Get the selected node/link ids. The pointer argument should point to an integer array with at
 // least as many elements as the respective NumSelectedNodes/NumSelectedLinks function call
 // returned.
-void GetSelectedNodes(int* node_ids);
-void GetSelectedLinks(int* link_ids);
+void GetSelectedNodes(ID* node_ids);
+void GetSelectedLinks(ID* link_ids);
 // Clears the list of selected nodes/links. Useful if you want to delete a selected node or link.
 void ClearNodeSelection();
 void ClearLinkSelection();
@@ -378,46 +373,46 @@ void ClearLinkSelection();
 // Clear-functions has the precondition that the object is currently considered selected.
 // Preconditions listed above can be checked via IsNodeSelected/IsLinkSelected if not already
 // known.
-void SelectNode(int node_id);
-void ClearNodeSelection(int node_id);
-bool IsNodeSelected(int node_id);
-void SelectLink(int link_id);
-void ClearLinkSelection(int link_id);
-bool IsLinkSelected(int link_id);
+void SelectNode(ID node_id);
+void ClearNodeSelection(ID node_id);
+bool IsNodeSelected(ID node_id);
+void SelectLink(ID link_id);
+void ClearLinkSelection(ID link_id);
+bool IsLinkSelected(ID link_id);
 
 // Was the previous attribute active? This will continuously return true while the left mouse button
 // is being pressed over the UI content of the attribute.
 bool IsAttributeActive();
 // Was any attribute active? If so, sets the active attribute id to the output function argument.
-bool IsAnyAttributeActive(int* attribute_id = NULL);
+bool IsAnyAttributeActive(ID* attribute_id = NULL);
 
 // Use the following functions to query a change of state for an existing link, or new link. Call
 // these after EndNodeEditor().
 
 // Did the user start dragging a new link from a pin?
-bool IsLinkStarted(int* started_at_attribute_id);
+bool IsLinkStarted(ID* started_at_attribute_id);
 // Did the user drop the dragged link before attaching it to a pin?
 // There are two different kinds of situations to consider when handling this event:
 // 1) a link which is created at a pin and then dropped
 // 2) an existing link which is detached from a pin and then dropped
 // Use the including_detached_links flag to control whether this function triggers when the user
 // detaches a link and drops it.
-bool IsLinkDropped(int* started_at_attribute_id = NULL, bool including_detached_links = true);
+bool IsLinkDropped(ID* started_at_attribute_id = NULL, bool including_detached_links = true);
 // Did the user finish creating a new link?
 bool IsLinkCreated(
-    int*  started_at_attribute_id,
-    int*  ended_at_attribute_id,
+    ID*   started_at_attribute_id,
+    ID*   ended_at_attribute_id,
     bool* created_from_snap = NULL);
 bool IsLinkCreated(
-    int*  started_at_node_id,
-    int*  started_at_attribute_id,
-    int*  ended_at_node_id,
-    int*  ended_at_attribute_id,
+    ID*   started_at_node_id,
+    ID*   started_at_attribute_id,
+    ID*   ended_at_node_id,
+    ID*   ended_at_attribute_id,
     bool* created_from_snap = NULL);
 
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
 // output argument link_id.
-bool IsLinkDestroyed(int* link_id);
+bool IsLinkDestroyed(ID* link_id);
 
 // Use the following functions to write the editor context's state to a string, or directly to a
 // file. The editor context is serialized in the INI file format.
