@@ -25,6 +25,7 @@
 #include <stdio.h> // for fwrite, ssprintf, sscanf
 #include <stdlib.h>
 #include <string.h> // strlen, strncmp
+#include <string>
 
 // Use secure CRT function variants to avoid MSVC compiler errors
 #ifdef _MSC_VER
@@ -418,8 +419,7 @@ void DrawListSet(ImDrawList* window_draw_list)
 
 void DrawListAddNode(const int node_idx)
 {
-    GImNodes->NodeIdxToSubmissionIdx.SetInt(
-        static_cast<ImGuiID>(node_idx), GImNodes->NodeIdxSubmissionOrder.Size);
+    GImNodes->NodeIdxToSubmissionIdx.SetInt(node_idx, GImNodes->NodeIdxSubmissionOrder.Size);
     GImNodes->NodeIdxSubmissionOrder.push_back(node_idx);
     ImDrawListGrowChannels(GImNodes->CanvasDrawList, 2);
 }
@@ -458,8 +458,7 @@ void DrawListActivateCurrentNodeForeground()
 
 void DrawListActivateNodeBackground(const int node_idx)
 {
-    const int submission_idx =
-        GImNodes->NodeIdxToSubmissionIdx.GetInt(static_cast<ImGuiID>(node_idx), -1);
+    const int submission_idx = GImNodes->NodeIdxToSubmissionIdx.GetInt(node_idx, -1);
     // There is a discrepancy in the submitted node count and the rendered node count! Did you call
     // one of the following functions
     // * EditorContextMoveToNode
@@ -883,7 +882,7 @@ ImOptionalIndex FindDuplicateLink(
     const int                   start_pin_idx,
     const int                   end_pin_idx)
 {
-    ImLinkData test_link(0);
+    ImLinkData test_link{{}};
     test_link.StartPinIdx = start_pin_idx;
     test_link.EndPinIdx = end_pin_idx;
     for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
@@ -1632,7 +1631,7 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
 }
 
 void BeginPinAttribute(
-    const int                  id,
+    const ID                   id,
     const ImNodesAttributeType type,
     const ImNodesPinShape      shape,
     const int                  node_idx)
@@ -1643,7 +1642,7 @@ void BeginPinAttribute(
     GImNodes->CurrentScope = ImNodesScope_Attribute;
 
     ImGui::BeginGroup();
-    ImGui::PushID(id);
+    PushID(id);
 
     ImNodesEditorContext& editor = EditorContextGet();
 
@@ -1735,7 +1734,7 @@ static inline void CalcMiniMapLayout()
         const ImVec2 grid_content_size = editor.GridContentBounds.IsInverted()
                                              ? max_size
                                              : ImFloor(editor.GridContentBounds.GetSize());
-        const float grid_content_aspect_ratio = grid_content_size.x / grid_content_size.y;
+        const float  grid_content_aspect_ratio = grid_content_size.x / grid_content_size.y;
         mini_map_size = ImFloor(
             grid_content_aspect_ratio > max_size_aspect_ratio
                 ? ImVec2(max_size.x, max_size.x / grid_content_aspect_ratio)
@@ -1947,7 +1946,7 @@ static void MiniMapUpdate()
 // [SECTION] selection helpers
 
 template<typename T>
-void SelectObject(const ImObjectPool<T>& objects, ImVector<int>& selected_indices, const int id)
+void SelectObject(const ImObjectPool<T>& objects, ImVector<int>& selected_indices, const ID id)
 {
     const int idx = ObjectPoolFind(objects, id);
     IM_ASSERT(idx >= 0);
@@ -1959,7 +1958,7 @@ template<typename T>
 void ClearObjectSelection(
     const ImObjectPool<T>& objects,
     ImVector<int>&         selected_indices,
-    const int              id)
+    const ID               id)
 {
     const int idx = ObjectPoolFind(objects, id);
     IM_ASSERT(idx >= 0);
@@ -1968,7 +1967,7 @@ void ClearObjectSelection(
 }
 
 template<typename T>
-bool IsObjectSelected(const ImObjectPool<T>& objects, ImVector<int>& selected_indices, const int id)
+bool IsObjectSelected(const ImObjectPool<T>& objects, ImVector<int>& selected_indices, const ID id)
 {
     const int idx = ObjectPoolFind(objects, id);
     return selected_indices.find(idx) != selected_indices.end();
@@ -2053,7 +2052,7 @@ void EditorContextResetPanning(const ImVec2& pos)
     editor.Panning = pos;
 }
 
-void EditorContextMoveToNode(const int node_id)
+void EditorContextMoveToNode(const ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ImNodeData&           node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
@@ -2453,7 +2452,7 @@ void MiniMap(
     // of the state for the mini map in GImNodes for the actual drawing/updating
 }
 
-void BeginNode(const int node_id)
+void BeginNode(const ID node_id)
 {
     // Remember to call BeginNodeEditor before calling BeginNode
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_Editor);
@@ -2484,7 +2483,7 @@ void BeginNode(const int node_id)
     DrawListAddNode(node_idx);
     DrawListActivateCurrentNodeForeground();
 
-    ImGui::PushID(node.Id);
+    PushID(node.Id);
     ImGui::BeginGroup();
 }
 
@@ -2512,7 +2511,7 @@ void EndNode()
     }
 }
 
-ImVec2 GetNodeDimensions(int node_id)
+ImVec2 GetNodeDimensions(ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
@@ -2541,21 +2540,21 @@ void EndNodeTitleBar()
     ImGui::SetCursorPos(GridSpaceToEditorSpace(editor, GetNodeContentOrigin(node)));
 }
 
-void BeginInputAttribute(const int id, const ImNodesPinShape shape)
+void BeginInputAttribute(const ID id, const ImNodesPinShape shape)
 {
     BeginPinAttribute(id, ImNodesAttributeType_Input, shape, GImNodes->CurrentNodeIdx);
 }
 
 void EndInputAttribute() { EndPinAttribute(); }
 
-void BeginOutputAttribute(const int id, const ImNodesPinShape shape)
+void BeginOutputAttribute(const ID id, const ImNodesPinShape shape)
 {
     BeginPinAttribute(id, ImNodesAttributeType_Output, shape, GImNodes->CurrentNodeIdx);
 }
 
 void EndOutputAttribute() { EndPinAttribute(); }
 
-void BeginStaticAttribute(const int id)
+void BeginStaticAttribute(const ID id)
 {
     // Make sure to call BeginNode() before calling BeginAttribute()
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_Node);
@@ -2564,7 +2563,7 @@ void BeginStaticAttribute(const int id)
     GImNodes->CurrentAttributeId = id;
 
     ImGui::BeginGroup();
-    ImGui::PushID(id);
+    PushID(id);
 }
 
 void EndStaticAttribute()
@@ -2599,7 +2598,7 @@ void PopAttributeFlag()
     GImNodes->CurrentAttributeFlags = GImNodes->AttributeFlagStack.back();
 }
 
-void Link(const int id, const int start_attr_id, const int end_attr_id)
+void Link(const ID id, const ID start_attr_id, const ID end_attr_id)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_Editor);
 
@@ -2734,35 +2733,35 @@ void PopStyleVar(int count)
     }
 }
 
-void SetNodeScreenSpacePos(const int node_id, const ImVec2& screen_space_pos)
+void SetNodeScreenSpacePos(const ID node_id, const ImVec2& screen_space_pos)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ImNodeData&           node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = ScreenSpaceToGridSpace(editor, screen_space_pos);
 }
 
-void SetNodeEditorSpacePos(const int node_id, const ImVec2& editor_space_pos)
+void SetNodeEditorSpacePos(const ID node_id, const ImVec2& editor_space_pos)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ImNodeData&           node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = EditorSpaceToGridSpace(editor, editor_space_pos);
 }
 
-void SetNodeGridSpacePos(const int node_id, const ImVec2& grid_pos)
+void SetNodeGridSpacePos(const ID node_id, const ImVec2& grid_pos)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ImNodeData&           node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Origin = grid_pos;
 }
 
-void SetNodeDraggable(const int node_id, const bool draggable)
+void SetNodeDraggable(const ID node_id, const bool draggable)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ImNodeData&           node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
     node.Draggable = draggable;
 }
 
-ImVec2 GetNodeScreenSpacePos(const int node_id)
+ImVec2 GetNodeScreenSpacePos(const ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
@@ -2771,7 +2770,7 @@ ImVec2 GetNodeScreenSpacePos(const int node_id)
     return GridSpaceToScreenSpace(editor, node.Origin);
 }
 
-ImVec2 GetNodeEditorSpacePos(const int node_id)
+ImVec2 GetNodeEditorSpacePos(const ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
@@ -2780,7 +2779,7 @@ ImVec2 GetNodeEditorSpacePos(const int node_id)
     return GridSpaceToEditorSpace(editor, node.Origin);
 }
 
-ImVec2 GetNodeGridSpacePos(const int node_id)
+ImVec2 GetNodeGridSpacePos(const ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
@@ -2789,7 +2788,7 @@ ImVec2 GetNodeGridSpacePos(const int node_id)
     return node.Origin;
 }
 
-void SnapNodeToGrid(int node_id)
+void SnapNodeToGrid(ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ImNodeData&           node = ObjectPoolFindOrCreateObject(editor.Nodes, node_id);
@@ -2798,7 +2797,7 @@ void SnapNodeToGrid(int node_id)
 
 bool IsEditorHovered() { return MouseInCanvas(); }
 
-bool IsNodeHovered(int* const node_id)
+bool IsNodeHovered(ID* const node_id)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
     IM_ASSERT(node_id != NULL);
@@ -2812,7 +2811,7 @@ bool IsNodeHovered(int* const node_id)
     return is_hovered;
 }
 
-bool IsLinkHovered(int* const link_id)
+bool IsLinkHovered(ID* const link_id)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
     IM_ASSERT(link_id != NULL);
@@ -2826,7 +2825,7 @@ bool IsLinkHovered(int* const link_id)
     return is_hovered;
 }
 
-bool IsPinHovered(int* const attr)
+bool IsPinHovered(ID* const attr)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
     IM_ASSERT(attr != NULL);
@@ -2854,7 +2853,7 @@ int NumSelectedLinks()
     return editor.SelectedLinkIndices.size();
 }
 
-void GetSelectedNodes(int* node_ids)
+void GetSelectedNodes(ID* node_ids)
 {
     IM_ASSERT(node_ids != NULL);
 
@@ -2866,7 +2865,7 @@ void GetSelectedNodes(int* node_ids)
     }
 }
 
-void GetSelectedLinks(int* link_ids)
+void GetSelectedLinks(ID* link_ids)
 {
     IM_ASSERT(link_ids != NULL);
 
@@ -2884,7 +2883,7 @@ void ClearNodeSelection()
     editor.SelectedNodeIndices.clear();
 }
 
-void ClearNodeSelection(int node_id)
+void ClearNodeSelection(ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ClearObjectSelection(editor.Nodes, editor.SelectedNodeIndices, node_id);
@@ -2896,31 +2895,31 @@ void ClearLinkSelection()
     editor.SelectedLinkIndices.clear();
 }
 
-void ClearLinkSelection(int link_id)
+void ClearLinkSelection(ID link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     ClearObjectSelection(editor.Links, editor.SelectedLinkIndices, link_id);
 }
 
-void SelectNode(int node_id)
+void SelectNode(ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     SelectObject(editor.Nodes, editor.SelectedNodeIndices, node_id);
 }
 
-void SelectLink(int link_id)
+void SelectLink(ID link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     SelectObject(editor.Links, editor.SelectedLinkIndices, link_id);
 }
 
-bool IsNodeSelected(int node_id)
+bool IsNodeSelected(ID node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     return IsObjectSelected(editor.Nodes, editor.SelectedNodeIndices, node_id);
 }
 
-bool IsLinkSelected(int link_id)
+bool IsLinkSelected(ID link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     return IsObjectSelected(editor.Links, editor.SelectedLinkIndices, link_id);
@@ -2938,7 +2937,7 @@ bool IsAttributeActive()
     return GImNodes->ActiveAttributeId == GImNodes->CurrentAttributeId;
 }
 
-bool IsAnyAttributeActive(int* const attribute_id)
+bool IsAnyAttributeActive(ID* const attribute_id)
 {
     IM_ASSERT((GImNodes->CurrentScope & (ImNodesScope_Node | ImNodesScope_Attribute)) == 0);
 
@@ -2955,7 +2954,7 @@ bool IsAnyAttributeActive(int* const attribute_id)
     return true;
 }
 
-bool IsLinkStarted(int* const started_at_id)
+bool IsLinkStarted(ID* const started_at_id)
 {
     // Call this function after EndNodeEditor()!
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
@@ -2972,7 +2971,7 @@ bool IsLinkStarted(int* const started_at_id)
     return is_started;
 }
 
-bool IsLinkDropped(int* const started_at_id, const bool including_detached_links)
+bool IsLinkDropped(ID* const started_at_id, const bool including_detached_links)
 {
     // Call this function after EndNodeEditor()!
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
@@ -2994,8 +2993,8 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
 }
 
 bool IsLinkCreated(
-    int* const  started_at_pin_id,
-    int* const  ended_at_pin_id,
+    ID* const   started_at_pin_id,
+    ID* const   ended_at_pin_id,
     bool* const created_from_snap)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
@@ -3034,10 +3033,10 @@ bool IsLinkCreated(
 }
 
 bool IsLinkCreated(
-    int*  started_at_node_id,
-    int*  started_at_pin_id,
-    int*  ended_at_node_id,
-    int*  ended_at_pin_id,
+    ID*   started_at_node_id,
+    ID*   started_at_pin_id,
+    ID*   ended_at_node_id,
+    ID*   ended_at_pin_id,
     bool* created_from_snap)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
@@ -3083,7 +3082,7 @@ bool IsLinkCreated(
     return is_created;
 }
 
-bool IsLinkDestroyed(int* const link_id)
+bool IsLinkDestroyed(ID* const link_id)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
 
@@ -3100,12 +3099,24 @@ bool IsLinkDestroyed(int* const link_id)
 
 namespace
 {
+
+std::string SubstringAfter(const std::string& begin, const std::string& s)
+{
+    auto from = s.find(begin);
+    if (from == std::string::npos)
+        return "";
+
+    from += begin.length();
+    return s.substr(from, s.length() - from);
+}
+
 void NodeLineHandler(ImNodesEditorContext& editor, const char* const line)
 {
-    int id;
-    int x, y;
-    if (sscanf(line, "[node.%i", &id) == 1)
+    std::string id_as_string = SubstringAfter("[node.", line);
+    int         x, y;
+    if (!id_as_string.empty())
     {
+        ID        id = IDFromString(id_as_string);
         const int node_idx = ObjectPoolFindOrCreateIndex(editor.Nodes, id);
         GImNodes->CurrentNodeIdx = node_idx;
         ImNodeData& node = editor.Nodes.Pool[node_idx];
@@ -3148,7 +3159,7 @@ const char* SaveEditorStateToIniString(
         if (editor.Nodes.InUse[i])
         {
             const ImNodeData& node = editor.Nodes.Pool[i];
-            GImNodes->TextBuffer.appendf("\n[node.%d]\n", node.Id);
+            GImNodes->TextBuffer.appendf("\n[node.%s]\n", IDToString(node.Id).c_str());
             GImNodes->TextBuffer.appendf("origin=%i,%i\n", (int)node.Origin.x, (int)node.Origin.y);
         }
     }
@@ -3262,4 +3273,163 @@ void LoadEditorStateFromIniFile(ImNodesEditorContext* const editor, const char* 
     LoadEditorStateFromIniString(editor, file_data, data_size);
     ImGui::MemFree(file_data);
 }
+} // namespace IMNODES_NAMESPACE
+
+//-----------------------------------------------------------------------------
+// [SECTION] ImGuiStorage
+// Helper: Key->value storage
+//-----------------------------------------------------------------------------
+
+namespace IMNODES_NAMESPACE
+{
+namespace Internal
+{
+
+// std::lower_bound but without the bullshit
+static Storage::ImGuiStoragePair* LowerBound(ImVector<Storage::ImGuiStoragePair>& data, ID key)
+{
+    Storage::ImGuiStoragePair* first = data.Data;
+    Storage::ImGuiStoragePair* last = data.Data + data.Size;
+    size_t                     count = (size_t)(last - first);
+    while (count > 0)
+    {
+        size_t                     count2 = count >> 1;
+        Storage::ImGuiStoragePair* mid = first + count2;
+        if (mid->key < key)
+        {
+            first = ++mid;
+            count -= count2 + 1;
+        }
+        else
+        {
+            count = count2;
+        }
+    }
+    return first;
+}
+
+// For quicker full rebuild of a storage (instead of an incremental one), you may add all your
+// contents and then sort once.
+void Storage::BuildSortByKey()
+{
+    struct StaticFunc
+    {
+        static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
+        {
+            // We can't just do a subtraction because qsort uses signed integers and subtracting our
+            // ID doesn't play well with that.
+            if (((const ImGuiStoragePair*)lhs)->key > ((const ImGuiStoragePair*)rhs)->key)
+                return +1;
+            if (((const ImGuiStoragePair*)lhs)->key < ((const ImGuiStoragePair*)rhs)->key)
+                return -1;
+            return 0;
+        }
+    };
+    ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), StaticFunc::PairComparerByID);
+}
+
+int Storage::GetInt(ID key, int default_val) const
+{
+    ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
+    if (it == Data.end() || it->key != key)
+        return default_val;
+    return it->val_i;
+}
+
+bool Storage::GetBool(ID key, bool default_val) const
+{
+    return GetInt(key, default_val ? 1 : 0) != 0;
+}
+
+float Storage::GetFloat(ID key, float default_val) const
+{
+    ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
+    if (it == Data.end() || it->key != key)
+        return default_val;
+    return it->val_f;
+}
+
+void* Storage::GetVoidPtr(ID key) const
+{
+    ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
+    if (it == Data.end() || it->key != key)
+        return NULL;
+    return it->val_p;
+}
+
+// References are only valid until a new value is added to the storage. Calling a Set***() function
+// or a Get***Ref() function invalidates the pointer.
+int* Storage::GetIntRef(ID key, int default_val)
+{
+    ImGuiStoragePair* it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
+    return &it->val_i;
+}
+
+bool* Storage::GetBoolRef(ID key, bool default_val)
+{
+    return (bool*)GetIntRef(key, default_val ? 1 : 0);
+}
+
+float* Storage::GetFloatRef(ID key, float default_val)
+{
+    ImGuiStoragePair* it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
+    return &it->val_f;
+}
+
+void** Storage::GetVoidPtrRef(ID key, void* default_val)
+{
+    ImGuiStoragePair* it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
+    return &it->val_p;
+}
+
+// FIXME-OPT: Need a way to reuse the result of lower_bound when doing GetInt()/SetInt() - not too
+// bad because it only happens on explicit interaction (maximum one a frame)
+void Storage::SetInt(ID key, int val)
+{
+    ImGuiStoragePair* it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+    {
+        Data.insert(it, ImGuiStoragePair(key, val));
+        return;
+    }
+    it->val_i = val;
+}
+
+void Storage::SetBool(ID key, bool val) { SetInt(key, val ? 1 : 0); }
+
+void Storage::SetFloat(ID key, float val)
+{
+    ImGuiStoragePair* it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+    {
+        Data.insert(it, ImGuiStoragePair(key, val));
+        return;
+    }
+    it->val_f = val;
+}
+
+void Storage::SetVoidPtr(ID key, void* val)
+{
+    ImGuiStoragePair* it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+    {
+        Data.insert(it, ImGuiStoragePair(key, val));
+        return;
+    }
+    it->val_p = val;
+}
+
+void Storage::SetAllInt(int v)
+{
+    for (int i = 0; i < Data.Size; i++)
+        Data[i].val_i = v;
+}
+
+} // namespace Internal
 } // namespace IMNODES_NAMESPACE

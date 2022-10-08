@@ -61,7 +61,7 @@ ImGui::End();
 Now you should have a workspace with a grid visible in the window. An empty node can now be instantiated:
 
 ```cpp
-const int hardcoded_node_id = 1;
+const ImNodes::ID hardcoded_node_id = 1;
 
 ImNodes::BeginNodeEditor();
 
@@ -72,14 +72,14 @@ ImNodes::EndNode();
 ImNodes::EndNodeEditor();
 ```
 
-Nodes, like windows in `dear imgui` must be uniquely identified. But we can't use the node titles for identification, because it should be possible to have many nodes of the same name in the workspace. Instead, you just use integers for identification.
+Nodes, like windows in `dear imgui` must be uniquely identified. But we can't use the node titles for identification, because it should be possible to have many nodes of the same name in the workspace. Instead, you just use integers for identification. (`ImNodes::ID` type is `int` by default but you can override that in "imnodes_config.h". See [ID type](#id-type)).
 
 Attributes are the UI content of the node. An attribute will have a pin (the little circle) on either side of the node. There are two types of attributes: input, and output attributes. Input attribute pins are on the left side of the node, and output attribute pins are on the right. Like nodes, pins must be uniquely identified.
 
 ```cpp
 ImNodes::BeginNode(hardcoded_node_id);
 
-const int output_attr_id = 2;
+const ImNodes::ID output_attr_id = 2;
 ImNodes::BeginOutputAttribute(output_attr_id);
 // in between Begin|EndAttribute calls, you can call ImGui
 // UI functions
@@ -108,11 +108,11 @@ ImNodes::EndNode();
 The user has to render their own links between nodes as well. A link is a curve which connects two attributes. A link is just a pair of attribute ids. And like nodes and attributes, links too have to be identified by unique integer values:
 
 ```cpp
-std::vector<std::pair<int, int>> links;
+std::vector<std::pair<ImNodes::ID, ImNodes::ID>> links;
 // elsewhere in the code...
 for (int i = 0; i < links.size(); ++i)
 {
-  const std::pair<int, int> p = links[i];
+  const std::pair<ImNodes::ID, ImNodes::ID> p = links[i];
   // in this case, we just use the array index of the link
   // as the unique identifier
   ImNodes::Link(i, p.first, p.second);
@@ -122,7 +122,7 @@ for (int i = 0; i < links.size(); ++i)
 After `EndNodeEditor` has been called, you can check if a link was created during the frame with the function call `IsLinkCreated`:
 
 ```cpp
-int start_attr, end_attr;
+ImNodes::ID start_attr, end_attr;
 if (ImNodes::IsLinkCreated(&start_attr, &end_attr))
 {
   links.push_back(std::make_pair(start_attr, end_attr));
@@ -132,7 +132,7 @@ if (ImNodes::IsLinkCreated(&start_attr, &end_attr))
 In addition to checking for new links, you can also check whether UI elements are being hovered over by the mouse cursor:
 
 ```cpp
-int node_id;
+ImNodes::ID node_id;
 if (ImNodes::IsNodeHovered(&node_id))
 {
   node_hovered = node_id;
@@ -147,7 +147,7 @@ You can also check to see if any node has been selected. Nodes can be clicked on
 const int num_selected_nodes = ImNodes::NumSelectedNodes();
 if (num_selected_nodes > 0)
 {
-  std::vector<int> selected_nodes;
+  std::vector<ImNodes::ID> selected_nodes;
   selected_nodes.resize(num_selected_nodes);
   ImNodes::GetSelectedNodes(selected_nodes.data());
 }
@@ -208,7 +208,7 @@ ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
 The mini-map also supports limited node hovering customization through a user-defined callback.
 ```cpp
 // User callback
-void mini_map_node_hovering_callback(int node_id, void* user_data)
+void mini_map_node_hovering_callback(ImNodes::ID node_id, void* user_data)
 {
   ImGui::SetTooltip("This is node %d", node_id);
 }
@@ -222,6 +222,8 @@ ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight, mini_map_node_hovering_c
 ## Customizing ImNodes
 
 ImNodes can be customized by providing an `imnodes_config.h` header and specifying defining `IMNODES_USER_CONFIG=imnodes_config.h` when compiling.
+
+### Minimap hovering callback
 
 It is currently possible to override the type of the minimap hovering callback function. This is useful when generating bindings for another language.
 
@@ -249,6 +251,30 @@ namespace py = pybind11;
 #define ImNodesMiniMapNodeHoveringCallback py::wrapper
 
 #define ImNodesMiniMapNodeHoveringCallbackUserData py::wrapper
+```
+
+### ID type
+
+By default `ImNodes::ID` is `int` but you can define it to be whatever interger type you like:
+
+```cpp
+// imnodes_config.h
+#pragma once
+#include <limits.h>
+#include <string>
+
+namespace IMNODES_NAMESPACE
+{
+using ID = int;
+static constexpr ID INVALID_ID = INT_MIN;
+
+inline void PushID(ID id) { ImGui::PushID(id); }
+
+inline std::string IDToString(ID id) { return std::to_string(id); }
+
+inline ID IDFromString(const std::string& str) { return std::stoi(str); }
+
+} // namespace IMNODES_NAMESPACE
 ```
 
 ## Known issues
