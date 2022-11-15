@@ -514,7 +514,7 @@ public:
                     const float label_width = ImGui::CalcTextSize("output").x;
                     ImGui::Indent(node_width - label_width);
                     ImGui::TextUnformatted("output");
-                    ImNodes::EndInputAttribute();
+                    ImNodes::EndOutputAttribute();
                 }
 
                 ImNodes::EndNode();
