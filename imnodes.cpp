@@ -1617,6 +1617,8 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
         link_color = link.ColorStyle.Hovered;
     }
 
+    float link_thickness = link.Thickness;
+
 #if IMGUI_VERSION_NUM < 18000
     GImNodes->CanvasDrawList->AddBezierCurve(
 #else
@@ -1627,7 +1629,7 @@ void DrawLink(ImNodesEditorContext& editor, const int link_idx)
         cubic_bezier.P2,
         cubic_bezier.P3,
         link_color,
-        GImNodes->Style.LinkThickness,
+        link_thickness,
         cubic_bezier.NumSegments);
 }
 
@@ -2611,6 +2613,7 @@ void Link(const int id, const int start_attr_id, const int end_attr_id)
     link.ColorStyle.Base = GImNodes->Style.Colors[ImNodesCol_Link];
     link.ColorStyle.Hovered = GImNodes->Style.Colors[ImNodesCol_LinkHovered];
     link.ColorStyle.Selected = GImNodes->Style.Colors[ImNodesCol_LinkSelected];
+    link.Thickness = GImNodes->Style.LinkThickness;
 
     // Check if this link was created by the current link event
     if ((editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation &&
