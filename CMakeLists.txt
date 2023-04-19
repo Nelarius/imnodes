@@ -18,7 +18,7 @@ endif()
 # cmake options
 option(IMNODES_EXAMPLES "Build examples" ${IMNODES_STANDALONE_PROJECT})
 
-# allow custom imgui target name since this can vary because imgui doesn''
+# allow custom imgui target name since this can vary because imgui doesn't natively include a CMakeLists.txt
 if(NOT DEFINED IMNODES_IMGUI_TARGET_NAME)
     find_package(imgui CONFIG REQUIRED)
     set(IMNODES_IMGUI_TARGET_NAME imgui::imgui)
