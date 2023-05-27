@@ -823,9 +823,9 @@ ImVec2 SnapOriginToGrid(ImVec2 origin)
     return origin;
 }
 
-void TranslateSelectedNodes(ImNodesEditorContext& editor)
+void TranslateSelectedNodes(ImNodesEditorContext& editor, bool force)
 {
-    if (GImNodes->LeftMouseDragging)
+    if (force || GImNodes->LeftMouseDragging)
     {
         // If we have grid snap enabled, don't start moving nodes until we've moved the mouse
         // slightly
@@ -984,11 +984,19 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
     break;
     case ImNodesClickInteractionType_Node:
     {
-        TranslateSelectedNodes(editor);
+        if (!editor.NodeDraggingEnableStateOnce)
+        {
+            IM_ASSERT(GImNodes->HoveredNodeIdx.HasValue());
+            editor.NodeDraggingEnableStateOnce = true;
+            editor.NodeDraggingState = 1;
+        }
+
+        TranslateSelectedNodes(editor, false);
 
         if (GImNodes->LeftMouseReleased)
         {
             editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
+            editor.NodeDraggingEnableStateOnce = false;
         }
     }
     break;
@@ -2244,6 +2252,11 @@ void BeginNodeEditor()
 
     GImNodes->ActiveAttribute = false;
 
+    if (editor.ClickInteraction.Type == ImNodesClickInteractionType_Node && GImNodes->LeftMouseReleased)
+    {
+        editor.NodeDraggingState = 2;
+    }
+
     ImGui::BeginGroup();
     {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
@@ -2281,6 +2294,8 @@ void EndNodeEditor()
     GImNodes->CurrentScope = ImNodesScope_None;
 
     ImNodesEditorContext& editor = EditorContextGet();
+
+    editor.NodeDraggingState = 0;
 
     bool no_grid_content = editor.GridContentBounds.IsInverted();
     if (no_grid_content)
@@ -2953,6 +2968,32 @@ bool IsAnyAttributeActive(int* const attribute_id)
     }
 
     return true;
+}
+
+bool IsNodesDragStarted(int *num_selected_nodes)
+{
+    ImNodesEditorContext &editor = *GImNodes->EditorCtx;
+
+    if (editor.NodeDraggingState == 1)
+    {
+        *num_selected_nodes = editor.SelectedNodeIndices.size();
+        return true;
+    }
+
+    return false;
+}
+
+bool IsNodesDragStopped(int *num_selected_nodes)
+{
+    ImNodesEditorContext &editor = *GImNodes->EditorCtx;
+
+    if (editor.NodeDraggingState == 2)
+    {
+        *num_selected_nodes = editor.SelectedNodeIndices.size();
+        TranslateSelectedNodes(editor, true);
+        return true;
+    }
+    return false;
 }
 
 bool IsLinkStarted(int* const started_at_id)
