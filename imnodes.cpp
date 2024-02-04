@@ -2279,15 +2279,28 @@ void BeginNodeEditor()
         // Setup zoom context
         ImVec2 canvas_size = ImGui::GetContentRegionAvail();
         GImNodes->CanvasOriginalOrigin = ImGui::GetCursorScreenPos();
-        GImNodes->OriginalImgCtx = ImGui::GetCurrentContext();
+        GImNodes->OriginalImgCtx = ImGui::GetCurrentContext();        
 
-        // Button to capture mouse events and hover test
-        ImGui::InvisibleButton("canvas_no_drag", canvas_size);
+        // Copy config settings in IO from main context, avoiding input fields
+        memcpy(
+            &GImNodes->ZoomImgCtx->IO,
+            &GImNodes->OriginalImgCtx->IO,
+            offsetof(ImGuiIO, SetPlatformImeDataFn) +
+                sizeof(GImNodes->OriginalImgCtx->IO.SetPlatformImeDataFn));
 
-        ImGuiConfigFlags configFlags = ImGui::GetIO().ConfigFlags;
+        GImNodes->ZoomImgCtx->IO.IniFilename = nullptr;
+        GImNodes->ZoomImgCtx->IO.ConfigInputTrickleEventQueue = false;
+        GImNodes->ZoomImgCtx->IO.DisplaySize = canvas_size / editor.ZoomScale;
+        GImNodes->ZoomImgCtx->Style = GImNodes->OriginalImgCtx->Style;
+
+        // Nav (tabbing) needs to be disabled otherwise it doubles up with the main context
+        // not sure how to get this working correctly
         ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
                                        ImGuiWindowFlags_NoScrollWithMouse |
                                        ImGuiWindowFlags_NoNavInputs;
+
+        // Button to capture mouse events and hover test
+        ImGui::InvisibleButton("canvas_no_drag", canvas_size);
 
         if (ImGui::IsItemHovered())
         {
@@ -2296,15 +2309,8 @@ void BeginNodeEditor()
         else
         {
             windowFlags |= ImGuiWindowFlags_NoInputs;
-            configFlags &= ImGuiConfigFlags_NoMouse;
+            GImNodes->ZoomImgCtx->IO.ConfigFlags &= ImGuiConfigFlags_NoMouse;
         }
-
-        const ImGuiStyle& orig_style = ImGui::GetStyle();
-        const float delta_time = ImGui::GetIO().DeltaTime;
-        ImGui::SetCurrentContext(GImNodes->ZoomImgCtx);
-        ImGuiStyle& new_style = ImGui::GetStyle();
-        new_style = orig_style;
-        ImGui::GetIO().DeltaTime = delta_time;
 
         // Copy IO events
         GImNodes->ZoomImgCtx->InputEventsQueue = GImNodes->OriginalImgCtx->InputEventsTrail;
@@ -2319,9 +2325,7 @@ void BeginNodeEditor()
             }
         }
 
-        ImGui::GetIO().DisplaySize = canvas_size / editor.ZoomScale;
-        ImGui::GetIO().ConfigInputTrickleEventQueue = false;
-        ImGui::GetIO().ConfigFlags = configFlags;
+        ImGui::SetCurrentContext(GImNodes->ZoomImgCtx);
         ImGui::NewFrame();
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -2352,6 +2356,7 @@ void BeginNodeEditor()
         }
     }
 
+    // Cache inputs
     GImNodes->MousePos = ImGui::GetIO().MousePos;
     GImNodes->LeftMouseClicked = ImGui::IsMouseClicked(0);
     GImNodes->LeftMouseReleased = ImGui::IsMouseReleased(0);
