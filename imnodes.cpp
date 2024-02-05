@@ -2283,8 +2283,8 @@ void BeginNodeEditor()
 
         // Copy config settings in IO from main context, avoiding input fields
         memcpy(
-            &GImNodes->ZoomImgCtx->IO,
-            &GImNodes->OriginalImgCtx->IO,
+            (void*)&GImNodes->ZoomImgCtx->IO,
+            (void*)&GImNodes->OriginalImgCtx->IO,
             offsetof(ImGuiIO, SetPlatformImeDataFn) +
                 sizeof(GImNodes->OriginalImgCtx->IO.SetPlatformImeDataFn));
 
