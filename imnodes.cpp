@@ -1365,7 +1365,7 @@ inline void AppendDrawData(ImDrawList* src, ImVec2 origin, float scale)
     }
     for (int i = 0, c = src->IdxBuffer.size(); i < c; ++i)
     {
-        dl->_IdxWritePtr[i] = idx_read[i] + vtx_start;
+        dl->_IdxWritePtr[i] = idx_read[i] + (ImDrawIdx)vtx_start;
     }
     for (int i = 0, c = src->CmdBuffer.size(); i < c; ++i)
     {
