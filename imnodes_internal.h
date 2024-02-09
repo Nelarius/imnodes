@@ -297,7 +297,7 @@ struct ImNodesContext
     ImNodesEditorContext* EditorCtx;
 
     // Canvas draw list and helper state
-    ImGuiContext* ZoomImgCtx;
+    ImGuiContext* NodeEditorImgCtx;
     ImGuiContext* OriginalImgCtx;
     ImDrawList*   CanvasDrawList;
     ImGuiStorage  NodeIdxToSubmissionIdx;

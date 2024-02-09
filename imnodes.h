@@ -255,6 +255,10 @@ ImVec2                EditorContextGetPanning();
 void                  EditorContextResetPanning(const ImVec2& pos);
 void                  EditorContextMoveToNode(const int node_id);
 
+// Get the separate ImGui context that ImNodes uses for zoom functionality
+// this is the active context when between BeginNodeEditor and EndNodeEditor
+ImGuiContext* GetNodeEditorImGuiContext();
+
 ImNodesIO& GetIO();
 
 // Returns the global style struct. See the struct declaration for default values.

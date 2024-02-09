@@ -1346,7 +1346,6 @@ void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
 
 inline void AppendDrawData(ImDrawList* src, ImVec2 origin, float scale)
 {
-    // TODO optimize if vtx_start == 0 || if idx_start == 0
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const int   vtx_start = dl->VtxBuffer.size();
     const int   idx_start = dl->IdxBuffer.size();
@@ -1371,7 +1370,6 @@ inline void AppendDrawData(ImDrawList* src, ImVec2 origin, float scale)
     {
         ImDrawCmd cmd = src->CmdBuffer[i];
         cmd.IdxOffset += idx_start;
-        IM_ASSERT(cmd.VtxOffset == 0);
         cmd.ClipRect.x = cmd.ClipRect.x * scale + origin.x;
         cmd.ClipRect.y = cmd.ClipRect.y * scale + origin.y;
         cmd.ClipRect.z = cmd.ClipRect.z * scale + origin.x;
@@ -1716,8 +1714,8 @@ void EndPinAttribute()
 
 void Initialize(ImNodesContext* context)
 {
-    context->ZoomImgCtx = ImGui::CreateContext(ImGui::GetIO().Fonts);
-    context->ZoomImgCtx->IO.IniFilename = nullptr;
+    context->NodeEditorImgCtx = ImGui::CreateContext(ImGui::GetIO().Fonts);
+    context->NodeEditorImgCtx->IO.IniFilename = nullptr;
     context->OriginalImgCtx = nullptr;
 
     context->CanvasOriginalOrigin = ImVec2(0.0f, 0.0f);
@@ -1740,7 +1738,7 @@ void Initialize(ImNodesContext* context)
 void Shutdown(ImNodesContext* ctx)
 {
     EditorContextFree(ctx->DefaultEditorCtx);
-    ImGui::DestroyContext(ctx->ZoomImgCtx);
+    ImGui::DestroyContext(ctx->NodeEditorImgCtx);
 }
 
 // [SECTION] minimap
@@ -2109,6 +2107,8 @@ void EditorContextMoveToNode(const int node_id)
     editor.Panning.y = -node.Origin.y;
 }
 
+ImGuiContext* GetNodeEditorImGuiContext() { return GImNodes->NodeEditorImgCtx; }
+
 void SetImGuiContext(ImGuiContext* ctx) { ImGui::SetCurrentContext(ctx); }
 
 ImNodesIO& GetIO() { return GImNodes->Io; }
@@ -2279,42 +2279,41 @@ void BeginNodeEditor()
         // Setup zoom context
         ImVec2 canvas_size = ImGui::GetContentRegionAvail();
         GImNodes->CanvasOriginalOrigin = ImGui::GetCursorScreenPos();
-        GImNodes->OriginalImgCtx = ImGui::GetCurrentContext();        
+        GImNodes->OriginalImgCtx = ImGui::GetCurrentContext();
 
         // Copy config settings in IO from main context, avoiding input fields
         memcpy(
-            (void*)&GImNodes->ZoomImgCtx->IO,
+            (void*)&GImNodes->NodeEditorImgCtx->IO,
             (void*)&GImNodes->OriginalImgCtx->IO,
             offsetof(ImGuiIO, SetPlatformImeDataFn) +
                 sizeof(GImNodes->OriginalImgCtx->IO.SetPlatformImeDataFn));
 
-        GImNodes->ZoomImgCtx->IO.IniFilename = nullptr;
-        GImNodes->ZoomImgCtx->IO.ConfigInputTrickleEventQueue = false;
-        GImNodes->ZoomImgCtx->IO.DisplaySize = canvas_size / editor.ZoomScale;
-        GImNodes->ZoomImgCtx->Style = GImNodes->OriginalImgCtx->Style;
+        GImNodes->NodeEditorImgCtx->IO.IniFilename = nullptr;
+        GImNodes->NodeEditorImgCtx->IO.ConfigInputTrickleEventQueue = false;
+        GImNodes->NodeEditorImgCtx->IO.DisplaySize = canvas_size / editor.ZoomScale;
+        GImNodes->NodeEditorImgCtx->Style = GImNodes->OriginalImgCtx->Style;
 
         // Nav (tabbing) needs to be disabled otherwise it doubles up with the main context
         // not sure how to get this working correctly
-        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
-                                       ImGuiWindowFlags_NoScrollWithMouse |
-                                       ImGuiWindowFlags_NoNavInputs;
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings |
+                                       ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoMove;
 
         // Button to capture mouse events and hover test
-        ImGui::InvisibleButton("canvas_no_drag", canvas_size);
+        ImGui::BeginChild("canvas_no_drag", canvas_size, 0, windowFlags);
 
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsWindowHovered())
         {
             GImNodes->IsHovered = true;            
         }
         else
         {
             windowFlags |= ImGuiWindowFlags_NoInputs;
-            GImNodes->ZoomImgCtx->IO.ConfigFlags &= ImGuiConfigFlags_NoMouse;
+            GImNodes->NodeEditorImgCtx->IO.ConfigFlags |= ImGuiConfigFlags_NoMouse;
         }
 
         // Copy IO events
-        GImNodes->ZoomImgCtx->InputEventsQueue = GImNodes->OriginalImgCtx->InputEventsTrail;
-        for (ImGuiInputEvent& e : GImNodes->ZoomImgCtx->InputEventsQueue)
+        GImNodes->NodeEditorImgCtx->InputEventsQueue = GImNodes->OriginalImgCtx->InputEventsTrail;
+        for (ImGuiInputEvent& e : GImNodes->NodeEditorImgCtx->InputEventsQueue)
         {
             if (e.Type == ImGuiInputEventType_MousePos)
             {
@@ -2325,7 +2324,7 @@ void BeginNodeEditor()
             }
         }
 
-        ImGui::SetCurrentContext(GImNodes->ZoomImgCtx);
+        ImGui::SetCurrentContext(GImNodes->NodeEditorImgCtx);
         ImGui::NewFrame();
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -2520,11 +2519,11 @@ void EndNodeEditor()
 
     GImNodes->OriginalImgCtx->WantTextInputNextFrame = ImMax(
         GImNodes->OriginalImgCtx->WantTextInputNextFrame,
-        GImNodes->ZoomImgCtx->WantTextInputNextFrame);
+        GImNodes->NodeEditorImgCtx->WantTextInputNextFrame);
 
     if (MouseInCanvas())
     {
-        GImNodes->OriginalImgCtx->MouseCursor = GImNodes->ZoomImgCtx->MouseCursor;
+        GImNodes->OriginalImgCtx->MouseCursor = GImNodes->NodeEditorImgCtx->MouseCursor;
     }
 
     // End frame for zoom context
@@ -2536,11 +2535,12 @@ void EndNodeEditor()
     ImGui::SetCurrentContext(GImNodes->OriginalImgCtx);
     GImNodes->OriginalImgCtx = nullptr;
 
+    ImGui::EndChild();
+    ImGui::EndGroup();
+
     // Copy draw data over to original context
     for (int i = 0; i < draw_data->CmdListsCount; ++i)
         AppendDrawData(draw_data->CmdLists[i], GImNodes->CanvasOriginalOrigin, editor.ZoomScale);
-
-    ImGui::EndGroup();
 }
 
 void MiniMap(
@@ -2927,7 +2927,7 @@ void EditorContextSetZoom(float zoom_scale, ImVec2 zoom_centering_pos)
     editor.Panning += zoom_centering_pos / new_zoom - zoom_centering_pos / editor.ZoomScale;
 
     // Fix mouse position
-    GImNodes->ZoomImgCtx->IO.MousePos *= editor.ZoomScale / new_zoom;
+    GImNodes->NodeEditorImgCtx->IO.MousePos *= editor.ZoomScale / new_zoom;
 
     editor.ZoomScale = new_zoom;
 }
