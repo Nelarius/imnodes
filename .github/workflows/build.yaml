@@ -4,6 +4,7 @@ on: [push, pull_request]
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         platform: [macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
@@ -13,7 +14,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v10.1
+        uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: ${{ github.workspace}}/vcpkg
           runVcpkgInstall: true
