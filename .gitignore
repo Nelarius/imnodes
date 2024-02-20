@@ -1,5 +1,6 @@
-### Local build ###
+### Project ###
 build*/
+*.bytes
 
 ### ImGui ###
 **.ini
