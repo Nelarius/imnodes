@@ -4,7 +4,6 @@
 #include <imnodes.h>
 #include <imgui.h>
 
-#include <SDL2/SDL_timer.h>
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -131,7 +130,9 @@ public:
     void show()
     {
         // Update timer context
-        current_time_seconds = 0.001f * SDL_GetTicks();
+        current_time_seconds =
+            std::chrono::duration<float>(std::chrono::steady_clock::now().time_since_epoch())
+                .count();
 
         auto flags = ImGuiWindowFlags_MenuBar;
 
@@ -205,8 +206,7 @@ public:
         // These are driven by the user, so we place this code before rendering the nodes
         {
             const bool open_popup = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-                                    ImNodes::IsEditorHovered() &&
-                                    ImGui::IsKeyReleased(ImGuiKey_A);
+                                    ImNodes::IsEditorHovered() && ImGui::IsKeyReleased(ImGuiKey_A);
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.f, 8.f));
             if (!ImGui::IsAnyItemHovered() && open_popup)
