@@ -267,6 +267,8 @@ struct ImNodesEditorContext
     ImVec2           PrimaryNodeOffset;
 
     ImClickInteractionState ClickInteraction;
+    int NodeDraggingState; // 0 - None, 1 - Just started dragging, 2 - Just stopped dragging
+    bool NodeDraggingEnableStateOnce; // Used as a flag that ensures state value change for a single frame
 
     // Mini-map state set by MiniMap()
 
@@ -284,7 +286,7 @@ struct ImNodesEditorContext
 
     ImNodesEditorContext()
         : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(),
+          SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(), NodeDraggingState(0), NodeDraggingEnableStateOnce(false),
           MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
           MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
           MiniMapScaling(0.0f)
