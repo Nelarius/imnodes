@@ -23,9 +23,9 @@ extern ImNodesContext* GImNodes;
 
 typedef int ImNodesScope;
 typedef int ImNodesAttributeType;
-typedef int ImNodesUIState;
 typedef int ImNodesClickInteractionType;
-typedef int ImNodesLinkCreationType;
+typedef int ImNodesInteractionType;
+typedef int ImNodesEventType;
 
 enum ImNodesScope_
 {
@@ -40,31 +40,6 @@ enum ImNodesAttributeType_
     ImNodesAttributeType_None,
     ImNodesAttributeType_Input,
     ImNodesAttributeType_Output
-};
-
-enum ImNodesUIState_
-{
-    ImNodesUIState_None = 0,
-    ImNodesUIState_LinkStarted = 1 << 0,
-    ImNodesUIState_LinkDropped = 1 << 1,
-    ImNodesUIState_LinkCreated = 1 << 2
-};
-
-enum ImNodesClickInteractionType_
-{
-    ImNodesClickInteractionType_Node,
-    ImNodesClickInteractionType_Link,
-    ImNodesClickInteractionType_LinkCreation,
-    ImNodesClickInteractionType_Panning,
-    ImNodesClickInteractionType_BoxSelection,
-    ImNodesClickInteractionType_ImGuiItem,
-    ImNodesClickInteractionType_None
-};
-
-enum ImNodesLinkCreationType_
-{
-    ImNodesLinkCreationType_Standard,
-    ImNodesLinkCreationType_FromDetach
 };
 
 // [SECTION] internal data structures
@@ -184,36 +159,118 @@ struct ImPinData
     }
 };
 
-struct ImLinkData
+struct ImLink
 {
-    int Id;
-    int StartPinIdx, EndPinIdx;
+    int   Id;
+    int   StartPinId, EndPinId;
+    ImU32 BaseColor, HoveredColor, SelectedColor;
 
-    struct
+    ImLink(
+        const int id,
+        const int start_pin_id,
+        const int end_pin_id,
+        const unsigned int (&colors)[ImNodesCol_COUNT])
+        : Id(id), StartPinId(start_pin_id), EndPinId(end_pin_id),
+          BaseColor(colors[ImNodesCol_Link]), HoveredColor(colors[ImNodesCol_LinkHovered]),
+          SelectedColor(colors[ImNodesCol_LinkSelected])
     {
-        ImU32 Base, Hovered, Selected;
-    } ColorStyle;
-
-    ImLinkData(const int link_id) : Id(link_id), StartPinIdx(), EndPinIdx(), ColorStyle() {}
+    }
 };
 
-struct ImClickInteractionState
+struct ImCubicBezier
 {
-    ImNodesClickInteractionType Type;
+    ImVec2 P0, P1, P2, P3;
+    int    NumSegments;
+};
 
-    struct
+struct ImBoxSelector
+{
+    ImRect GridSpaceRect;
+};
+
+struct ImPartialLink
+{
+    int  StartPinId;
+    bool CreatedFromDetach;
+};
+
+struct ImSnappedLink
+{
+    int StartPinId;
+    int SnappedPinId;
+};
+
+enum ImNodesInteractionType_
+{
+    ImNodesInteractionType_Pending,
+    ImNodesInteractionType_BoxSelector,
+    ImNodesInteractionType_ImGui,
+    ImNodesInteractionType_Link,
+    ImNodesInteractionType_Node,
+    ImNodesInteractionType_Panning,
+    ImNodesInteractionType_PartialLink,
+    ImNodesInteractionType_SnappedLink,
+    ImNodesInteractionType_None
+};
+
+struct ImInteractionState
+{
+    ImNodesInteractionType Type;
+
+    union
     {
-        int                     StartPinIdx;
-        ImOptionalIndex         EndPinIdx;
-        ImNodesLinkCreationType Type;
-    } LinkCreation;
+        ImBoxSelector BoxSelector;
+        ImPartialLink PartialLink;
+        ImSnappedLink SnappedLink;
+    };
 
-    struct
+    ImInteractionState() : Type(ImNodesInteractionType_Pending) {}
+};
+
+enum ImNodesEventType_
+{
+    ImNodesEventType_LinkStarted,
+    ImNodesEventType_LinkCreatedOnMouseRelease,
+    ImNodesEventType_LinkCreatedOnSnap,
+    ImNodesEventType_LinkDropped,
+    ImNodesEventType_LinkDestroyed,
+    ImNodesEventType_None,
+};
+
+struct ImLinkStarted
+{
+    int StartPinId;
+};
+
+struct ImLinkCreated
+{
+    int StartPinId, EndPinId;
+};
+
+struct ImLinkDropped
+{
+    int  StartPinId;
+    bool IsFromDetach;
+};
+
+struct ImLinkDestroyed
+{
+    int LinkIdx;
+};
+
+struct ImNodesEvent
+{
+    ImNodesEventType Type;
+
+    union
     {
-        ImRect Rect; // Coordinates in grid space
-    } BoxSelector;
+        ImLinkStarted   LinkStarted;
+        ImLinkCreated   LinkCreated;
+        ImLinkDestroyed LinkDestroyed;
+        ImLinkDropped   LinkDropped;
+    };
 
-    ImClickInteractionState() : Type(ImNodesClickInteractionType_None) {}
+    ImNodesEvent() : Type(ImNodesEventType_None) {}
 };
 
 struct ImNodesColElement
@@ -247,7 +304,6 @@ struct ImNodesEditorContext
 {
     ImObjectPool<ImNodeData> Nodes;
     ImObjectPool<ImPinData>  Pins;
-    ImObjectPool<ImLinkData> Links;
 
     ImVector<int> NodeDepthOrder;
 
@@ -259,14 +315,14 @@ struct ImNodesEditorContext
     ImRect GridContentBounds;
 
     ImVector<int> SelectedNodeIndices;
-    ImVector<int> SelectedLinkIndices;
+    ImVector<int> SelectedLinkIds;
 
     // Relative origins of selected nodes for snapping of dragged nodes
     ImVector<ImVec2> SelectedNodeOffsets;
     // Offset of the primary node origin relative to the mouse cursor.
-    ImVec2           PrimaryNodeOffset;
+    ImVec2 PrimaryNodeOffset;
 
-    ImClickInteractionState ClickInteraction;
+    ImInteractionState InteractionState;
 
     // Mini-map state set by MiniMap()
 
@@ -283,11 +339,10 @@ struct ImNodesEditorContext
     float  MiniMapScaling;
 
     ImNodesEditorContext()
-        : Nodes(), Pins(), Links(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIndices(),
-          SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(),
-          MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
-          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
-          MiniMapScaling(0.0f)
+        : Nodes(), Pins(), Panning(0.f, 0.f), SelectedNodeIndices(), SelectedLinkIds(),
+          SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), InteractionState(),
+          MiniMapEnabled(false), MiniMapSizeFraction(0.0f), MiniMapNodeHoveringCallback(NULL),
+          MiniMapNodeHoveringCallbackUserData(NULL), MiniMapScaling(0.0f)
     {
     }
 };
@@ -307,6 +362,13 @@ struct ImNodesContext
     // Canvas extents
     ImVec2 CanvasOriginScreenSpace;
     ImRect CanvasRectScreenSpace;
+
+    // Frame state
+
+    // Links
+
+    ImVector<ImLink>        Links;
+    ImVector<ImCubicBezier> Curves;
 
     // Debug helpers
     ImNodesScope CurrentScope;
@@ -330,13 +392,7 @@ struct ImNodesContext
     ImOptionalIndex HoveredLinkIdx;
     ImOptionalIndex HoveredPinIdx;
 
-    ImOptionalIndex DeletedLinkIdx;
-    ImOptionalIndex SnapLinkIdx;
-
-    // Event helper state
-    // TODO: this should be a part of a state machine, and not a member of the global struct.
-    // Unclear what parts of the code this relates to.
-    int ImNodesUIState;
+    ImNodesEvent Event;
 
     int  ActiveAttributeId;
     bool ActiveAttribute;

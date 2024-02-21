@@ -14,6 +14,7 @@
 #error "Minimum ImGui version requirement not met -- please use a newer version!"
 #endif
 
+#include <float.h>
 #include <limits.h>
 #include <math.h>
 #include <new>
@@ -35,12 +36,6 @@ namespace
 {
 // [SECTION] bezier curve helpers
 
-struct CubicBezier
-{
-    ImVec2 P0, P1, P2, P3;
-    int    NumSegments;
-};
-
 inline ImVec2 EvalCubicBezier(
     const float   t,
     const ImVec2& P0,
@@ -60,15 +55,39 @@ inline ImVec2 EvalCubicBezier(
         b0 * P0.y + b1 * P1.y + b2 * P2.y + b3 * P3.y);
 }
 
-// Calculates the closest point along each bezier curve segment.
-ImVec2 GetClosestPointOnCubicBezier(const int num_segments, const ImVec2& p, const CubicBezier& cb)
+ImCubicBezier CalcCubicBezier(
+    ImVec2                     start,
+    ImVec2                     end,
+    const ImNodesAttributeType start_type,
+    const float                line_segments_per_length)
 {
-    IM_ASSERT(num_segments > 0);
+    IM_ASSERT(
+        (start_type == ImNodesAttributeType_Input) || (start_type == ImNodesAttributeType_Output));
+    if (start_type == ImNodesAttributeType_Input)
+    {
+        ImSwap(start, end);
+    }
+
+    const float   link_length = ImSqrt(ImLengthSqr(end - start));
+    const ImVec2  offset = ImVec2(0.25f * link_length, 0.f);
+    ImCubicBezier cb;
+    cb.P0 = start;
+    cb.P1 = start + offset;
+    cb.P2 = end - offset;
+    cb.P3 = end;
+    cb.NumSegments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
+    return cb;
+}
+
+// Calculates the closest point along each bezier curve segment.
+ImVec2 GetClosestPointOnCubicBezier(const ImVec2& p, const ImCubicBezier& cb)
+{
+    IM_ASSERT(cb.NumSegments > 0);
     ImVec2 p_last = cb.P0;
     ImVec2 p_closest;
     float  p_closest_dist = FLT_MAX;
-    float  t_step = 1.0f / (float)num_segments;
-    for (int i = 1; i <= num_segments; ++i)
+    float  t_step = 1.0f / (float)cb.NumSegments;
+    for (int i = 1; i <= cb.NumSegments; ++i)
     {
         ImVec2 p_current = EvalCubicBezier(t_step * i, cb.P0, cb.P1, cb.P2, cb.P3);
         ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
@@ -83,18 +102,15 @@ ImVec2 GetClosestPointOnCubicBezier(const int num_segments, const ImVec2& p, con
     return p_closest;
 }
 
-inline float GetDistanceToCubicBezier(
-    const ImVec2&      pos,
-    const CubicBezier& cubic_bezier,
-    const int          num_segments)
+inline float GetDistanceToCubicBezier(const ImVec2& pos, const ImCubicBezier& cubic_bezier)
 {
-    const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(num_segments, pos, cubic_bezier);
+    const ImVec2 point_on_curve = GetClosestPointOnCubicBezier(pos, cubic_bezier);
 
     const ImVec2 to_curve = point_on_curve - pos;
     return ImSqrt(ImLengthSqr(to_curve));
 }
 
-inline ImRect GetContainingRectForCubicBezier(const CubicBezier& cb)
+inline ImRect GetContainingRectForCubicBezier(const ImCubicBezier& cb)
 {
     const ImVec2 min = ImVec2(ImMin(cb.P0.x, cb.P3.x), ImMin(cb.P0.y, cb.P3.y));
     const ImVec2 max = ImVec2(ImMax(cb.P0.x, cb.P3.x), ImMax(cb.P0.y, cb.P3.y));
@@ -107,30 +123,6 @@ inline ImRect GetContainingRectForCubicBezier(const CubicBezier& cb)
     rect.Expand(ImVec2(hover_distance, hover_distance));
 
     return rect;
-}
-
-inline CubicBezier GetCubicBezier(
-    ImVec2                     start,
-    ImVec2                     end,
-    const ImNodesAttributeType start_type,
-    const float                line_segments_per_length)
-{
-    IM_ASSERT(
-        (start_type == ImNodesAttributeType_Input) || (start_type == ImNodesAttributeType_Output));
-    if (start_type == ImNodesAttributeType_Input)
-    {
-        ImSwap(start, end);
-    }
-
-    const float  link_length = ImSqrt(ImLengthSqr(end - start));
-    const ImVec2 offset = ImVec2(0.25f * link_length, 0.f);
-    CubicBezier  cubic_bezier;
-    cubic_bezier.P0 = start;
-    cubic_bezier.P1 = start + offset;
-    cubic_bezier.P2 = end - offset;
-    cubic_bezier.P3 = end;
-    cubic_bezier.NumSegments = ImMax(static_cast<int>(link_length * line_segments_per_length), 1);
-    return cubic_bezier;
 }
 
 inline float EvalImplicitLineEq(const ImVec2& p1, const ImVec2& p2, const ImVec2& p)
@@ -189,19 +181,13 @@ inline bool RectangleOverlapsLineSegment(const ImRect& rect, const ImVec2& p1, c
     return abs(sum) != sum_abs;
 }
 
-inline bool RectangleOverlapsBezier(const ImRect& rectangle, const CubicBezier& cubic_bezier)
+inline bool RectangleOverlapsBezier(const ImRect& rectangle, const ImCubicBezier& cb)
 {
-    ImVec2 current =
-        EvalCubicBezier(0.f, cubic_bezier.P0, cubic_bezier.P1, cubic_bezier.P2, cubic_bezier.P3);
-    const float dt = 1.0f / cubic_bezier.NumSegments;
-    for (int s = 0; s < cubic_bezier.NumSegments; ++s)
+    ImVec2      current = EvalCubicBezier(0.f, cb.P0, cb.P1, cb.P2, cb.P3);
+    const float dt = 1.0f / cb.NumSegments;
+    for (int s = 0; s < cb.NumSegments; ++s)
     {
-        ImVec2 next = EvalCubicBezier(
-            static_cast<float>((s + 1) * dt),
-            cubic_bezier.P0,
-            cubic_bezier.P1,
-            cubic_bezier.P2,
-            cubic_bezier.P3);
+        ImVec2 next = EvalCubicBezier(static_cast<float>((s + 1) * dt), cb.P0, cb.P1, cb.P2, cb.P3);
         if (RectangleOverlapsLineSegment(rectangle, current, next))
         {
             return true;
@@ -211,15 +197,11 @@ inline bool RectangleOverlapsBezier(const ImRect& rectangle, const CubicBezier& 
     return false;
 }
 
-inline bool RectangleOverlapsLink(
-    const ImRect&              rectangle,
-    const ImVec2&              start,
-    const ImVec2&              end,
-    const ImNodesAttributeType start_type)
+inline bool RectangleOverlapsLink(const ImRect& rectangle, const ImCubicBezier& cb)
 {
     // First level: simple rejection test via rectangle overlap:
 
-    ImRect lrect = ImRect(start, end);
+    ImRect lrect = ImRect(cb.P0, cb.P3);
     if (lrect.Min.x > lrect.Max.x)
     {
         ImSwap(lrect.Min.x, lrect.Max.x);
@@ -235,7 +217,7 @@ inline bool RectangleOverlapsLink(
         // First, check if either one or both endpoinds are trivially contained
         // in the rectangle
 
-        if (rectangle.Contains(start) || rectangle.Contains(end))
+        if (rectangle.Contains(cb.P0) || rectangle.Contains(cb.P3))
         {
             return true;
         }
@@ -243,9 +225,7 @@ inline bool RectangleOverlapsLink(
         // Second level of refinement: do a more expensive test against the
         // link
 
-        const CubicBezier cubic_bezier =
-            GetCubicBezier(start, end, start_type, GImNodes->Style.LinkLineSegmentsPerLength);
-        return RectangleOverlapsBezier(rectangle, cubic_bezier);
+        return RectangleOverlapsBezier(rectangle, cb);
     }
 
     return false;
@@ -554,253 +534,18 @@ ImVec2 GetScreenSpacePinCoordinates(
     return ImVec2(x, 0.5f * (attribute_rect.Min.y + attribute_rect.Max.y));
 }
 
-ImVec2 GetScreenSpacePinCoordinates(const ImNodesEditorContext& editor, const ImPinData& pin)
-{
-    const ImRect& parent_node_rect = editor.Nodes.Pool[pin.ParentNodeIdx].Rect;
-    return GetScreenSpacePinCoordinates(parent_node_rect, pin.AttributeRect, pin.Type);
-}
-
-bool MouseInCanvas()
+bool MouseInCanvas(const ImNodesContext& context)
 {
     // This flag should be true either when hovering or clicking something in the canvas.
-    const bool is_window_hovered_or_focused = ImGui::IsWindowHovered() || ImGui::IsWindowFocused();
+    const bool is_window_hovered_or_focused =
+        ImGui::IsWindowHovered(ImGuiFocusedFlags_RootAndChildWindows) ||
+        ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
     return is_window_hovered_or_focused &&
-           GImNodes->CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
+           context.CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
 }
 
-void BeginNodeSelection(ImNodesEditorContext& editor, const int node_idx)
-{
-    // Don't start selecting a node if we are e.g. already creating and dragging
-    // a new link! New link creation can happen when the mouse is clicked over
-    // a node, but within the hover radius of a pin.
-    if (editor.ClickInteraction.Type != ImNodesClickInteractionType_None)
-    {
-        return;
-    }
-
-    editor.ClickInteraction.Type = ImNodesClickInteractionType_Node;
-    // If the node is not already contained in the selection, then we want only
-    // the interaction node to be selected, effective immediately.
-    //
-    // If the multiple selection modifier is active, we want to add this node
-    // to the current list of selected nodes.
-    //
-    // Otherwise, we want to allow for the possibility of multiple nodes to be
-    // moved at once.
-    if (!editor.SelectedNodeIndices.contains(node_idx))
-    {
-        editor.SelectedLinkIndices.clear();
-        if (!GImNodes->MultipleSelectModifier)
-        {
-            editor.SelectedNodeIndices.clear();
-        }
-        editor.SelectedNodeIndices.push_back(node_idx);
-
-        // Ensure that individually selected nodes get rendered on top
-        ImVector<int>&   depth_stack = editor.NodeDepthOrder;
-        const int* const elem = depth_stack.find(node_idx);
-        IM_ASSERT(elem != depth_stack.end());
-        depth_stack.erase(elem);
-        depth_stack.push_back(node_idx);
-    }
-    // Deselect a previously-selected node
-    else if (GImNodes->MultipleSelectModifier)
-    {
-        const int* const node_ptr = editor.SelectedNodeIndices.find(node_idx);
-        editor.SelectedNodeIndices.erase(node_ptr);
-
-        // Don't allow dragging after deselecting
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-    }
-
-    // To support snapping of multiple nodes, we need to store the offset of
-    // each node in the selection to the origin of the dragged node.
-    const ImVec2 ref_origin = editor.Nodes.Pool[node_idx].Origin;
-    editor.PrimaryNodeOffset =
-        ref_origin + GImNodes->CanvasOriginScreenSpace + editor.Panning - GImNodes->MousePos;
-
-    editor.SelectedNodeOffsets.clear();
-    for (int idx = 0; idx < editor.SelectedNodeIndices.Size; idx++)
-    {
-        const int    node = editor.SelectedNodeIndices[idx];
-        const ImVec2 node_origin = editor.Nodes.Pool[node].Origin - ref_origin;
-        editor.SelectedNodeOffsets.push_back(node_origin);
-    }
-}
-
-void BeginLinkSelection(ImNodesEditorContext& editor, const int link_idx)
-{
-    editor.ClickInteraction.Type = ImNodesClickInteractionType_Link;
-    // When a link is selected, clear all other selections, and insert the link
-    // as the sole selection.
-    editor.SelectedNodeIndices.clear();
-    editor.SelectedLinkIndices.clear();
-    editor.SelectedLinkIndices.push_back(link_idx);
-}
-
-void BeginLinkDetach(ImNodesEditorContext& editor, const int link_idx, const int detach_pin_idx)
-{
-    const ImLinkData&        link = editor.Links.Pool[link_idx];
-    ImClickInteractionState& state = editor.ClickInteraction;
-    state.Type = ImNodesClickInteractionType_LinkCreation;
-    state.LinkCreation.EndPinIdx.Reset();
-    state.LinkCreation.StartPinIdx =
-        detach_pin_idx == link.StartPinIdx ? link.EndPinIdx : link.StartPinIdx;
-    GImNodes->DeletedLinkIdx = link_idx;
-}
-
-void BeginLinkCreation(ImNodesEditorContext& editor, const int hovered_pin_idx)
-{
-    editor.ClickInteraction.Type = ImNodesClickInteractionType_LinkCreation;
-    editor.ClickInteraction.LinkCreation.StartPinIdx = hovered_pin_idx;
-    editor.ClickInteraction.LinkCreation.EndPinIdx.Reset();
-    editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_Standard;
-    GImNodes->ImNodesUIState |= ImNodesUIState_LinkStarted;
-}
-
-void BeginLinkInteraction(
-    ImNodesEditorContext& editor,
-    const int             link_idx,
-    const ImOptionalIndex pin_idx = ImOptionalIndex())
-{
-    // Check if we are clicking the link with the modifier pressed.
-    // This will in a link detach via clicking.
-
-    const bool modifier_pressed = GImNodes->Io.LinkDetachWithModifierClick.Modifier == NULL
-                                      ? false
-                                      : *GImNodes->Io.LinkDetachWithModifierClick.Modifier;
-
-    if (modifier_pressed)
-    {
-        const ImLinkData& link = editor.Links.Pool[link_idx];
-        const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
-        const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
-        const ImVec2&     mouse_pos = GImNodes->MousePos;
-        const float       dist_to_start = ImLengthSqr(start_pin.Pos - mouse_pos);
-        const float       dist_to_end = ImLengthSqr(end_pin.Pos - mouse_pos);
-        const int closest_pin_idx = dist_to_start < dist_to_end ? link.StartPinIdx : link.EndPinIdx;
-
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_LinkCreation;
-        BeginLinkDetach(editor, link_idx, closest_pin_idx);
-        editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_FromDetach;
-    }
-    else
-    {
-        if (pin_idx.HasValue())
-        {
-            const int hovered_pin_flags = editor.Pins.Pool[pin_idx.Value()].Flags;
-
-            // Check the 'click and drag to detach' case.
-            if (hovered_pin_flags & ImNodesAttributeFlags_EnableLinkDetachWithDragClick)
-            {
-                BeginLinkDetach(editor, link_idx, pin_idx.Value());
-                editor.ClickInteraction.LinkCreation.Type = ImNodesLinkCreationType_FromDetach;
-            }
-            else
-            {
-                BeginLinkCreation(editor, pin_idx.Value());
-            }
-        }
-        else
-        {
-            BeginLinkSelection(editor, link_idx);
-        }
-    }
-}
-
-static inline bool IsMiniMapHovered();
-
-void BeginCanvasInteraction(ImNodesEditorContext& editor)
-{
-    const bool any_ui_element_hovered =
-        GImNodes->HoveredNodeIdx.HasValue() || GImNodes->HoveredLinkIdx.HasValue() ||
-        GImNodes->HoveredPinIdx.HasValue() || ImGui::IsAnyItemHovered();
-
-    const bool mouse_not_in_canvas = !MouseInCanvas();
-
-    if (editor.ClickInteraction.Type != ImNodesClickInteractionType_None ||
-        any_ui_element_hovered || mouse_not_in_canvas)
-    {
-        return;
-    }
-
-    const bool started_panning = GImNodes->AltMouseClicked;
-
-    if (started_panning)
-    {
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_Panning;
-    }
-    else if (GImNodes->LeftMouseClicked)
-    {
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_BoxSelection;
-        editor.ClickInteraction.BoxSelector.Rect.Min =
-            ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
-    }
-}
-
-void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
-{
-    // Invert box selector coordinates as needed
-
-    if (box_rect.Min.x > box_rect.Max.x)
-    {
-        ImSwap(box_rect.Min.x, box_rect.Max.x);
-    }
-
-    if (box_rect.Min.y > box_rect.Max.y)
-    {
-        ImSwap(box_rect.Min.y, box_rect.Max.y);
-    }
-
-    // Update node selection
-
-    editor.SelectedNodeIndices.clear();
-
-    // Test for overlap against node rectangles
-
-    for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
-    {
-        if (editor.Nodes.InUse[node_idx])
-        {
-            ImNodeData& node = editor.Nodes.Pool[node_idx];
-            if (box_rect.Overlaps(node.Rect))
-            {
-                editor.SelectedNodeIndices.push_back(node_idx);
-            }
-        }
-    }
-
-    // Update link selection
-
-    editor.SelectedLinkIndices.clear();
-
-    // Test for overlap against links
-
-    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
-    {
-        if (editor.Links.InUse[link_idx])
-        {
-            const ImLinkData& link = editor.Links.Pool[link_idx];
-
-            const ImPinData& pin_start = editor.Pins.Pool[link.StartPinIdx];
-            const ImPinData& pin_end = editor.Pins.Pool[link.EndPinIdx];
-            const ImRect&    node_start_rect = editor.Nodes.Pool[pin_start.ParentNodeIdx].Rect;
-            const ImRect&    node_end_rect = editor.Nodes.Pool[pin_end.ParentNodeIdx].Rect;
-
-            const ImVec2 start = GetScreenSpacePinCoordinates(
-                node_start_rect, pin_start.AttributeRect, pin_start.Type);
-            const ImVec2 end =
-                GetScreenSpacePinCoordinates(node_end_rect, pin_end.AttributeRect, pin_end.Type);
-
-            // Test
-            if (RectangleOverlapsLink(box_rect, start, end, pin_start.Type))
-            {
-                editor.SelectedLinkIndices.push_back(link_idx);
-            }
-        }
-    }
-}
+inline bool IsMiniMapHovered();
 
 ImVec2 SnapOriginToGrid(ImVec2 origin)
 {
@@ -845,49 +590,33 @@ void TranslateSelectedNodes(ImNodesEditorContext& editor)
     }
 }
 
-struct LinkPredicate
-{
-    bool operator()(const ImLinkData& lhs, const ImLinkData& rhs) const
-    {
-        // Do a unique compare by sorting the pins' addresses.
-        // This catches duplicate links, whether they are in the
-        // same direction or not.
-        // Sorting by pin index should have the uniqueness guarantees as sorting
-        // by id -- each unique id will get one slot in the link pool array.
-
-        int lhs_start = lhs.StartPinIdx;
-        int lhs_end = lhs.EndPinIdx;
-        int rhs_start = rhs.StartPinIdx;
-        int rhs_end = rhs.EndPinIdx;
-
-        if (lhs_start > lhs_end)
-        {
-            ImSwap(lhs_start, lhs_end);
-        }
-
-        if (rhs_start > rhs_end)
-        {
-            ImSwap(rhs_start, rhs_end);
-        }
-
-        return lhs_start == rhs_start && lhs_end == rhs_end;
-    }
-};
-
 ImOptionalIndex FindDuplicateLink(
-    const ImNodesEditorContext& editor,
-    const int                   start_pin_idx,
-    const int                   end_pin_idx)
+    const ImVector<ImLink>& links,
+    const int               start_pin_id,
+    const int               end_pin_id)
 {
-    ImLinkData test_link(0);
-    test_link.StartPinIdx = start_pin_idx;
-    test_link.EndPinIdx = end_pin_idx;
-    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
+    for (int idx = 0; idx < links.size(); ++idx)
     {
-        const ImLinkData& link = editor.Links.Pool[link_idx];
-        if (LinkPredicate()(test_link, link) && editor.Links.InUse[link_idx])
+        const ImLink& link = links[idx];
+
+        int lhs_start_id = start_pin_id;
+        int lhs_end_id = end_pin_id;
+        int rhs_start_id = link.StartPinId;
+        int rhs_end_id = link.EndPinId;
+
+        if (lhs_start_id > lhs_end_id)
         {
-            return ImOptionalIndex(link_idx);
+            ImSwap(lhs_start_id, lhs_end_id);
+        }
+
+        if (rhs_start_id > rhs_end_id)
+        {
+            ImSwap(rhs_start_id, rhs_end_id);
+        }
+
+        if (lhs_start_id == rhs_start_id && lhs_end_id == rhs_end_id)
+        {
+            return ImOptionalIndex(idx);
         }
     }
 
@@ -917,205 +646,12 @@ bool ShouldLinkSnapToPin(
     // The link to be created must not be a duplicate, unless it is the link which was created on
     // snap. In that case we want to snap, since we want it to appear visually as if the created
     // link remains snapped to the pin.
-    if (duplicate_link.HasValue() && !(duplicate_link == GImNodes->SnapLinkIdx))
+    if (duplicate_link.HasValue())
     {
         return false;
     }
 
     return true;
-}
-
-void ClickInteractionUpdate(ImNodesEditorContext& editor)
-{
-    switch (editor.ClickInteraction.Type)
-    {
-    case ImNodesClickInteractionType_BoxSelection:
-    {
-        editor.ClickInteraction.BoxSelector.Rect.Max =
-            ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
-
-        ImRect box_rect = editor.ClickInteraction.BoxSelector.Rect;
-        box_rect.Min = GridSpaceToScreenSpace(editor, box_rect.Min);
-        box_rect.Max = GridSpaceToScreenSpace(editor, box_rect.Max);
-
-        BoxSelectorUpdateSelection(editor, box_rect);
-
-        const ImU32 box_selector_color = GImNodes->Style.Colors[ImNodesCol_BoxSelector];
-        const ImU32 box_selector_outline = GImNodes->Style.Colors[ImNodesCol_BoxSelectorOutline];
-        GImNodes->CanvasDrawList->AddRectFilled(box_rect.Min, box_rect.Max, box_selector_color);
-        GImNodes->CanvasDrawList->AddRect(box_rect.Min, box_rect.Max, box_selector_outline);
-
-        if (GImNodes->LeftMouseReleased)
-        {
-            ImVector<int>&       depth_stack = editor.NodeDepthOrder;
-            const ImVector<int>& selected_idxs = editor.SelectedNodeIndices;
-
-            // Bump the selected node indices, in order, to the top of the depth stack.
-            // NOTE: this algorithm has worst case time complexity of O(N^2), if the node selection
-            // is ~ N (due to selected_idxs.contains()).
-
-            if ((selected_idxs.Size > 0) && (selected_idxs.Size < depth_stack.Size))
-            {
-                int num_moved = 0; // The number of indices moved. Stop after selected_idxs.Size
-                for (int i = 0; i < depth_stack.Size - selected_idxs.Size; ++i)
-                {
-                    for (int node_idx = depth_stack[i]; selected_idxs.contains(node_idx);
-                         node_idx = depth_stack[i])
-                    {
-                        depth_stack.erase(depth_stack.begin() + static_cast<size_t>(i));
-                        depth_stack.push_back(node_idx);
-                        ++num_moved;
-                    }
-
-                    if (num_moved == selected_idxs.Size)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-        }
-    }
-    break;
-    case ImNodesClickInteractionType_Node:
-    {
-        TranslateSelectedNodes(editor);
-
-        if (GImNodes->LeftMouseReleased)
-        {
-            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-        }
-    }
-    break;
-    case ImNodesClickInteractionType_Link:
-    {
-        if (GImNodes->LeftMouseReleased)
-        {
-            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-        }
-    }
-    break;
-    case ImNodesClickInteractionType_LinkCreation:
-    {
-        const ImPinData& start_pin =
-            editor.Pins.Pool[editor.ClickInteraction.LinkCreation.StartPinIdx];
-
-        const ImOptionalIndex maybe_duplicate_link_idx =
-            GImNodes->HoveredPinIdx.HasValue()
-                ? FindDuplicateLink(
-                      editor,
-                      editor.ClickInteraction.LinkCreation.StartPinIdx,
-                      GImNodes->HoveredPinIdx.Value())
-                : ImOptionalIndex();
-
-        const bool should_snap =
-            GImNodes->HoveredPinIdx.HasValue() &&
-            ShouldLinkSnapToPin(
-                editor, start_pin, GImNodes->HoveredPinIdx.Value(), maybe_duplicate_link_idx);
-
-        // If we created on snap and the hovered pin is empty or changed, then we need signal that
-        // the link's state has changed.
-        const bool snapping_pin_changed =
-            editor.ClickInteraction.LinkCreation.EndPinIdx.HasValue() &&
-            !(GImNodes->HoveredPinIdx == editor.ClickInteraction.LinkCreation.EndPinIdx);
-
-        // Detach the link that was created by this link event if it's no longer in snap range
-        if (snapping_pin_changed && GImNodes->SnapLinkIdx.HasValue())
-        {
-            BeginLinkDetach(
-                editor,
-                GImNodes->SnapLinkIdx.Value(),
-                editor.ClickInteraction.LinkCreation.EndPinIdx.Value());
-        }
-
-        const ImVec2 start_pos = GetScreenSpacePinCoordinates(editor, start_pin);
-        // If we are within the hover radius of a receiving pin, snap the link
-        // endpoint to it
-        const ImVec2 end_pos = should_snap
-                                   ? GetScreenSpacePinCoordinates(
-                                         editor, editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()])
-                                   : GImNodes->MousePos;
-
-        const CubicBezier cubic_bezier = GetCubicBezier(
-            start_pos, end_pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
-#if IMGUI_VERSION_NUM < 18000
-        GImNodes->CanvasDrawList->AddBezierCurve(
-#else
-        GImNodes->CanvasDrawList->AddBezierCubic(
-#endif
-            cubic_bezier.P0,
-            cubic_bezier.P1,
-            cubic_bezier.P2,
-            cubic_bezier.P3,
-            GImNodes->Style.Colors[ImNodesCol_Link],
-            GImNodes->Style.LinkThickness,
-            cubic_bezier.NumSegments);
-
-        const bool link_creation_on_snap =
-            GImNodes->HoveredPinIdx.HasValue() &&
-            (editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()].Flags &
-             ImNodesAttributeFlags_EnableLinkCreationOnSnap);
-
-        if (!should_snap)
-        {
-            editor.ClickInteraction.LinkCreation.EndPinIdx.Reset();
-        }
-
-        const bool create_link =
-            should_snap && (GImNodes->LeftMouseReleased || link_creation_on_snap);
-
-        if (create_link && !maybe_duplicate_link_idx.HasValue())
-        {
-            // Avoid send OnLinkCreated() events every frame if the snap link is not saved
-            // (only applies for EnableLinkCreationOnSnap)
-            if (!GImNodes->LeftMouseReleased &&
-                editor.ClickInteraction.LinkCreation.EndPinIdx == GImNodes->HoveredPinIdx)
-            {
-                break;
-            }
-
-            GImNodes->ImNodesUIState |= ImNodesUIState_LinkCreated;
-            editor.ClickInteraction.LinkCreation.EndPinIdx = GImNodes->HoveredPinIdx.Value();
-        }
-
-        if (GImNodes->LeftMouseReleased)
-        {
-            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-            if (!create_link)
-            {
-                GImNodes->ImNodesUIState |= ImNodesUIState_LinkDropped;
-            }
-        }
-    }
-    break;
-    case ImNodesClickInteractionType_Panning:
-    {
-        const bool dragging = GImNodes->AltMouseDragging;
-
-        if (dragging)
-        {
-            editor.Panning += ImGui::GetIO().MouseDelta;
-        }
-        else
-        {
-            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-        }
-    }
-    break;
-    case ImNodesClickInteractionType_ImGuiItem:
-    {
-        if (GImNodes->LeftMouseReleased)
-        {
-            editor.ClickInteraction.Type = ImNodesClickInteractionType_None;
-        }
-    }
-    case ImNodesClickInteractionType_None:
-        break;
-    default:
-        IM_ASSERT(!"Unreachable code!");
-        break;
-    }
 }
 
 void ResolveOccludedPins(const ImNodesEditorContext& editor, ImVector<int>& occluded_pin_indices)
@@ -1225,9 +761,28 @@ ImOptionalIndex ResolveHoveredNode(const ImVector<int>& depth_stack)
     return ImOptionalIndex(node_idx_on_top);
 }
 
+ImOptionalIndex ResolveAttachedLink(
+    const ImVector<ImLink>&        links,
+    const ImObjectPool<ImPinData>& pins,
+    const int                      hovered_pin_idx)
+{
+    const int pin_id = pins.Pool[hovered_pin_idx].Id;
+    for (int idx = 0; idx < links.size(); ++idx)
+    {
+        const ImLink& link = links[idx];
+        if (pin_id == link.StartPinId || pin_id == link.EndPinId)
+        {
+            return ImOptionalIndex(idx);
+        }
+    }
+
+    return ImOptionalIndex();
+}
+
 ImOptionalIndex ResolveHoveredLink(
-    const ImObjectPool<ImLinkData>& links,
-    const ImObjectPool<ImPinData>&  pins)
+    const ImVector<ImLink>&        links,
+    const ImVector<ImCubicBezier>& curves,
+    const ImObjectPool<ImPinData>& pins)
 {
     float           smallest_distance = FLT_MAX;
     ImOptionalIndex link_idx_with_smallest_distance;
@@ -1240,59 +795,572 @@ ImOptionalIndex ResolveHoveredLink(
     // The latter is a requirement for link detaching with drag click to work, as both a link and
     // pin are required to be hovered over for the feature to work.
 
-    for (int idx = 0; idx < links.Pool.Size; ++idx)
+    const bool is_pin_hovered = GImNodes->HoveredPinIdx.HasValue();
+    if (is_pin_hovered)
     {
-        if (!links.InUse[idx])
-        {
-            continue;
-        }
+        return ResolveAttachedLink(links, pins, GImNodes->HoveredPinIdx.Value());
+    }
 
-        const ImLinkData& link = links.Pool[idx];
-        const ImPinData&  start_pin = pins.Pool[link.StartPinIdx];
-        const ImPinData&  end_pin = pins.Pool[link.EndPinIdx];
-
-        // If there is a hovered pin links can only be considered hovered if they use that pin
-        if (GImNodes->HoveredPinIdx.HasValue())
-        {
-            if (GImNodes->HoveredPinIdx == link.StartPinIdx ||
-                GImNodes->HoveredPinIdx == link.EndPinIdx)
-            {
-                return idx;
-            }
-            continue;
-        }
-
-        // TODO: the calculated CubicBeziers could be cached since we generate them again when
-        // rendering the links
-
-        const CubicBezier cubic_bezier = GetCubicBezier(
-            start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
+    for (int idx = 0; idx < curves.size(); ++idx)
+    {
+        const ImCubicBezier& curve = curves[idx];
 
         // The distance test
+        const ImRect curve_bounds = GetContainingRectForCubicBezier(curve);
+
+        if (curve_bounds.Contains(GImNodes->MousePos))
         {
-            const ImRect link_rect = GetContainingRectForCubicBezier(cubic_bezier);
+            const float distance = GetDistanceToCubicBezier(GImNodes->MousePos, curve);
 
-            // First, do a simple bounding box test against the box containing the link
-            // to see whether calculating the distance to the link is worth doing.
-            if (link_rect.Contains(GImNodes->MousePos))
+            if (distance < GImNodes->Style.LinkHoverDistance && distance < smallest_distance)
             {
-                const float distance = GetDistanceToCubicBezier(
-                    GImNodes->MousePos, cubic_bezier, cubic_bezier.NumSegments);
-
-                // TODO: GImNodes->Style.LinkHoverDistance could be also copied into ImLinkData,
-                // since we're not calling this function in the same scope as ImNodes::Link(). The
-                // rendered/detected link might have a different hover distance than what the user
-                // had specified when calling Link()
-                if (distance < GImNodes->Style.LinkHoverDistance && distance < smallest_distance)
-                {
-                    smallest_distance = distance;
-                    link_idx_with_smallest_distance = idx;
-                }
+                smallest_distance = distance;
+                link_idx_with_smallest_distance = idx;
             }
         }
     }
 
     return link_idx_with_smallest_distance;
+}
+
+void EnterNodeState(const ImNodesContext& context, ImNodesEditorContext& editor, const int node_idx)
+{
+    editor.InteractionState.Type = ImNodesInteractionType_Node;
+
+    // Clear the existing node selection if the user clicked an unselected node.
+    const int* const node_ptr = editor.SelectedNodeIndices.find(node_idx);
+
+    if (node_ptr == editor.SelectedNodeIndices.end())
+    {
+        if (!context.MultipleSelectModifier)
+        {
+            editor.SelectedLinkIds.resize(0);
+            editor.SelectedNodeIndices.resize(0);
+        }
+        editor.SelectedNodeIndices.push_back(node_idx);
+
+        // Ensure that individually selected nodes get rendered on top
+        ImVector<int>&   depth_stack = editor.NodeDepthOrder;
+        const int* const elem = depth_stack.find(node_idx);
+        IM_ASSERT(elem != depth_stack.end());
+        depth_stack.erase(elem);
+        depth_stack.push_back(node_idx);
+    }
+    // Otherwise, deselect a previously-selected node
+    else if (context.MultipleSelectModifier)
+    {
+        editor.SelectedNodeIndices.erase_unsorted(node_ptr);
+    }
+
+    // To support snapping of multiple nodes, we need to store the offset of
+    // each node in the selection to the origin of the dragged node.
+    const ImVec2 ref_origin = editor.Nodes.Pool[node_idx].Origin;
+    editor.PrimaryNodeOffset =
+        ref_origin + context.CanvasOriginScreenSpace + editor.Panning - context.MousePos;
+
+    editor.SelectedNodeOffsets.clear();
+    for (int idx = 0; idx < editor.SelectedNodeIndices.Size; idx++)
+    {
+        const int    node = editor.SelectedNodeIndices[idx];
+        const ImVec2 node_origin = editor.Nodes.Pool[node].Origin - ref_origin;
+        editor.SelectedNodeOffsets.push_back(node_origin);
+    }
+}
+
+void EnterLinkState(
+    const ImNodesContext& context,
+    ImNodesEditorContext& editor,
+    const int             hovered_link_id)
+{
+    editor.InteractionState.Type = ImNodesInteractionType_Link;
+
+    const int* const link_ptr = editor.SelectedLinkIds.find(hovered_link_id);
+
+    if (link_ptr == editor.SelectedLinkIds.end())
+    {
+        // Clicking an unselected link
+        if (!context.MultipleSelectModifier)
+        {
+            editor.SelectedLinkIds.resize(0);
+            editor.SelectedNodeIndices.resize(0);
+        }
+        editor.SelectedLinkIds.push_back(hovered_link_id);
+    }
+    else if (context.MultipleSelectModifier)
+    {
+        // Clicking a previously selected link with multiple select modifier should remove the
+        // selection
+        editor.SelectedLinkIds.erase_unsorted(link_ptr);
+    }
+    else
+    {
+        // Click a previously selected link without the multiple select modifier. Clear all
+        // selections, append link selection.
+        editor.SelectedLinkIds.resize(0);
+        editor.SelectedNodeIndices.resize(0);
+        editor.SelectedLinkIds.push_back(hovered_link_id);
+    }
+}
+
+void EnterImGuiState(ImNodesEditorContext& editor)
+{
+    editor.InteractionState.Type = ImNodesInteractionType_ImGui;
+}
+
+void EnterBoxSelectorState(ImNodesEditorContext& editor)
+{
+    editor.InteractionState.Type = ImNodesInteractionType_BoxSelector;
+    editor.InteractionState.BoxSelector.GridSpaceRect.Min =
+        ScreenSpaceToGridSpace(editor, ImGui::GetIO().MousePos);
+    editor.InteractionState.BoxSelector.GridSpaceRect.Max = ImVec2(-FLT_MAX, -FLT_MAX);
+}
+
+void EnterPanningState(ImNodesEditorContext& editor)
+{
+    editor.InteractionState.Type = ImNodesInteractionType_Panning;
+}
+
+void EnterPartialLinkState(
+    ImNodesContext&       context,
+    ImNodesEditorContext& editor,
+    const int             start_pin_id,
+    const bool            created_from_detach)
+{
+    if (!created_from_detach)
+    {
+        context.Event.Type = ImNodesEventType_LinkStarted;
+        context.Event.LinkStarted.StartPinId = start_pin_id;
+    }
+
+    editor.InteractionState.Type = ImNodesInteractionType_PartialLink;
+    editor.InteractionState.PartialLink.StartPinId = start_pin_id;
+    editor.InteractionState.PartialLink.CreatedFromDetach = created_from_detach;
+}
+
+void EnterPendingState(ImNodesEditorContext& editor)
+{
+    editor.InteractionState.Type = ImNodesInteractionType_Pending;
+}
+
+void EnterSnappedLinkState(
+    ImNodesEditorContext& editor,
+    const int             start_pin_id,
+    const int             end_pin_id)
+{
+    editor.InteractionState.Type = ImNodesInteractionType_SnappedLink;
+    editor.InteractionState.SnappedLink.StartPinId = start_pin_id;
+    editor.InteractionState.SnappedLink.SnappedPinId = end_pin_id;
+}
+
+void PartialLinkStateUpdate(ImNodesContext& context, ImNodesEditorContext& editor)
+{
+    const ImInteractionState& state = editor.InteractionState;
+    const int                 start_pin_id = state.PartialLink.StartPinId;
+    const ImPinData&          start_pin = ObjectPoolFindOrCreateObject(editor.Pins, start_pin_id);
+
+    // Hovered pin detection
+
+    {
+        ResolveOccludedPins(editor, context.OccludedPinIndices);
+        context.HoveredPinIdx = ResolveHoveredPin(editor.Pins, context.OccludedPinIndices);
+    }
+
+    // Partial link state
+    bool link_snapped_to_pin = false;
+    bool create_link_on_snap = false;
+
+    if (context.HoveredPinIdx.HasValue())
+    {
+        const ImPinData& hovered_pin = editor.Pins.Pool[GImNodes->HoveredPinIdx.Value()];
+
+        const ImOptionalIndex maybe_duplicate_link_idx =
+            FindDuplicateLink(context.Links, start_pin_id, hovered_pin.Id);
+
+        link_snapped_to_pin = ShouldLinkSnapToPin(
+            editor, start_pin, context.HoveredPinIdx.Value(), maybe_duplicate_link_idx);
+        if (link_snapped_to_pin)
+        {
+            create_link_on_snap =
+                hovered_pin.Flags & ImNodesAttributeFlags_EnableLinkCreationOnSnap;
+        }
+    }
+
+    // Render the bezier curve
+
+    {
+        const ImVec2               start_pos = start_pin.Pos;
+        const ImNodesAttributeType start_pin_type = start_pin.Type;
+
+        ImVec2 end_pos;
+        if (link_snapped_to_pin)
+        {
+            end_pos = editor.Pins.Pool[context.HoveredPinIdx.Value()].Pos;
+        }
+        else
+        {
+            end_pos = context.MousePos;
+        }
+
+        const ImCubicBezier cb = CalcCubicBezier(
+            start_pos, end_pos, start_pin_type, GImNodes->Style.LinkLineSegmentsPerLength);
+
+#if IMGUI_VERSION_NUM < 18000
+        GimNodes->CanvasDrawList->AddBezierCurve(
+#else
+        GImNodes->CanvasDrawList->AddBezierCubic(
+#endif
+            cb.P0,
+            cb.P1,
+            cb.P2,
+            cb.P3,
+            GImNodes->Style.Colors[ImNodesCol_Link],
+            GImNodes->Style.LinkThickness,
+            cb.NumSegments);
+    }
+
+    if (context.LeftMouseReleased)
+    {
+        if (link_snapped_to_pin)
+        {
+            context.Event.Type = ImNodesEventType_LinkCreatedOnMouseRelease;
+            context.Event.LinkCreated.StartPinId = start_pin_id;
+            context.Event.LinkCreated.EndPinId = editor.Pins.Pool[context.HoveredPinIdx.Value()].Id;
+        }
+        else
+        {
+            context.Event.Type = ImNodesEventType_LinkDropped;
+            context.Event.LinkDropped.StartPinId = start_pin_id;
+            context.Event.LinkDropped.IsFromDetach = state.PartialLink.CreatedFromDetach;
+        }
+
+        EnterPendingState(editor);
+        return;
+    }
+
+    if (create_link_on_snap)
+    {
+        context.Event.Type = ImNodesEventType_LinkCreatedOnSnap;
+        context.Event.LinkCreated.StartPinId = start_pin_id;
+        context.Event.LinkCreated.EndPinId = editor.Pins.Pool[context.HoveredPinIdx.Value()].Id;
+        EnterSnappedLinkState(
+            editor, start_pin_id, editor.Pins.Pool[context.HoveredPinIdx.Value()].Id);
+        return;
+    }
+}
+
+void ImGuiStateUpdate(ImNodesContext& context, ImNodesEditorContext& editor)
+{
+    if (context.LeftMouseReleased)
+    {
+        EnterPendingState(editor);
+    }
+}
+
+void SnappedLinkStateUpdate(ImNodesContext& context, ImNodesEditorContext& editor)
+{
+    // Entering this state requires HoveredPinIdx to have a value.
+
+    // Hovered pin detection
+
+    {
+        ResolveOccludedPins(editor, context.OccludedPinIndices);
+        context.HoveredPinIdx = ResolveHoveredPin(editor.Pins, context.OccludedPinIndices);
+    }
+
+    const ImInteractionState& state = editor.InteractionState;
+
+    const bool snapping_pin_changed =
+        !(context.HoveredPinIdx.HasValue() &&
+          editor.Pins.Pool[context.HoveredPinIdx.Value()].Id == state.SnappedLink.SnappedPinId);
+
+    if (snapping_pin_changed)
+    {
+        // Pre-condition: the user created a link after this state was entered
+        // FindDuplicateLink should return a valid link idx.
+        const ImOptionalIndex snapped_link = FindDuplicateLink(
+            context.Links, state.SnappedLink.StartPinId, state.SnappedLink.SnappedPinId);
+
+        context.Event.Type = ImNodesEventType_LinkDestroyed;
+        context.Event.LinkDestroyed.LinkIdx = snapped_link.Value();
+
+        EnterPartialLinkState(context, editor, state.SnappedLink.StartPinId, true);
+        return;
+    }
+
+    if (context.LeftMouseReleased)
+    {
+        EnterPendingState(editor);
+        return;
+    }
+}
+
+void PendingStateUpdate(ImNodesContext& context, ImNodesEditorContext& editor)
+{
+    if (IsMiniMapHovered() || !MouseInCanvas(context))
+    {
+        return;
+    }
+
+    // Detect ImGui interaction first, because it blocks interaction with the rest of the UI.
+
+    if (context.LeftMouseClicked && (ImGui::IsAnyItemActive() || ImGui::IsAnyItemHovered()))
+    {
+        EnterImGuiState(editor);
+        return;
+    }
+
+    ResolveOccludedPins(editor, context.OccludedPinIndices);
+    context.HoveredPinIdx = ResolveHoveredPin(editor.Pins, context.OccludedPinIndices);
+
+    if (!context.HoveredPinIdx.HasValue())
+    {
+        // Resolve which node is actually on top and being hovered using the depth stack.
+        context.HoveredNodeIdx = ResolveHoveredNode(editor.NodeDepthOrder);
+    }
+
+    if (!(context.HoveredPinIdx.HasValue() || context.HoveredNodeIdx.HasValue()))
+    {
+        context.HoveredLinkIdx = ResolveHoveredLink(context.Links, context.Curves, editor.Pins);
+    }
+
+    // This function should replicate BeginCanvasInteraction()
+
+    if (context.LeftMouseClicked)
+    {
+        if (context.HoveredPinIdx.HasValue())
+        {
+            EnterPartialLinkState(
+                context, editor, editor.Pins.Pool[context.HoveredPinIdx.Value()].Id, false);
+            return;
+        }
+        else if (context.HoveredNodeIdx.HasValue())
+        {
+            EnterNodeState(context, editor, context.HoveredNodeIdx.Value());
+            return;
+        }
+        else if (context.HoveredLinkIdx.HasValue())
+        {
+            const bool detach_modifier_pressed =
+                context.Io.LinkDetachWithModifierClick.Modifier == nullptr
+                    ? false
+                    : *context.Io.LinkDetachWithModifierClick.Modifier;
+
+            if (detach_modifier_pressed)
+            {
+                const int link_idx = context.HoveredLinkIdx.Value();
+
+                // Detach the link from the pin which is closest to the mouse cursor.
+                const ImLink&    link = context.Links[link_idx];
+                const ImPinData& start_pin =
+                    ObjectPoolFindOrCreateObject(editor.Pins, link.StartPinId);
+                const ImPinData& end_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.EndPinId);
+                const float      dist_to_start = ImLengthSqr(start_pin.Pos - context.MousePos);
+                const float      dist_to_end = ImLengthSqr(end_pin.Pos - context.MousePos);
+                const int closest_pin_id = dist_to_start <= dist_to_end ? end_pin.Id : start_pin.Id;
+
+                context.Event.Type = ImNodesEventType_LinkDestroyed;
+                context.Event.LinkDestroyed.LinkIdx = link_idx;
+
+                EnterPartialLinkState(context, editor, closest_pin_id, true);
+            }
+            else
+            {
+                EnterLinkState(context, editor, context.Links[context.HoveredLinkIdx.Value()].Id);
+            }
+            return;
+        }
+        else if (context.AltMouseClicked)
+        {
+            EnterPanningState(editor);
+            return;
+        }
+        else
+        {
+            EnterBoxSelectorState(editor);
+            return;
+        }
+    }
+}
+
+void BoxSelectorUpdateSelection(
+    ImNodesEditorContext&          editor,
+    const ImVector<ImLink>&        links,
+    const ImVector<ImCubicBezier>& curves,
+    ImRect                         box_rect)
+{
+    // Invert box selector coordinates as needed
+
+    if (box_rect.Min.x > box_rect.Max.x)
+    {
+        ImSwap(box_rect.Min.x, box_rect.Max.x);
+    }
+
+    if (box_rect.Min.y > box_rect.Max.y)
+    {
+        ImSwap(box_rect.Min.y, box_rect.Max.y);
+    }
+
+    // Update node selection
+
+    editor.SelectedNodeIndices.clear();
+
+    // Test for overlap against node rectangles
+
+    for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
+    {
+        if (editor.Nodes.InUse[node_idx])
+        {
+            ImNodeData& node = editor.Nodes.Pool[node_idx];
+            if (box_rect.Overlaps(node.Rect))
+            {
+                editor.SelectedNodeIndices.push_back(node_idx);
+            }
+        }
+    }
+
+    // Update link selection
+
+    editor.SelectedLinkIds.clear();
+
+    // Test for overlap against links
+
+    for (int idx = 0; idx < links.size(); ++idx)
+    {
+        const ImLink&        link = links[idx];
+        const ImCubicBezier& cb = curves[idx];
+
+        if (RectangleOverlapsLink(box_rect, cb))
+        {
+            editor.SelectedLinkIds.push_back(link.Id);
+        }
+    }
+}
+
+void AutoPan(const ImNodesContext& context, ImNodesEditorContext& editor)
+{
+    if (MouseInCanvas(context))
+    {
+        return;
+    }
+
+    ImVec2 mouse = ImGui::GetMousePos();
+    ImVec2 center = GImNodes->CanvasRectScreenSpace.GetCenter();
+    ImVec2 direction = (center - mouse);
+    direction = direction * ImInvLength(direction, 0.0);
+
+    editor.AutoPanningDelta = direction * ImGui::GetIO().DeltaTime * GImNodes->Io.AutoPanningSpeed;
+    editor.Panning += editor.AutoPanningDelta;
+}
+
+void BoxSelectorUpdate(ImNodesContext& context, ImNodesEditorContext& editor)
+{
+    AutoPan(context, editor);
+
+    ImBoxSelector& box_selector = editor.InteractionState.BoxSelector;
+
+    box_selector.GridSpaceRect.Max = ScreenSpaceToGridSpace(editor, context.MousePos);
+
+    ImRect box_rect = box_selector.GridSpaceRect;
+    box_rect.Min = GridSpaceToScreenSpace(editor, box_rect.Min);
+    box_rect.Max = GridSpaceToScreenSpace(editor, box_rect.Max);
+
+    BoxSelectorUpdateSelection(editor, context.Links, context.Curves, box_rect);
+
+    const ImU32 box_selector_color = context.Style.Colors[ImNodesCol_BoxSelector];
+    const ImU32 box_selector_outline = context.Style.Colors[ImNodesCol_BoxSelectorOutline];
+    context.CanvasDrawList->AddRectFilled(box_rect.Min, box_rect.Max, box_selector_color);
+    context.CanvasDrawList->AddRect(box_rect.Min, box_rect.Max, box_selector_outline);
+
+    if (context.LeftMouseReleased)
+    {
+        ImVector<int>&       depth_stack = editor.NodeDepthOrder;
+        const ImVector<int>& selected_idxs = editor.SelectedNodeIndices;
+
+        // Bump the selected node indices, in order, to the top of the depth stack.
+        // NOTE: this algorithm has worst case time complexity of O(N^2), if the node
+        // selection is ~ N (due to selected_idxs.contains()).
+
+        if ((selected_idxs.Size > 0) && (selected_idxs.Size < depth_stack.Size))
+        {
+            int num_moved = 0; // The number of indices moved. Stop after selected_idxs.Size
+            for (int i = 0; i < depth_stack.Size - selected_idxs.Size; ++i)
+            {
+                for (int node_idx = depth_stack[i]; selected_idxs.contains(node_idx);
+                     node_idx = depth_stack[i])
+                {
+                    depth_stack.erase(depth_stack.begin() + static_cast<size_t>(i));
+                    depth_stack.push_back(node_idx);
+                    ++num_moved;
+                }
+
+                if (num_moved == selected_idxs.Size)
+                {
+                    break;
+                }
+            }
+        }
+
+        EnterPendingState(editor);
+        return;
+    }
+}
+
+void InteractionStateUpdate(ImNodesContext& context, ImNodesEditorContext& editor)
+{
+    switch (editor.InteractionState.Type)
+    {
+    case ImNodesInteractionType_Pending:
+        PendingStateUpdate(context, editor);
+        break;
+    case ImNodesInteractionType_BoxSelector:
+        BoxSelectorUpdate(context, editor);
+        break;
+    case ImNodesInteractionType_ImGui:
+    {
+        ImGuiStateUpdate(context, editor);
+    }
+    break;
+    case ImNodesInteractionType_Link:
+    {
+        if (context.LeftMouseReleased)
+        {
+            EnterPendingState(editor);
+        }
+    }
+    break;
+    case ImNodesInteractionType_Node:
+    {
+        AutoPan(context, editor);
+
+        TranslateSelectedNodes(editor);
+
+        if (context.LeftMouseReleased)
+        {
+            EnterPendingState(editor);
+        }
+    }
+    break;
+    case ImNodesInteractionType_Panning:
+    {
+        if (context.AltMouseDragging)
+        {
+            editor.Panning += ImGui::GetIO().MouseDelta;
+        }
+        else
+        {
+            EnterPendingState(editor);
+        }
+    }
+    break;
+    case ImNodesInteractionType_PartialLink:
+        PartialLinkStateUpdate(context, editor);
+        break;
+    case ImNodesInteractionType_SnappedLink:
+        SnappedLinkStateUpdate(context, editor);
+        break;
+    default:
+        break;
+    }
 }
 
 // [SECTION] render helpers
@@ -1496,9 +1564,7 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
     const ImNodeData& node = editor.Nodes.Pool[node_idx];
     ImGui::SetCursorPos(node.Origin + editor.Panning);
 
-    const bool node_hovered =
-        GImNodes->HoveredNodeIdx == node_idx &&
-        editor.ClickInteraction.Type != ImNodesClickInteractionType_BoxSelection;
+    const bool node_hovered = GImNodes->HoveredNodeIdx == node_idx;
 
     ImU32 node_background = node.ColorStyle.Background;
     ImU32 titlebar_background = node.ColorStyle.Titlebar;
@@ -1575,56 +1641,56 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
     }
 }
 
-void DrawLink(ImNodesEditorContext& editor, const int link_idx)
+void CalcLinkGeometries(
+    ImObjectPool<ImPinData>& pins,
+    const ImVector<ImLink>&  links,
+    ImVector<ImCubicBezier>& curves)
 {
-    const ImLinkData& link = editor.Links.Pool[link_idx];
-    const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
-    const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
+    const float link_line_segments_per_length = GImNodes->Style.LinkLineSegmentsPerLength;
 
-    const CubicBezier cubic_bezier = GetCubicBezier(
-        start_pin.Pos, end_pin.Pos, start_pin.Type, GImNodes->Style.LinkLineSegmentsPerLength);
-
-    const bool link_hovered =
-        GImNodes->HoveredLinkIdx == link_idx &&
-        editor.ClickInteraction.Type != ImNodesClickInteractionType_BoxSelection;
-
-    if (link_hovered)
+    for (const ImLink& link : links)
     {
-        GImNodes->HoveredLinkIdx = link_idx;
-    }
+        const ImPinData& start_pin = ObjectPoolFindOrCreateObject(pins, link.StartPinId);
+        const ImPinData& end_pin = ObjectPoolFindOrCreateObject(pins, link.EndPinId);
 
-    // It's possible for a link to be deleted in begin_link_interaction. A user
-    // may detach a link, resulting in the link wire snapping to the mouse
-    // position.
-    //
-    // In other words, skip rendering the link if it was deleted.
-    if (GImNodes->DeletedLinkIdx == link_idx)
-    {
-        return;
+        curves.push_back(CalcCubicBezier(
+            start_pin.Pos, end_pin.Pos, start_pin.Type, link_line_segments_per_length));
     }
+}
 
-    ImU32 link_color = link.ColorStyle.Base;
-    if (editor.SelectedLinkIndices.contains(link_idx))
+void DrawLinks(
+    ImNodesEditorContext&          editor, // TODO: const
+    const ImVector<ImLink>&        links,
+    const ImVector<ImCubicBezier>& curves)
+{
+    const int num_links = links.size();
+    IM_ASSERT(num_links == curves.size());
+
+    const float link_thickness = GImNodes->Style.LinkThickness;
+    for (int idx = 0; idx < num_links; ++idx)
     {
-        link_color = link.ColorStyle.Selected;
-    }
-    else if (link_hovered)
-    {
-        link_color = link.ColorStyle.Hovered;
-    }
+        const ImLink&        link = links[idx];
+        const ImCubicBezier& curve = curves[idx];
+
+        const bool link_hovered = GImNodes->HoveredLinkIdx == idx;
+
+        ImU32 link_color = link.BaseColor;
+        if (link_hovered)
+        {
+            link_color = link.HoveredColor;
+        }
+        else if (editor.SelectedLinkIds.contains(link.Id))
+        {
+            link_color = link.SelectedColor;
+        }
 
 #if IMGUI_VERSION_NUM < 18000
-    GImNodes->CanvasDrawList->AddBezierCurve(
+        GImNodes->CanvasDrawList->AddBezierCurve(
 #else
-    GImNodes->CanvasDrawList->AddBezierCubic(
+        GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-        cubic_bezier.P0,
-        cubic_bezier.P1,
-        cubic_bezier.P2,
-        cubic_bezier.P3,
-        link_color,
-        GImNodes->Style.LinkThickness,
-        cubic_bezier.NumSegments);
+            curve.P0, curve.P1, curve.P2, curve.P3, link_color, link_thickness, curve.NumSegments);
+    }
 }
 
 void BeginPinAttribute(
@@ -1700,13 +1766,13 @@ void Shutdown(ImNodesContext* ctx) { EditorContextFree(ctx->DefaultEditorCtx); }
 
 // [SECTION] minimap
 
-static inline bool IsMiniMapActive()
+inline bool IsMiniMapActive()
 {
     ImNodesEditorContext& editor = EditorContextGet();
     return editor.MiniMapEnabled && editor.MiniMapSizeFraction > 0.0f;
 }
 
-static inline bool IsMiniMapHovered()
+inline bool IsMiniMapHovered()
 {
     ImNodesEditorContext& editor = EditorContextGet();
     return IsMiniMapActive() &&
@@ -1731,7 +1797,7 @@ static inline void CalcMiniMapLayout()
         const ImVec2 grid_content_size = editor.GridContentBounds.IsInverted()
                                              ? max_size
                                              : ImFloor(editor.GridContentBounds.GetSize());
-        const float grid_content_aspect_ratio = grid_content_size.x / grid_content_size.y;
+        const float  grid_content_aspect_ratio = grid_content_size.x / grid_content_size.y;
         mini_map_size = ImFloor(
             grid_content_aspect_ratio > max_size_aspect_ratio
                 ? ImVec2(max_size.x, max_size.x / grid_content_aspect_ratio)
@@ -1788,7 +1854,9 @@ static void MiniMapDrawNode(ImNodesEditorContext& editor, const int node_idx)
 
     ImU32 mini_map_node_background;
 
-    if (editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
+    // TODO: it should not be possible to interact with the minimap if an interaction is already in
+    // progress
+    if (editor.InteractionState.Type == ImNodesInteractionType_Pending &&
         ImGui::IsMouseHoveringRect(node_rect.Min, node_rect.Max))
     {
         mini_map_node_background = GImNodes->Style.Colors[ImNodesCol_MiniMapNodeBackgroundHovered];
@@ -1817,45 +1885,42 @@ static void MiniMapDrawNode(ImNodesEditorContext& editor, const int node_idx)
         node_rect.Min, node_rect.Max, mini_map_node_outline, mini_map_node_rounding);
 }
 
-static void MiniMapDrawLink(ImNodesEditorContext& editor, const int link_idx)
+void MiniMapDrawLinks(ImNodesEditorContext& editor, const ImVector<ImLink>& links)
 {
-    const ImLinkData& link = editor.Links.Pool[link_idx];
-    const ImPinData&  start_pin = editor.Pins.Pool[link.StartPinIdx];
-    const ImPinData&  end_pin = editor.Pins.Pool[link.EndPinIdx];
+    const float link_thickness = GImNodes->Style.LinkThickness * editor.MiniMapScaling;
 
-    const CubicBezier cubic_bezier = GetCubicBezier(
-        ScreenSpaceToMiniMapSpace(editor, start_pin.Pos),
-        ScreenSpaceToMiniMapSpace(editor, end_pin.Pos),
-        start_pin.Type,
-        GImNodes->Style.LinkLineSegmentsPerLength / editor.MiniMapScaling);
-
-    // It's possible for a link to be deleted in begin_link_interaction. A user
-    // may detach a link, resulting in the link wire snapping to the mouse
-    // position.
-    //
-    // In other words, skip rendering the link if it was deleted.
-    if (GImNodes->DeletedLinkIdx == link_idx)
+    for (const ImLink& link : links)
     {
-        return;
-    }
+        const ImPinData& start_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.StartPinId);
+        const ImPinData& end_pin = ObjectPoolFindOrCreateObject(editor.Pins, link.EndPinId);
 
-    const ImU32 link_color =
-        GImNodes->Style.Colors
-            [editor.SelectedLinkIndices.contains(link_idx) ? ImNodesCol_MiniMapLinkSelected
-                                                           : ImNodesCol_MiniMapLink];
+        // TODO: this should use the pre-calculated curves, but pins are updated in the draw code
+        // after we generate the links. Using pre-calculated curves causes a strong link wiggling
+        // effect, as the link's position drags the nodes' position by one frame.
+        const ImCubicBezier cubic_bezier = CalcCubicBezier(
+            ScreenSpaceToMiniMapSpace(editor, start_pin.Pos),
+            ScreenSpaceToMiniMapSpace(editor, end_pin.Pos),
+            start_pin.Type,
+            GImNodes->Style.LinkLineSegmentsPerLength / editor.MiniMapScaling);
+
+        const int   color_idx = editor.SelectedLinkIds.contains(link.Id)
+                                    ? ImNodesCol_MiniMapLinkSelected
+                                    : ImNodesCol_MiniMapLink;
+        const ImU32 link_color = GImNodes->Style.Colors[color_idx];
 
 #if IMGUI_VERSION_NUM < 18000
-    GImNodes->CanvasDrawList->AddBezierCurve(
+        GImNodes->CanvasDrawList->AddBezierCurve(
 #else
-    GImNodes->CanvasDrawList->AddBezierCubic(
+        GImNodes->CanvasDrawList->AddBezierCubic(
 #endif
-        cubic_bezier.P0,
-        cubic_bezier.P1,
-        cubic_bezier.P2,
-        cubic_bezier.P3,
-        link_color,
-        GImNodes->Style.LinkThickness * editor.MiniMapScaling,
-        cubic_bezier.NumSegments);
+            cubic_bezier.P0,
+            cubic_bezier.P1,
+            cubic_bezier.P2,
+            cubic_bezier.P3,
+            link_color,
+            link_thickness,
+            cubic_bezier.NumSegments);
+    }
 }
 
 static void MiniMapUpdate()
@@ -1892,13 +1957,7 @@ static void MiniMapUpdate()
         mini_map_rect.Min, mini_map_rect.Max, true /* intersect with editor clip-rect */);
 
     // Draw links first so they appear under nodes, and we can use the same draw channel
-    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
-    {
-        if (editor.Links.InUse[link_idx])
-        {
-            MiniMapDrawLink(editor, link_idx);
-        }
-    }
+    MiniMapDrawLinks(editor, GImNodes->Links);
 
     for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
     {
@@ -1925,8 +1984,10 @@ static void MiniMapUpdate()
 
     ImGui::EndChild();
 
+    // TODO: it should not be possible to interact with the minimap if an interaction is already
+    // in progress
     bool center_on_click = mini_map_is_hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
-                           editor.ClickInteraction.Type == ImNodesClickInteractionType_None &&
+                           editor.InteractionState.Type == ImNodesInteractionType_Pending &&
                            !GImNodes->NodeIdxSubmissionOrder.empty();
     if (center_on_click)
     {
@@ -2208,17 +2269,17 @@ void BeginNodeEditor()
     editor.MiniMapEnabled = false;
     ObjectPoolReset(editor.Nodes);
     ObjectPoolReset(editor.Pins);
-    ObjectPoolReset(editor.Links);
+
+    GImNodes->Links.resize(0);
+    GImNodes->Curves.resize(0);
 
     GImNodes->HoveredNodeIdx.Reset();
     GImNodes->HoveredLinkIdx.Reset();
     GImNodes->HoveredPinIdx.Reset();
-    GImNodes->DeletedLinkIdx.Reset();
-    GImNodes->SnapLinkIdx.Reset();
 
     GImNodes->NodeIndicesOverlappingWithMouse.clear();
 
-    GImNodes->ImNodesUIState = ImNodesUIState_None;
+    GImNodes->Event.Type = ImNodesEventType_None;
 
     GImNodes->MousePos = ImGui::GetIO().MousePos;
     GImNodes->LeftMouseClicked = ImGui::IsMouseClicked(0);
@@ -2278,48 +2339,25 @@ void EndNodeEditor()
 
     ImNodesEditorContext& editor = EditorContextGet();
 
+    CalcLinkGeometries(editor.Pins, GImNodes->Links, GImNodes->Curves);
+
+    IM_ASSERT(GImNodes->Links.size() == GImNodes->Curves.size());
+
     bool no_grid_content = editor.GridContentBounds.IsInverted();
     if (no_grid_content)
     {
         editor.GridContentBounds = ScreenSpaceToGridSpace(editor, GImNodes->CanvasRectScreenSpace);
     }
 
-    // Detect ImGui interaction first, because it blocks interaction with the rest of the UI
-
-    if (GImNodes->LeftMouseClicked && ImGui::IsAnyItemActive())
     {
-        editor.ClickInteraction.Type = ImNodesClickInteractionType_ImGuiItem;
-    }
+        // Render the click interaction UI elements (partial links, box selector) on top of
+        // everything
+        // else.
 
-    // Detect which UI element is being hovered over. Detection is done in a hierarchical fashion,
-    // because a UI element being hovered excludes any other as being hovered over.
+        DrawListAppendClickInteractionChannel();
+        DrawListActivateClickInteractionChannel();
 
-    // Don't do hovering detection for nodes/links/pins when interacting with the mini-map, since
-    // its an *overlay* with its own interaction behavior and must have precedence during mouse
-    // interaction.
-
-    if ((editor.ClickInteraction.Type == ImNodesClickInteractionType_None ||
-         editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation) &&
-        MouseInCanvas() && !IsMiniMapHovered())
-    {
-        // Pins needs some special care. We need to check the depth stack to see which pins are
-        // being occluded by other nodes.
-        ResolveOccludedPins(editor, GImNodes->OccludedPinIndices);
-
-        GImNodes->HoveredPinIdx = ResolveHoveredPin(editor.Pins, GImNodes->OccludedPinIndices);
-
-        if (!GImNodes->HoveredPinIdx.HasValue())
-        {
-            // Resolve which node is actually on top and being hovered using the depth stack.
-            GImNodes->HoveredNodeIdx = ResolveHoveredNode(editor.NodeDepthOrder);
-        }
-
-        // We don't check for hovered pins here, because if we want to detach a link by clicking and
-        // dragging, we need to have both a link and pin hovered.
-        if (!GImNodes->HoveredNodeIdx.HasValue())
-        {
-            GImNodes->HoveredLinkIdx = ResolveHoveredLink(editor.Links, editor.Pins);
-        }
+        InteractionStateUpdate(*GImNodes, editor);
     }
 
     for (int node_idx = 0; node_idx < editor.Nodes.Pool.size(); ++node_idx)
@@ -2335,83 +2373,24 @@ void EndNodeEditor()
     // channel.
     GImNodes->CanvasDrawList->ChannelsSetCurrent(0);
 
-    for (int link_idx = 0; link_idx < editor.Links.Pool.size(); ++link_idx)
-    {
-        if (editor.Links.InUse[link_idx])
-        {
-            DrawLink(editor, link_idx);
-        }
-    }
+    DrawLinks(editor, GImNodes->Links, GImNodes->Curves);
 
-    // Render the click interaction UI elements (partial links, box selector) on top of everything
-    // else.
+    // At this point, draw commands have been issued for all nodes (and pins). Update the node
+    // pool to detect unused node slots and remove those indices from the depth stack before
+    // sorting the node draw commands by depth.
+    ObjectPoolUpdate(editor.Nodes);
+    ObjectPoolUpdate(editor.Pins);
 
-    DrawListAppendClickInteractionChannel();
-    DrawListActivateClickInteractionChannel();
+    DrawListSortChannelsByDepth(editor.NodeDepthOrder);
+
+    // Finally, merge the draw channels
+    GImNodes->CanvasDrawList->ChannelsMerge();
 
     if (IsMiniMapActive())
     {
         CalcMiniMapLayout();
         MiniMapUpdate();
     }
-
-    // Handle node graph interaction
-
-    if (!IsMiniMapHovered())
-    {
-        if (GImNodes->LeftMouseClicked && GImNodes->HoveredLinkIdx.HasValue())
-        {
-            BeginLinkInteraction(editor, GImNodes->HoveredLinkIdx.Value(), GImNodes->HoveredPinIdx);
-        }
-
-        else if (GImNodes->LeftMouseClicked && GImNodes->HoveredPinIdx.HasValue())
-        {
-            BeginLinkCreation(editor, GImNodes->HoveredPinIdx.Value());
-        }
-
-        else if (GImNodes->LeftMouseClicked && GImNodes->HoveredNodeIdx.HasValue())
-        {
-            BeginNodeSelection(editor, GImNodes->HoveredNodeIdx.Value());
-        }
-
-        else if (
-            GImNodes->LeftMouseClicked || GImNodes->LeftMouseReleased ||
-            GImNodes->AltMouseClicked || GImNodes->AltMouseScrollDelta != 0.f)
-        {
-            BeginCanvasInteraction(editor);
-        }
-
-        bool should_auto_pan =
-            editor.ClickInteraction.Type == ImNodesClickInteractionType_BoxSelection ||
-            editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation ||
-            editor.ClickInteraction.Type == ImNodesClickInteractionType_Node;
-        if (should_auto_pan && !MouseInCanvas())
-        {
-            ImVec2 mouse = ImGui::GetMousePos();
-            ImVec2 center = GImNodes->CanvasRectScreenSpace.GetCenter();
-            ImVec2 direction = (center - mouse);
-            direction = direction * ImInvLength(direction, 0.0);
-
-            editor.AutoPanningDelta =
-                direction * ImGui::GetIO().DeltaTime * GImNodes->Io.AutoPanningSpeed;
-            editor.Panning += editor.AutoPanningDelta;
-        }
-    }
-    ClickInteractionUpdate(editor);
-
-    // At this point, draw commands have been issued for all nodes (and pins). Update the node pool
-    // to detect unused node slots and remove those indices from the depth stack before sorting the
-    // node draw commands by depth.
-    ObjectPoolUpdate(editor.Nodes);
-    ObjectPoolUpdate(editor.Pins);
-
-    DrawListSortChannelsByDepth(editor.NodeDepthOrder);
-
-    // After the links have been rendered, the link pool can be updated as well.
-    ObjectPoolUpdate(editor.Links);
-
-    // Finally, merge the draw channels
-    GImNodes->CanvasDrawList->ChannelsMerge();
 
     // pop style
     ImGui::EndChild();      // end scrolling region
@@ -2599,25 +2578,8 @@ void Link(const int id, const int start_attr_id, const int end_attr_id)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_Editor);
 
-    ImNodesEditorContext& editor = EditorContextGet();
-    ImLinkData&           link = ObjectPoolFindOrCreateObject(editor.Links, id);
-    link.Id = id;
-    link.StartPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, start_attr_id);
-    link.EndPinIdx = ObjectPoolFindOrCreateIndex(editor.Pins, end_attr_id);
-    link.ColorStyle.Base = GImNodes->Style.Colors[ImNodesCol_Link];
-    link.ColorStyle.Hovered = GImNodes->Style.Colors[ImNodesCol_LinkHovered];
-    link.ColorStyle.Selected = GImNodes->Style.Colors[ImNodesCol_LinkSelected];
-
-    // Check if this link was created by the current link event
-    if ((editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation &&
-         editor.Pins.Pool[link.EndPinIdx].Flags & ImNodesAttributeFlags_EnableLinkCreationOnSnap &&
-         editor.ClickInteraction.LinkCreation.StartPinIdx == link.StartPinIdx &&
-         editor.ClickInteraction.LinkCreation.EndPinIdx == link.EndPinIdx) ||
-        (editor.ClickInteraction.LinkCreation.StartPinIdx == link.EndPinIdx &&
-         editor.ClickInteraction.LinkCreation.EndPinIdx == link.StartPinIdx))
-    {
-        GImNodes->SnapLinkIdx = ObjectPoolFindOrCreateIndex(editor.Links, id);
-    }
+    const ImLink link(id, start_attr_id, end_attr_id, GImNodes->Style.Colors);
+    GImNodes->Links.push_back(link);
 }
 
 void PushColorStyle(const ImNodesCol item, unsigned int color)
@@ -2792,7 +2754,7 @@ void SnapNodeToGrid(int node_id)
     node.Origin = SnapOriginToGrid(node.Origin);
 }
 
-bool IsEditorHovered() { return MouseInCanvas(); }
+bool IsEditorHovered() { return MouseInCanvas(*GImNodes); }
 
 bool IsNodeHovered(int* const node_id)
 {
@@ -2816,8 +2778,7 @@ bool IsLinkHovered(int* const link_id)
     const bool is_hovered = GImNodes->HoveredLinkIdx.HasValue();
     if (is_hovered)
     {
-        const ImNodesEditorContext& editor = EditorContextGet();
-        *link_id = editor.Links.Pool[GImNodes->HoveredLinkIdx.Value()].Id;
+        *link_id = GImNodes->Links[GImNodes->HoveredLinkIdx.Value()].Id;
     }
     return is_hovered;
 }
@@ -2847,7 +2808,7 @@ int NumSelectedLinks()
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
     const ImNodesEditorContext& editor = EditorContextGet();
-    return editor.SelectedLinkIndices.size();
+    return editor.SelectedLinkIds.size();
 }
 
 void GetSelectedNodes(int* node_ids)
@@ -2867,10 +2828,9 @@ void GetSelectedLinks(int* link_ids)
     IM_ASSERT(link_ids != NULL);
 
     const ImNodesEditorContext& editor = EditorContextGet();
-    for (int i = 0; i < editor.SelectedLinkIndices.size(); ++i)
+    for (int i = 0; i < editor.SelectedLinkIds.size(); ++i)
     {
-        const int link_idx = editor.SelectedLinkIndices[i];
-        link_ids[i] = editor.Links.Pool[link_idx].Id;
+        link_ids[i] = editor.SelectedLinkIds[i];
     }
 }
 
@@ -2889,13 +2849,13 @@ void ClearNodeSelection(int node_id)
 void ClearLinkSelection()
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    editor.SelectedLinkIndices.clear();
+    editor.SelectedLinkIds.clear();
 }
 
 void ClearLinkSelection(int link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    ClearObjectSelection(editor.Links, editor.SelectedLinkIndices, link_id);
+    editor.SelectedLinkIds.find_erase_unsorted(link_id);
 }
 
 void SelectNode(int node_id)
@@ -2907,7 +2867,7 @@ void SelectNode(int node_id)
 void SelectLink(int link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    SelectObject(editor.Links, editor.SelectedLinkIndices, link_id);
+    editor.SelectedLinkIds.push_back(link_id);
 }
 
 bool IsNodeSelected(int node_id)
@@ -2919,7 +2879,7 @@ bool IsNodeSelected(int node_id)
 bool IsLinkSelected(int link_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
-    return IsObjectSelected(editor.Links, editor.SelectedLinkIndices, link_id);
+    return editor.SelectedLinkIds.contains(link_id);
 }
 
 bool IsAttributeActive()
@@ -2957,12 +2917,10 @@ bool IsLinkStarted(int* const started_at_id)
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
     IM_ASSERT(started_at_id != NULL);
 
-    const bool is_started = (GImNodes->ImNodesUIState & ImNodesUIState_LinkStarted) != 0;
+    const bool is_started = GImNodes->Event.Type == ImNodesEventType_LinkStarted;
     if (is_started)
     {
-        const ImNodesEditorContext& editor = EditorContextGet();
-        const int                   pin_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
-        *started_at_id = editor.Pins.Pool[pin_idx].Id;
+        *started_at_id = GImNodes->Event.LinkStarted.StartPinId;
     }
 
     return is_started;
@@ -2973,17 +2931,13 @@ bool IsLinkDropped(int* const started_at_id, const bool including_detached_links
     // Call this function after EndNodeEditor()!
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
 
-    const ImNodesEditorContext& editor = EditorContextGet();
-
     const bool link_dropped =
-        (GImNodes->ImNodesUIState & ImNodesUIState_LinkDropped) != 0 &&
-        (including_detached_links ||
-         editor.ClickInteraction.LinkCreation.Type != ImNodesLinkCreationType_FromDetach);
+        (GImNodes->Event.Type == ImNodesEventType_LinkDropped) &&
+        (including_detached_links || !GImNodes->Event.LinkDropped.IsFromDetach);
 
     if (link_dropped && started_at_id)
     {
-        const int pin_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
-        *started_at_id = editor.Pins.Pool[pin_idx].Id;
+        *started_at_id = GImNodes->Event.LinkDropped.StartPinId;
     }
 
     return link_dropped;
@@ -2998,31 +2952,22 @@ bool IsLinkCreated(
     IM_ASSERT(started_at_pin_id != NULL);
     IM_ASSERT(ended_at_pin_id != NULL);
 
-    const bool is_created = (GImNodes->ImNodesUIState & ImNodesUIState_LinkCreated) != 0;
+    const ImNodesEvent& event = GImNodes->Event;
+
+    const bool is_created = (event.Type == ImNodesEventType_LinkCreatedOnMouseRelease) ||
+                            (event.Type == ImNodesEventType_LinkCreatedOnSnap);
 
     if (is_created)
     {
-        const ImNodesEditorContext& editor = EditorContextGet();
-        const int                   start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
-        const int        end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
-        const ImPinData& start_pin = editor.Pins.Pool[start_idx];
-        const ImPinData& end_pin = editor.Pins.Pool[end_idx];
+        ImNodesEditorContext& editor = EditorContextGet(); // TODO: const
 
-        if (start_pin.Type == ImNodesAttributeType_Output)
-        {
-            *started_at_pin_id = start_pin.Id;
-            *ended_at_pin_id = end_pin.Id;
-        }
-        else
-        {
-            *started_at_pin_id = end_pin.Id;
-            *ended_at_pin_id = start_pin.Id;
-        }
+        *started_at_pin_id =
+            ObjectPoolFindOrCreateObject(editor.Pins, event.LinkCreated.StartPinId).Id;
+        *ended_at_pin_id = ObjectPoolFindOrCreateObject(editor.Pins, event.LinkCreated.EndPinId).Id;
 
         if (created_from_snap)
         {
-            *created_from_snap =
-                editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation;
+            *created_from_snap = (event.Type == ImNodesEventType_LinkCreatedOnSnap);
         }
     }
 
@@ -3042,37 +2987,27 @@ bool IsLinkCreated(
     IM_ASSERT(ended_at_node_id != NULL);
     IM_ASSERT(ended_at_pin_id != NULL);
 
-    const bool is_created = (GImNodes->ImNodesUIState & ImNodesUIState_LinkCreated) != 0;
+    const ImNodesEvent& event = GImNodes->Event;
+
+    const bool is_created = (event.Type == ImNodesEventType_LinkCreatedOnMouseRelease) ||
+                            (event.Type == ImNodesEventType_LinkCreatedOnSnap);
 
     if (is_created)
     {
-        const ImNodesEditorContext& editor = EditorContextGet();
-        const int                   start_idx = editor.ClickInteraction.LinkCreation.StartPinIdx;
-        const int         end_idx = editor.ClickInteraction.LinkCreation.EndPinIdx.Value();
-        const ImPinData&  start_pin = editor.Pins.Pool[start_idx];
-        const ImNodeData& start_node = editor.Nodes.Pool[start_pin.ParentNodeIdx];
-        const ImPinData&  end_pin = editor.Pins.Pool[end_idx];
-        const ImNodeData& end_node = editor.Nodes.Pool[end_pin.ParentNodeIdx];
+        ImNodesEditorContext& editor = EditorContextGet(); // TODO: const
 
-        if (start_pin.Type == ImNodesAttributeType_Output)
-        {
-            *started_at_pin_id = start_pin.Id;
-            *started_at_node_id = start_node.Id;
-            *ended_at_pin_id = end_pin.Id;
-            *ended_at_node_id = end_node.Id;
-        }
-        else
-        {
-            *started_at_pin_id = end_pin.Id;
-            *started_at_node_id = end_node.Id;
-            *ended_at_pin_id = start_pin.Id;
-            *ended_at_node_id = start_node.Id;
-        }
+        const ImPinData& start_pin =
+            ObjectPoolFindOrCreateObject(editor.Pins, event.LinkCreated.StartPinId);
+        const ImPinData& end_pin =
+            ObjectPoolFindOrCreateObject(editor.Pins, event.LinkCreated.EndPinId);
+        *started_at_node_id = editor.Nodes.Pool[start_pin.ParentNodeIdx].Id;
+        *started_at_pin_id = start_pin.Id;
+        *ended_at_node_id = editor.Nodes.Pool[end_pin.ParentNodeIdx].Id;
+        *ended_at_pin_id = end_pin.Id;
 
         if (created_from_snap)
         {
-            *created_from_snap =
-                editor.ClickInteraction.Type == ImNodesClickInteractionType_LinkCreation;
+            *created_from_snap = (event.Type == ImNodesEventType_LinkCreatedOnSnap);
         }
     }
 
@@ -3083,12 +3018,12 @@ bool IsLinkDestroyed(int* const link_id)
 {
     IM_ASSERT(GImNodes->CurrentScope == ImNodesScope_None);
 
-    const bool link_destroyed = GImNodes->DeletedLinkIdx.HasValue();
+    const ImNodesEvent& event = GImNodes->Event;
+    const bool          link_destroyed = event.Type == ImNodesEventType_LinkDestroyed;
+
     if (link_destroyed)
     {
-        const ImNodesEditorContext& editor = EditorContextGet();
-        const int                   link_idx = GImNodes->DeletedLinkIdx.Value();
-        *link_id = editor.Links.Pool[link_idx].Id;
+        *link_id = GImNodes->Links[event.LinkDestroyed.LinkIdx].Id;
     }
 
     return link_destroyed;

@@ -95,10 +95,6 @@ enum ImNodesPinShape_
 enum ImNodesAttributeFlags_
 {
     ImNodesAttributeFlags_None = 0,
-    // Allow detaching a link by left-clicking and dragging the link at a pin it is connected to.
-    // NOTE: the user has to actually delete the link for this to work. A deleted link can be
-    // detected by calling IsLinkDestroyed() after EndNodeEditor().
-    ImNodesAttributeFlags_EnableLinkDetachWithDragClick = 1 << 0,
     // Visual snapping of an in progress link will trigger IsLink Created/Destroyed events. Allows
     // for previewing the creation of a link while dragging it across attributes. See here for demo:
     // https://github.com/Nelarius/imnodes/issues/41#issuecomment-647132113 NOTE: the user has to

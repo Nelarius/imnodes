@@ -117,7 +117,6 @@ void NodeEditorInitialize()
 {
     editor1.context = ImNodes::EditorContextCreate();
     editor2.context = ImNodes::EditorContextCreate();
-    ImNodes::PushAttributeFlag(ImNodesAttributeFlags_EnableLinkDetachWithDragClick);
 
     ImNodesIO& io = ImNodes::GetIO();
     io.LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
