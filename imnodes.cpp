@@ -2288,9 +2288,11 @@ void BeginNodeEditor()
             offsetof(ImGuiIO, SetPlatformImeDataFn) +
                 sizeof(GImNodes->OriginalImgCtx->IO.SetPlatformImeDataFn));
 
+        GImNodes->NodeEditorImgCtx->IO.BackendPlatformUserData = nullptr;
+        GImNodes->NodeEditorImgCtx->IO.BackendRendererUserData = nullptr;
         GImNodes->NodeEditorImgCtx->IO.IniFilename = nullptr;
         GImNodes->NodeEditorImgCtx->IO.ConfigInputTrickleEventQueue = false;
-        GImNodes->NodeEditorImgCtx->IO.DisplaySize = canvas_size / editor.ZoomScale;
+        GImNodes->NodeEditorImgCtx->IO.DisplaySize = ImMax(canvas_size / editor.ZoomScale, ImVec2(0, 0));
         GImNodes->NodeEditorImgCtx->Style = GImNodes->OriginalImgCtx->Style;
 
         // Nav (tabbing) needs to be disabled otherwise it doubles up with the main context
