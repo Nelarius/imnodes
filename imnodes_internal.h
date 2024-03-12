@@ -285,10 +285,11 @@ struct ImNodesEditorContext
 
     ImNodesEditorContext()
         : Nodes(), Pins(), Links(), ZoomScale(1.f), Panning(0.f, 0.f), SelectedNodeIndices(),
-          SelectedLinkIndices(), SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f),
-          ClickInteraction(), MiniMapEnabled(false), MiniMapSizeFraction(0.0f),
-          MiniMapNodeHoveringCallback(NULL), MiniMapNodeHoveringCallbackUserData(NULL),
-          MiniMapScaling(0.0f) {}
+           SelectedLinkIndices(), SelectedNodeOffsets(), PrimaryNodeOffset(0.f, 0.f), ClickInteraction(),
+          MiniMapEnabled(false), MiniMapSizeFraction(0.0f), MiniMapNodeHoveringCallback(NULL),
+          MiniMapNodeHoveringCallbackUserData(NULL), MiniMapScaling(0.0f)
+    {
+    }
 };
 
 struct ImNodesContext
