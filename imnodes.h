@@ -343,6 +343,7 @@ void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
 void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
 void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 
+ImVec2 GetOrCreateNodeEditorSpacePos(const int node_id);
 ImVec2 GetNodeScreenSpacePos(const int node_id);
 ImVec2 GetNodeEditorSpacePos(const int node_id);
 ImVec2 GetNodeGridSpacePos(const int node_id);
