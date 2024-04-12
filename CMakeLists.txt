@@ -45,7 +45,9 @@ target_sources(imnodes PRIVATE
     imnodes.h
     imnodes_internal.h
     imnodes.cpp)
-target_include_directories(imnodes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(
+  imnodes PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+                 $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(imnodes PUBLIC ${IMNODES_IMGUI_TARGET_NAME})
 
 # Example projects
@@ -104,4 +106,35 @@ if(IMNODES_EXAMPLES)
     else()
         target_link_libraries(hello X11 Xext GL)
     endif()
+endif()
+
+install(
+  TARGETS imnodes
+  EXPORT imnodes_target
+  ARCHIVE COMPONENT Development DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY COMPONENT Runtime
+          NAMELINK_COMPONENT Development
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME COMPONENT Runtime DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(
+  FILES imnodes.h imnodes_internal.h
+  COMPONENT Development
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  Config.cmake.in imnodes-config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imnodes)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/imnodes-config.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imnodes)
+
+install(
+  EXPORT imnodes_target
+  NAMESPACE imnodes::
+  FILE imnodes-targets.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/imnodes)
+
+if(IMNODES_EXAMPLES)
+    install(TARGETS saveload hello RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
