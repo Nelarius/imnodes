@@ -562,10 +562,10 @@ ImVec2 GetScreenSpacePinCoordinates(const ImNodesEditorContext& editor, const Im
 
 bool MouseInCanvas()
 {
-    // This flag should be true either when hovering or clicking something in the canvas.
-    const bool is_window_hovered_or_focused = ImGui::IsWindowHovered() || ImGui::IsWindowFocused();
+    // This flag should be true when hovering on the canvas.
+    const bool is_window_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
 
-    return is_window_hovered_or_focused &&
+    return is_window_hovered &&
            GImNodes->CanvasRectScreenSpace.Contains(ImGui::GetMousePos());
 }
 
