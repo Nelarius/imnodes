@@ -2934,6 +2934,16 @@ void EditorContextSetZoom(float zoom_scale, ImVec2 zoom_centering_pos)
     editor.ZoomScale = new_zoom;
 }
 
+ImVec2 ConvertToEditorContextSpace(const ImVec2& screen_space_pos)
+{
+    return (screen_space_pos - GImNodes->CanvasOriginalOrigin) / EditorContextGet().ZoomScale;
+}
+
+ImVec2 ConvertFromEditorContextSpace(const ImVec2& screen_space_pos)
+{
+    return (screen_space_pos * EditorContextGet().ZoomScale) + GImNodes->CanvasOriginalOrigin;    
+}
+
 bool IsEditorHovered() { return MouseInCanvas(); }
 
 bool IsNodeHovered(int* const node_id)

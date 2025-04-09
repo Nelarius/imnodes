@@ -286,6 +286,10 @@ void MiniMap(
 float EditorContextGetZoom();
 void EditorContextSetZoom(float zoom_scale, ImVec2 zoom_center);
 
+// Convert to/from node editor imgui context screen space
+ImVec2 ConvertToEditorContextSpace(const ImVec2& screen_space_pos);
+ImVec2 ConvertFromEditorContextSpace(const ImVec2& screen_space_pos);
+
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
 void PushColorStyle(ImNodesCol item, unsigned int color);
 void PopColorStyle();
