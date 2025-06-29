@@ -30,6 +30,7 @@ struct Editor
     std::vector<Node>     nodes;
     std::vector<Link>     links;
     int                   current_id = 0;
+    bool first_show = true;
 };
 
 void show_editor(const char* editor_name, Editor& editor)
@@ -106,6 +107,11 @@ void show_editor(const char* editor_name, Editor& editor)
         }
     }
 
+    if (editor.first_show)
+    {
+        ImGui::Dummy(ImVec2(300, 300));
+        editor.first_show = false;
+    }
     ImGui::End();
 }
 
@@ -130,6 +136,7 @@ void NodeEditorInitialize()
 void NodeEditorShow()
 {
     show_editor("editor1", editor1);
+    ImGui::SetNextWindowPos(ImVec2(400, 60), ImGuiCond_FirstUseEver);
     show_editor("editor2", editor2);
 }
 
