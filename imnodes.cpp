@@ -2593,7 +2593,7 @@ void PopAttributeFlag()
 {
     // PopAttributeFlag called without a matching PushAttributeFlag!
     // The bottom value is always the default value, pushed in Initialize().
-    IM_ASSERT(GImNodes->AttributeFlagStack.size() > 1);
+    IM_ASSERT(GImNodes->AttributeFlagStack.size() > 0);
 
     GImNodes->AttributeFlagStack.pop_back();
     GImNodes->CurrentAttributeFlags = GImNodes->AttributeFlagStack.back();
