@@ -7,6 +7,10 @@
 #include IMNODES_USER_CONFIG
 #endif
 
+#ifndef IMNODES_API
+#define IMNODES_API
+#endif
+
 #ifndef IMNODES_NAMESPACE
 #define IMNODES_NAMESPACE ImNodes
 #endif
@@ -241,61 +245,61 @@ namespace IMNODES_NAMESPACE
 {
 // Call this function if you are compiling imnodes in to a dll, separate from ImGui. Calling this
 // function sets the GImGui global variable, which is not shared across dll boundaries.
-void SetImGuiContext(ImGuiContext* ctx);
+IMNODES_API void SetImGuiContext(ImGuiContext* ctx);
 
-ImNodesContext* CreateContext();
-void            DestroyContext(ImNodesContext* ctx = NULL); // NULL = destroy current context
-ImNodesContext* GetCurrentContext();
-void            SetCurrentContext(ImNodesContext* ctx);
+IMNODES_API ImNodesContext* CreateContext();
+IMNODES_API void            DestroyContext(ImNodesContext* ctx = NULL); // NULL = destroy current context
+IMNODES_API ImNodesContext* GetCurrentContext();
+IMNODES_API void            SetCurrentContext(ImNodesContext* ctx);
 
-ImNodesEditorContext* EditorContextCreate();
-void                  EditorContextFree(ImNodesEditorContext*);
-void                  EditorContextSet(ImNodesEditorContext*);
-ImVec2                EditorContextGetPanning();
-void                  EditorContextResetPanning(const ImVec2& pos);
-void                  EditorContextMoveToNode(const int node_id);
+IMNODES_API ImNodesEditorContext* EditorContextCreate();
+IMNODES_API void                  EditorContextFree(ImNodesEditorContext*);
+IMNODES_API void                  EditorContextSet(ImNodesEditorContext*);
+IMNODES_API ImVec2                EditorContextGetPanning();
+IMNODES_API void                  EditorContextResetPanning(const ImVec2& pos);
+IMNODES_API void                  EditorContextMoveToNode(const int node_id);
 
-ImNodesIO& GetIO();
+IMNODES_API ImNodesIO& GetIO();
 
 // Returns the global style struct. See the struct declaration for default values.
-ImNodesStyle& GetStyle();
+IMNODES_API ImNodesStyle& GetStyle();
 // Style presets matching the dear imgui styles of the same name. If dest is NULL, the active
 // context's ImNodesStyle instance will be used as the destination.
-void StyleColorsDark(ImNodesStyle* dest = NULL); // on by default
-void StyleColorsClassic(ImNodesStyle* dest = NULL);
-void StyleColorsLight(ImNodesStyle* dest = NULL);
+IMNODES_API void StyleColorsDark(ImNodesStyle* dest = NULL); // on by default
+IMNODES_API void StyleColorsClassic(ImNodesStyle* dest = NULL);
+IMNODES_API void StyleColorsLight(ImNodesStyle* dest = NULL);
 
 // The top-level function call. Call this before calling BeginNode/EndNode. Calling this function
 // will result the node editor grid workspace being rendered.
-void BeginNodeEditor();
-void EndNodeEditor();
+IMNODES_API void BeginNodeEditor();
+IMNODES_API void EndNodeEditor();
 
 // Add a navigable minimap to the editor; call before EndNodeEditor after all
 // nodes and links have been specified
-void MiniMap(
+IMNODES_API void MiniMap(
     const float                                      minimap_size_fraction = 0.2f,
     const ImNodesMiniMapLocation                     location = ImNodesMiniMapLocation_TopLeft,
     const ImNodesMiniMapNodeHoveringCallback         node_hovering_callback = NULL,
     const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data = NULL);
 
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
-void PushColorStyle(ImNodesCol item, unsigned int color);
-void PopColorStyle();
-void PushStyleVar(ImNodesStyleVar style_item, float value);
-void PushStyleVar(ImNodesStyleVar style_item, const ImVec2& value);
-void PopStyleVar(int count = 1);
+IMNODES_API void PushColorStyle(ImNodesCol item, unsigned int color);
+IMNODES_API void PopColorStyle();
+IMNODES_API void PushStyleVar(ImNodesStyleVar style_item, float value);
+IMNODES_API void PushStyleVar(ImNodesStyleVar style_item, const ImVec2& value);
+IMNODES_API void PopStyleVar(int count = 1);
 
 // id can be any positive or negative integer, but INT_MIN is currently reserved for internal use.
-void BeginNode(int id);
-void EndNode();
+IMNODES_API void BeginNode(int id);
+IMNODES_API void EndNode();
 
-ImVec2 GetNodeDimensions(int id);
+IMNODES_API ImVec2 GetNodeDimensions(int id);
 
 // Place your node title bar content (such as the node title, using ImGui::Text) between the
 // following function calls. These functions have to be called before adding any attributes, or the
 // layout of the node will be incorrect.
-void BeginNodeTitleBar();
-void EndNodeTitleBar();
+IMNODES_API void BeginNodeTitleBar();
+IMNODES_API void EndNodeTitleBar();
 
 // Attributes are ImGui UI elements embedded within the node. Attributes can have pin shapes
 // rendered next to them. Links are created between pins.
@@ -307,28 +311,28 @@ void EndNodeTitleBar();
 // Each attribute id must be unique.
 
 // Create an input attribute block. The pin is rendered on left side.
-void BeginInputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
-void EndInputAttribute();
+IMNODES_API void BeginInputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
+IMNODES_API void EndInputAttribute();
 // Create an output attribute block. The pin is rendered on the right side.
-void BeginOutputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
-void EndOutputAttribute();
+IMNODES_API void BeginOutputAttribute(int id, ImNodesPinShape shape = ImNodesPinShape_CircleFilled);
+IMNODES_API void EndOutputAttribute();
 // Create a static attribute block. A static attribute has no pin, and therefore can't be linked to
 // anything. However, you can still use IsAttributeActive() and IsAnyAttributeActive() to check for
 // attribute activity.
-void BeginStaticAttribute(int id);
-void EndStaticAttribute();
+IMNODES_API void BeginStaticAttribute(int id);
+IMNODES_API void EndStaticAttribute();
 
 // Push a single AttributeFlags value. By default, only AttributeFlags_None is set.
-void PushAttributeFlag(ImNodesAttributeFlags flag);
-void PopAttributeFlag();
+IMNODES_API void PushAttributeFlag(ImNodesAttributeFlags flag);
+IMNODES_API void PopAttributeFlag();
 
 // Render a link between attributes.
 // The attributes ids used here must match the ids used in Begin(Input|Output)Attribute function
 // calls. The order of start_attr and end_attr doesn't make a difference for rendering the link.
-void Link(int id, int start_attribute_id, int end_attribute_id);
+IMNODES_API void Link(int id, int start_attribute_id, int end_attribute_id);
 
 // Enable or disable the ability to click and drag a specific node.
-void SetNodeDraggable(int node_id, const bool draggable);
+IMNODES_API void SetNodeDraggable(int node_id, const bool draggable);
 
 // The node's position can be expressed in three coordinate systems:
 // * screen space coordinates, -- the origin is the upper left corner of the window.
@@ -339,76 +343,76 @@ void SetNodeDraggable(int node_id, const bool draggable);
 
 // Use the following functions to get and set the node's coordinates in these coordinate systems.
 
-void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
-void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
-void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
+IMNODES_API void SetNodeScreenSpacePos(int node_id, const ImVec2& screen_space_pos);
+IMNODES_API void SetNodeEditorSpacePos(int node_id, const ImVec2& editor_space_pos);
+IMNODES_API void SetNodeGridSpacePos(int node_id, const ImVec2& grid_pos);
 
-ImVec2 GetNodeScreenSpacePos(const int node_id);
-ImVec2 GetNodeEditorSpacePos(const int node_id);
-ImVec2 GetNodeGridSpacePos(const int node_id);
+IMNODES_API ImVec2 GetNodeScreenSpacePos(const int node_id);
+IMNODES_API ImVec2 GetNodeEditorSpacePos(const int node_id);
+IMNODES_API ImVec2 GetNodeGridSpacePos(const int node_id);
 
 // If ImNodesStyleFlags_GridSnapping is enabled, snap the specified node's origin to the grid.
-void SnapNodeToGrid(int node_id);
+IMNODES_API void SnapNodeToGrid(int node_id);
 
 // Returns true if the current node editor canvas is being hovered over by the mouse, and is not
 // blocked by any other windows.
-bool IsEditorHovered();
+IMNODES_API bool IsEditorHovered();
 // The following functions return true if a UI element is being hovered over by the mouse cursor.
 // Assigns the id of the UI element being hovered over to the function argument. Use these functions
 // after EndNodeEditor() has been called.
-bool IsNodeHovered(int* node_id);
-bool IsLinkHovered(int* link_id);
-bool IsPinHovered(int* attribute_id);
+IMNODES_API bool IsNodeHovered(int* node_id);
+IMNODES_API bool IsLinkHovered(int* link_id);
+IMNODES_API bool IsPinHovered(int* attribute_id);
 
 // Use The following two functions to query the number of selected nodes or links in the current
 // editor. Use after calling EndNodeEditor().
-int NumSelectedNodes();
-int NumSelectedLinks();
+IMNODES_API int NumSelectedNodes();
+IMNODES_API int NumSelectedLinks();
 // Get the selected node/link ids. The pointer argument should point to an integer array with at
 // least as many elements as the respective NumSelectedNodes/NumSelectedLinks function call
 // returned.
-void GetSelectedNodes(int* node_ids);
-void GetSelectedLinks(int* link_ids);
+IMNODES_API void GetSelectedNodes(int* node_ids);
+IMNODES_API void GetSelectedLinks(int* link_ids);
 // Clears the list of selected nodes/links. Useful if you want to delete a selected node or link.
-void ClearNodeSelection();
-void ClearLinkSelection();
+IMNODES_API void ClearNodeSelection();
+IMNODES_API void ClearLinkSelection();
 // Use the following functions to add or remove individual nodes or links from the current editors
 // selection. Note that all functions require the id to be an existing valid id for this editor.
 // Select-functions has the precondition that the object is currently considered unselected.
 // Clear-functions has the precondition that the object is currently considered selected.
 // Preconditions listed above can be checked via IsNodeSelected/IsLinkSelected if not already
 // known.
-void SelectNode(int node_id);
-void ClearNodeSelection(int node_id);
-bool IsNodeSelected(int node_id);
-void SelectLink(int link_id);
-void ClearLinkSelection(int link_id);
-bool IsLinkSelected(int link_id);
+IMNODES_API void SelectNode(int node_id);
+IMNODES_API void ClearNodeSelection(int node_id);
+IMNODES_API bool IsNodeSelected(int node_id);
+IMNODES_API void SelectLink(int link_id);
+IMNODES_API void ClearLinkSelection(int link_id);
+IMNODES_API bool IsLinkSelected(int link_id);
 
 // Was the previous attribute active? This will continuously return true while the left mouse button
 // is being pressed over the UI content of the attribute.
-bool IsAttributeActive();
+IMNODES_API bool IsAttributeActive();
 // Was any attribute active? If so, sets the active attribute id to the output function argument.
-bool IsAnyAttributeActive(int* attribute_id = NULL);
+IMNODES_API bool IsAnyAttributeActive(int* attribute_id = NULL);
 
 // Use the following functions to query a change of state for an existing link, or new link. Call
 // these after EndNodeEditor().
 
 // Did the user start dragging a new link from a pin?
-bool IsLinkStarted(int* started_at_attribute_id);
+IMNODES_API bool IsLinkStarted(int* started_at_attribute_id);
 // Did the user drop the dragged link before attaching it to a pin?
 // There are two different kinds of situations to consider when handling this event:
 // 1) a link which is created at a pin and then dropped
 // 2) an existing link which is detached from a pin and then dropped
 // Use the including_detached_links flag to control whether this function triggers when the user
 // detaches a link and drops it.
-bool IsLinkDropped(int* started_at_attribute_id = NULL, bool including_detached_links = true);
+IMNODES_API bool IsLinkDropped(int* started_at_attribute_id = NULL, bool including_detached_links = true);
 // Did the user finish creating a new link?
-bool IsLinkCreated(
+IMNODES_API bool IsLinkCreated(
     int*  started_at_attribute_id,
     int*  ended_at_attribute_id,
     bool* created_from_snap = NULL);
-bool IsLinkCreated(
+IMNODES_API bool IsLinkCreated(
     int*  started_at_node_id,
     int*  started_at_attribute_id,
     int*  ended_at_node_id,
@@ -417,22 +421,22 @@ bool IsLinkCreated(
 
 // Was an existing link detached from a pin by the user? The detached link's id is assigned to the
 // output argument link_id.
-bool IsLinkDestroyed(int* link_id);
+IMNODES_API bool IsLinkDestroyed(int* link_id);
 
 // Use the following functions to write the editor context's state to a string, or directly to a
 // file. The editor context is serialized in the INI file format.
 
-const char* SaveCurrentEditorStateToIniString(size_t* data_size = NULL);
-const char* SaveEditorStateToIniString(
+IMNODES_API const char* SaveCurrentEditorStateToIniString(size_t* data_size = NULL);
+IMNODES_API const char* SaveEditorStateToIniString(
     const ImNodesEditorContext* editor,
     size_t*                     data_size = NULL);
 
-void LoadCurrentEditorStateFromIniString(const char* data, size_t data_size);
-void LoadEditorStateFromIniString(ImNodesEditorContext* editor, const char* data, size_t data_size);
+IMNODES_API void LoadCurrentEditorStateFromIniString(const char* data, size_t data_size);
+IMNODES_API void LoadEditorStateFromIniString(ImNodesEditorContext* editor, const char* data, size_t data_size);
 
-void SaveCurrentEditorStateToIniFile(const char* file_name);
-void SaveEditorStateToIniFile(const ImNodesEditorContext* editor, const char* file_name);
+IMNODES_API void SaveCurrentEditorStateToIniFile(const char* file_name);
+IMNODES_API void SaveEditorStateToIniFile(const ImNodesEditorContext* editor, const char* file_name);
 
-void LoadCurrentEditorStateFromIniFile(const char* file_name);
-void LoadEditorStateFromIniFile(ImNodesEditorContext* editor, const char* file_name);
+IMNODES_API void LoadCurrentEditorStateFromIniFile(const char* file_name);
+IMNODES_API void LoadEditorStateFromIniFile(ImNodesEditorContext* editor, const char* file_name);
 } // namespace IMNODES_NAMESPACE
