@@ -724,7 +724,7 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
     const bool mouse_not_in_canvas = !MouseInCanvas();
 
     if (editor.ClickInteraction.Type != ImNodesClickInteractionType_None ||
-        any_ui_element_hovered || mouse_not_in_canvas)
+        any_ui_element_hovered || mouse_not_in_canvas || !ImGui::IsWindowHovered())
     {
         return;
     }
