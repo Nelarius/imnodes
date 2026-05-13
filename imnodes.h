@@ -255,6 +255,10 @@ ImVec2                EditorContextGetPanning();
 void                  EditorContextResetPanning(const ImVec2& pos);
 void                  EditorContextMoveToNode(const int node_id);
 
+// Get the separate ImGui context that ImNodes uses for zoom functionality
+// this is the active context when between BeginNodeEditor and EndNodeEditor
+ImGuiContext* GetNodeEditorImGuiContext();
+
 ImNodesIO& GetIO();
 
 // Returns the global style struct. See the struct declaration for default values.
@@ -277,6 +281,14 @@ void MiniMap(
     const ImNodesMiniMapLocation                     location = ImNodesMiniMapLocation_TopLeft,
     const ImNodesMiniMapNodeHoveringCallback         node_hovering_callback = NULL,
     const ImNodesMiniMapNodeHoveringCallbackUserData node_hovering_callback_data = NULL);
+
+// Editor zoom controls
+float EditorContextGetZoom();
+void EditorContextSetZoom(float zoom_scale, ImVec2 zoom_center);
+
+// Convert to/from node editor imgui context screen space
+ImVec2 ConvertToEditorContextSpace(const ImVec2& screen_space_pos);
+ImVec2 ConvertFromEditorContextSpace(const ImVec2& screen_space_pos);
 
 // Use PushColorStyle and PopColorStyle to modify ImNodesStyle::Colors mid-frame.
 void PushColorStyle(ImNodesCol item, unsigned int color);
