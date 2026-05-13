@@ -1,24 +1,53 @@
 name: Build
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
 
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, windows-latest]
+        include:
+          - platform: macos-latest
+            os: macos
+          - platform: windows-latest
+            os: windows
+
     runs-on: ${{ matrix.platform }}
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
+          submodules: recursive
+
+      - name: Checkout vcpkg
+        uses: actions/checkout@v4
         with:
-          vcpkgDirectory: ${{ github.workspace}}/vcpkg
-          runVcpkgInstall: true
+          repository: microsoft/vcpkg
+          path: vcpkg
+
+      - name: Bootstrap vcpkg (macOS)
+        if: matrix.os == 'macos'
+        shell: bash
+        run: ./vcpkg/bootstrap-vcpkg.sh
+
+      - name: Bootstrap vcpkg (Windows)
+        if: matrix.os == 'windows'
+        shell: cmd
+        run: vcpkg\bootstrap-vcpkg.bat
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
       - name: CMake generate
-        run: cmake -B build-release/ -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: >
+          cmake -B build-release -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
       - name: CMake build
-        run: cmake --build build-release/ -j
+        run: cmake --build build-release --config Release
