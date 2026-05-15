@@ -104,4 +104,33 @@ if(IMNODES_EXAMPLES)
     else()
         target_link_libraries(hello X11 Xext GL)
     endif()
+
+    # Headless render test. Renders a small node graph offscreen and writes a
+    # PNG, so agents can iterate on imnodes visuals without needing an
+    # interactive window. Shares the SDL2+OpenGL+ImGui dependencies of the
+    # examples, so it is gated on IMNODES_EXAMPLES.
+    add_executable(render_test
+        ${CMAKE_CURRENT_SOURCE_DIR}/imnodes.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/render_test.cpp)
+    target_link_libraries(render_test imnodes SDL2::SDL2)
+    target_include_directories(render_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test)
+    # stb_image_write.h is a vendored single-header library that does not
+    # compile cleanly under the project's -Wall -Wextra -Werror policy. Relax
+    # those warnings just for this target rather than weakening the policy
+    # globally.
+    if(NOT MSVC)
+        target_compile_options(render_test PRIVATE
+            -Wno-missing-field-initializers
+            -Wno-unused-function
+            -Wno-cast-qual
+            -Wno-sign-compare
+            -Wno-deprecated-declarations)
+    endif()
+    if (APPLE)
+        target_link_libraries(render_test "-framework OpenGL")
+    elseif(MSVC)
+        target_link_libraries(render_test "opengl32")
+    else()
+        target_link_libraries(render_test X11 Xext GL)
+    endif()
 endif()
