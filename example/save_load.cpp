@@ -110,6 +110,12 @@ public:
             }
         }
 
+        static bool first_show = true;
+        if (first_show)
+        {
+            ImGui::Dummy(ImVec2(600, 500));
+            first_show = false;
+        }
         ImGui::End();
     }
 

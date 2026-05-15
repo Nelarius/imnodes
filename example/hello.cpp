@@ -31,7 +31,12 @@ public:
 
         ImNodes::EndNode();
         ImNodes::EndNodeEditor();
-
+        static bool first_show = true;
+        if (first_show)
+        {
+            ImGui::Dummy(ImVec2(500, 500));
+            first_show = false;
+        }
         ImGui::End();
     }
 };

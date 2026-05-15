@@ -130,6 +130,7 @@ public:
 
     void show()
     {
+        static bool first_show = true;
         // Update timer context
         current_time_seconds = 0.001f * SDL_GetTicks();
 
@@ -640,6 +641,10 @@ public:
             }
         }
 
+        if (first_show)
+        {
+            ImGui::Dummy(ImVec2(500, 500));
+        }
         ImGui::End();
 
         // The color output window
@@ -647,7 +652,13 @@ public:
         const ImU32 color =
             root_node_id_ != -1 ? evaluate(graph_, root_node_id_) : IM_COL32(255, 20, 147, 255);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, color);
+        ImGui::SetNextWindowPos(ImVec2(600, 60), ImGuiCond_FirstUseEver);
         ImGui::Begin("output color");
+        if (first_show)
+        {
+            ImGui::Dummy(ImVec2(150, 150));
+            first_show = false;
+        }
         ImGui::End();
         ImGui::PopStyleColor();
     }
