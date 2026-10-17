@@ -743,20 +743,8 @@ void BeginCanvasInteraction(ImNodesEditorContext& editor)
     }
 }
 
-void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, ImRect box_rect)
+void BoxSelectorUpdateSelection(ImNodesEditorContext& editor, const ImRect& box_rect)
 {
-    // Invert box selector coordinates as needed
-
-    if (box_rect.Min.x > box_rect.Max.x)
-    {
-        ImSwap(box_rect.Min.x, box_rect.Max.x);
-    }
-
-    if (box_rect.Min.y > box_rect.Max.y)
-    {
-        ImSwap(box_rect.Min.y, box_rect.Max.y);
-    }
-
     // Update node selection
 
     editor.SelectedNodeIndices.clear();
@@ -938,9 +926,13 @@ void ClickInteractionUpdate(ImNodesEditorContext& editor)
         editor.ClickInteraction.BoxSelector.Rect.Max =
             ScreenSpaceToGridSpace(editor, GImNodes->MousePos);
 
-        ImRect box_rect = editor.ClickInteraction.BoxSelector.Rect;
-        box_rect.Min = GridSpaceToScreenSpace(editor, box_rect.Min);
-        box_rect.Max = GridSpaceToScreenSpace(editor, box_rect.Max);
+        // The box selector rect is anchored at the drag start, so it is inverted when dragging up
+        // and/or left. Normalize it: ImGui 1.93 doesn't draw rectangles with min > max.
+        const ImVec2 box_start =
+            GridSpaceToScreenSpace(editor, editor.ClickInteraction.BoxSelector.Rect.Min);
+        const ImVec2 box_end =
+            GridSpaceToScreenSpace(editor, editor.ClickInteraction.BoxSelector.Rect.Max);
+        const ImRect box_rect(ImMin(box_start, box_end), ImMax(box_start, box_end));
 
         BoxSelectorUpdateSelection(editor, box_rect);
 
@@ -1333,22 +1325,38 @@ void DrawGrid(ImNodesEditorContext& editor, const ImVec2& canvas_size)
     ImU32        line_color_prim = GImNodes->Style.Colors[ImNodesCol_GridLinePrimary];
     bool         draw_primary = GImNodes->Style.Flags & ImNodesStyleFlags_GridLinesPrimary;
 
+    // ImGui 1.93 removed the +0.5px offset AddLine() applied to its inputs, so 1px lines at integer
+    // coordinates straddle two pixels. AddLineV()/AddLineH() keep the lines on the pixel grid.
     for (float x = fmodf(offset.x, GImNodes->Style.GridSpacing); x < canvas_size.x;
          x += GImNodes->Style.GridSpacing)
     {
+        const ImU32 color = offset.x - x == 0.f && draw_primary ? line_color_prim : line_color;
+#if IMGUI_VERSION_NUM < 19300
         GImNodes->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(x, 0.0f)),
             EditorSpaceToScreenSpace(ImVec2(x, canvas_size.y)),
-            offset.x - x == 0.f && draw_primary ? line_color_prim : line_color);
+            color);
+#else
+        const ImVec2 line_min = EditorSpaceToScreenSpace(ImVec2(x, 0.0f));
+        GImNodes->CanvasDrawList->AddLineV(
+            line_min.x, line_min.y, line_min.y + canvas_size.y, color);
+#endif
     }
 
     for (float y = fmodf(offset.y, GImNodes->Style.GridSpacing); y < canvas_size.y;
          y += GImNodes->Style.GridSpacing)
     {
+        const ImU32 color = offset.y - y == 0.f && draw_primary ? line_color_prim : line_color;
+#if IMGUI_VERSION_NUM < 19300
         GImNodes->CanvasDrawList->AddLine(
             EditorSpaceToScreenSpace(ImVec2(0.0f, y)),
             EditorSpaceToScreenSpace(ImVec2(canvas_size.x, y)),
-            offset.y - y == 0.f && draw_primary ? line_color_prim : line_color);
+            color);
+#else
+        const ImVec2 line_min = EditorSpaceToScreenSpace(ImVec2(0.0f, y));
+        GImNodes->CanvasDrawList->AddLineH(
+            line_min.x, line_min.x + canvas_size.x, line_min.y, color);
+#endif
     }
 }
 
