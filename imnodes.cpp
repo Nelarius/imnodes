@@ -1535,14 +1535,20 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
                 titlebar_background,
                 node.LayoutStyle.CornerRounding,
                 ImDrawCornerFlags_Top);
-#else
+#elif IMGUI_VERSION_NUM < 19300
             GImNodes->CanvasDrawList->AddRectFilled(
                 title_bar_rect.Min,
                 title_bar_rect.Max,
                 titlebar_background,
                 node.LayoutStyle.CornerRounding,
                 ImDrawFlags_RoundCornersTop);
-
+#else
+            GImNodes->CanvasDrawList->AddRectFilled(
+                title_bar_rect.Min,
+                title_bar_rect.Max,
+                titlebar_background,
+                node.LayoutStyle.CornerRounding,
+                ImDrawFlags_RoundTop);
 #endif
         }
 
@@ -1564,7 +1570,7 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
                 node.LayoutStyle.CornerRounding,
                 ImDrawFlags_RoundCornersAll,
                 node.LayoutStyle.BorderThickness);
-#else
+#elif IMGUI_VERSION_NUM < 19300
             GImNodes->CanvasDrawList->AddRect(
                 node.Rect.Min,
                 node.Rect.Max,
@@ -1572,6 +1578,14 @@ void DrawNode(ImNodesEditorContext& editor, const int node_idx)
                 node.LayoutStyle.CornerRounding,
                 node.LayoutStyle.BorderThickness,
                 ImDrawFlags_RoundCornersAll);
+#else
+            GImNodes->CanvasDrawList->AddRect(
+                node.Rect.Min,
+                node.Rect.Max,
+                node.ColorStyle.Outline,
+                node.LayoutStyle.CornerRounding,
+                node.LayoutStyle.BorderThickness,
+                ImDrawFlags_RoundAll);
 #endif
         }
     }
