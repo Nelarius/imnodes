@@ -268,6 +268,8 @@ IMNODES_API ImNodesStyle& GetStyle();
 IMNODES_API void StyleColorsDark(ImNodesStyle* dest = NULL); // on by default
 IMNODES_API void StyleColorsClassic(ImNodesStyle* dest = NULL);
 IMNODES_API void StyleColorsLight(ImNodesStyle* dest = NULL);
+// Get a string corresponding to the enum value (for display, saving, etc.).
+IMNODES_API const char* GetStyleColorName(ImNodesCol idx);
 
 // The top-level function call. Call this before calling BeginNode/EndNode. Calling this function
 // will result the node editor grid workspace being rendered.
