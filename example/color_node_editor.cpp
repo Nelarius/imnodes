@@ -4,7 +4,7 @@
 #include <imnodes.h>
 #include <imgui.h>
 
-#include <SDL2/SDL_timer.h>
+#include <SDL3/SDL_timer.h>
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -131,7 +131,7 @@ public:
     void show()
     {
         // Update timer context
-        current_time_seconds = 0.001f * SDL_GetTicks();
+        current_time_seconds = 0.001f * static_cast<float>(SDL_GetTicks());
 
         auto flags = ImGuiWindowFlags_MenuBar;
 

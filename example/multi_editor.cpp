@@ -1,7 +1,6 @@
 #include "node_editor.h"
 #include <imnodes.h>
 #include <imgui.h>
-#include <SDL_scancode.h>
 
 #include <algorithm>
 #include <vector>

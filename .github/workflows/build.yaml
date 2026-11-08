@@ -39,6 +39,10 @@ jobs:
         shell: cmd
         run: vcpkg\bootstrap-vcpkg.bat
 
+      - name: Setup MSVC environment (Windows)
+        if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
@@ -51,3 +55,33 @@ jobs:
 
       - name: CMake build
         run: cmake --build build-release --config Release
+
+  # The vcpkg imgui port lags upstream, so also compile against the newest
+  # Dear ImGui release with obsolete functions disabled to catch API breaks.
+  imgui-latest:
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [g++, clang++]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout latest Dear ImGui release
+        shell: bash
+        run: |
+          tag=$(git ls-remote --tags --refs https://github.com/ocornut/imgui.git 'v*' \
+            | sed 's#.*refs/tags/##' | grep -v -- '-docking' | sort -V | tail -n 1)
+          echo "Using Dear ImGui $tag"
+          git clone --depth 1 --branch "$tag" https://github.com/ocornut/imgui.git imgui
+
+      - name: Compile imnodes
+        run: >
+          ${{ matrix.cxx }} -std=c++11
+          -Wall -Wextra -Wpedantic -Werror
+          -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS
+          -isystem imgui
+          -c imnodes.cpp -o imnodes.o

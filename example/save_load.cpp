@@ -2,7 +2,6 @@
 
 #include <imnodes.h>
 #include <imgui.h>
-#include <SDL_keycode.h>
 
 #include <algorithm>
 #include <cassert>
